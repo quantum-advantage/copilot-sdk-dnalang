@@ -1,0 +1,18 @@
+# Ignore common large and system files
+node_modules
+**/node_modules
+*.zip
+*.tar.gz
+Archive*
+*.tar
+*.tgz
+.DS_Store
+.env
+.env.*
+*.log
+.vscode
+.cache
+tmp
+tests
+__pycache__
+*.pyc
