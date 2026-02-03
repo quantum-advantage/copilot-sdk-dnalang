@@ -1,0 +1,179 @@
+{
+  "experiment": "theta_angle_parameter_sweep",
+  "timestamp": "2026-02-03T06:16:36.557928",
+  "results": [
+    {
+      "theta_degrees": 30.0,
+      "theta_radians": 0.5235987755982988,
+      "n_qubits": 8,
+      "shots": 10000,
+      "circuit_depth": 15,
+      "circuit_size": 67,
+      "execution_time": 0.020074129104614258,
+      "hardware": false,
+      "backend": "simulation",
+      "timestamp": "2026-02-03T06:16:36.482147",
+      "metrics": {
+        "phi": 0.7857158292761023,
+        "lambda": 0.8774,
+        "gamma": 0.004824215367965368,
+        "entropy": 6.169243509344058,
+        "num_unique": 231,
+        "uniqueness_ratio": 0.0231
+      },
+      "counts_sample": {
+        "10100111": 101,
+        "11110011": 342,
+        "10111100": 92,
+        "11111111": 1226,
+        "10111111": 432,
+        "10110011": 129,
+        "10101000": 74,
+        "10101111": 425,
+        "11001111": 321,
+        "00111111": 314
+      }
+    },
+    {
+      "theta_degrees": 45.0,
+      "theta_radians": 0.7853981633974483,
+      "n_qubits": 8,
+      "shots": 10000,
+      "circuit_depth": 15,
+      "circuit_size": 67,
+      "execution_time": 0.018617868423461914,
+      "hardware": false,
+      "backend": "simulation",
+      "timestamp": "2026-02-03T06:16:36.501644",
+      "metrics": {
+        "phi": 0.6956418745135503,
+        "lambda": 0.7681,
+        "gamma": 0.005816111809045226,
+        "entropy": 5.3123558659913135,
+        "num_unique": 199,
+        "uniqueness_ratio": 0.0199
+      },
+      "counts_sample": {
+        "10101111": 573,
+        "11111111": 2319,
+        "11110011": 405,
+        "11001010": 95,
+        "00111111": 393,
+        "11001011": 186,
+        "10110111": 18,
+        "00101010": 123,
+        "10111100": 67,
+        "11111001": 14
+      }
+    },
+    {
+      "theta_degrees": 51.843,
+      "theta_radians": 0.9048310441114203,
+      "n_qubits": 8,
+      "shots": 10000,
+      "circuit_depth": 15,
+      "circuit_size": 67,
+      "execution_time": 0.01859426498413086,
+      "hardware": false,
+      "backend": "simulation",
+      "timestamp": "2026-02-03T06:16:36.521057",
+      "metrics": {
+        "phi": 0.6802447371234143,
+        "lambda": 0.7456,
+        "gamma": 0.005979464285714285,
+        "entropy": 5.179866296181225,
+        "num_unique": 196,
+        "uniqueness_ratio": 0.0196
+      },
+      "counts_sample": {
+        "00011010": 7,
+        "11110111": 266,
+        "11111110": 104,
+        "10101011": 516,
+        "11111111": 2544,
+        "10000000": 1,
+        "11001111": 387,
+        "10111111": 361,
+        "11011111": 273,
+        "00111111": 405
+      }
+    },
+    {
+      "theta_degrees": 60.0,
+      "theta_radians": 1.0471975511965976,
+      "n_qubits": 8,
+      "shots": 10000,
+      "circuit_depth": 15,
+      "circuit_size": 67,
+      "execution_time": 0.01767134666442871,
+      "hardware": false,
+      "backend": "simulation",
+      "timestamp": "2026-02-03T06:16:36.539505",
+      "metrics": {
+        "phi": 0.6725595538774695,
+        "lambda": 0.7316,
+        "gamma": 0.005675116822429906,
+        "entropy": 5.206597582731113,
+        "num_unique": 214,
+        "uniqueness_ratio": 0.0214
+      },
+      "counts_sample": {
+        "00101011": 103,
+        "10111111": 203,
+        "11111111": 2684,
+        "10101011": 387,
+        "11001111": 341,
+        "01100011": 15,
+        "11000111": 26,
+        "10101000": 92,
+        "11100011": 33,
+        "10101010": 183
+      }
+    },
+    {
+      "theta_degrees": 90.0,
+      "theta_radians": 1.5707963267948966,
+      "n_qubits": 8,
+      "shots": 10000,
+      "circuit_depth": 15,
+      "circuit_size": 67,
+      "execution_time": 0.017401456832885742,
+      "hardware": false,
+      "backend": "simulation",
+      "timestamp": "2026-02-03T06:16:36.557612",
+      "metrics": {
+        "phi": 0.7894394582173568,
+        "lambda": 0.8763,
+        "gamma": 0.004644014830508475,
+        "entropy": 6.222869458209026,
+        "num_unique": 236,
+        "uniqueness_ratio": 0.0236
+      },
+      "counts_sample": {
+        "10111110": 57,
+        "11010111": 185,
+        "01111100": 46,
+        "11111111": 1237,
+        "01010111": 72,
+        "00111011": 34,
+        "01011011": 44,
+        "11111011": 267,
+        "11011101": 187,
+        "11110101": 132
+      }
+    }
+  ],
+  "summary": {
+    "angles_tested": [
+      30.0,
+      45.0,
+      51.843,
+      60.0,
+      90.0
+    ],
+    "best_phi": 90.0,
+    "best_lambda": 30.0,
+    "best_gamma": 90.0,
+    "best_entropy": 90.0
+  }
+}

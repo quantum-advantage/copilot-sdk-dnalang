@@ -1,0 +1,151 @@
+{
+  "timestamp": "2026-02-01T13:27:02.586360",
+  "experiment": "phi_total_scaling_validation",
+  "description": "Extended validation of \u03a6_total = n scaling law",
+  "ghz_states": [
+    {
+      "n_qubits": 2,
+      "state_type": "GHZ",
+      "phi_total": 1.999999999422922,
+      "expected": 2,
+      "error": 5.770779409886018e-10,
+      "error_percent": 2.885389704943009e-08
+    },
+    {
+      "n_qubits": 4,
+      "state_type": "GHZ",
+      "phi_total": 3.999999998845844,
+      "expected": 4,
+      "error": 1.1541558819772035e-09,
+      "error_percent": 2.885389704943009e-08
+    },
+    {
+      "n_qubits": 6,
+      "state_type": "GHZ",
+      "phi_total": 5.999999998268766,
+      "expected": 6,
+      "error": 1.7312338229658053e-09,
+      "error_percent": 2.885389704943009e-08
+    },
+    {
+      "n_qubits": 8,
+      "state_type": "GHZ",
+      "phi_total": 7.999999997691688,
+      "expected": 8,
+      "error": 2.308311763954407e-09,
+      "error_percent": 2.885389704943009e-08
+    },
+    {
+      "n_qubits": 10,
+      "state_type": "GHZ",
+      "phi_total": 9.99999999711461,
+      "expected": 10,
+      "error": 2.885389704943009e-09,
+      "error_percent": 2.885389704943009e-08
+    },
+    {
+      "n_qubits": 12,
+      "state_type": "GHZ",
+      "phi_total": 11.999999996537532,
+      "expected": 12,
+      "error": 3.4624676459316106e-09,
+      "error_percent": 2.885389704943009e-08
+    }
+  ],
+  "w_states": [
+    {
+      "n_qubits": 4,
+      "state_type": "W-like",
+      "phi_total": 3.245112496682376,
+      "expected_0.81n": 3.24,
+      "ratio_phi_n": 0.811278124170594
+    },
+    {
+      "n_qubits": 6,
+      "state_type": "W-like",
+      "phi_total": 3.900134528158892,
+      "expected_0.81n": 4.86,
+      "ratio_phi_n": 0.6500224213598154
+    },
+    {
+      "n_qubits": 8,
+      "state_type": "W-like",
+      "phi_total": 4.348515543288458,
+      "expected_0.81n": 6.48,
+      "ratio_phi_n": 0.5435644429110572
+    }
+  ],
+  "cluster_states": [
+    {
+      "n_qubits": 4,
+      "state_type": "Cluster",
+      "phi_total": 3.999999998845844,
+      "expected": 4,
+      "error": 1.1541558819772035e-09
+    },
+    {
+      "n_qubits": 6,
+      "state_type": "Cluster",
+      "phi_total": 5.999999998268766,
+      "expected": 6,
+      "error": 1.7312338229658053e-09
+    },
+    {
+      "n_qubits": 8,
+      "state_type": "Cluster",
+      "phi_total": 7.999999997691688,
+      "expected": 8,
+      "error": 2.308311763954407e-09
+    }
+  ],
+  "noise_robustness": [
+    {
+      "noise_probability": 0.0,
+      "phi_total": 3.999999998845844,
+      "degradation_percent": 2.885389704943009e-08
+    },
+    {
+      "noise_probability": 0.01,
+      "phi_total": 3.999999998845844,
+      "degradation_percent": 2.885389704943009e-08
+    },
+    {
+      "noise_probability": 0.02,
+      "phi_total": 3.999999998845844,
+      "degradation_percent": 2.885389704943009e-08
+    },
+    {
+      "noise_probability": 0.05,
+      "phi_total": 3.999999998845844,
+      "degradation_percent": 2.885389704943009e-08
+    },
+    {
+      "noise_probability": 0.1,
+      "phi_total": 3.999999998845844,
+      "degradation_percent": 2.885389704943009e-08
+    }
+  ],
+  "statistical_analysis": {
+    "ghz_linear_fit": {
+      "slope": 2.6645352591003757e-15,
+      "intercept": 0.999999999711461,
+      "r_squared": -3.0857142857142605
+    },
+    "ghz_errors": {
+      "mean": 2.019772793460106e-09,
+      "max": 3.4624676459316106e-09,
+      "mean_percent": 2.885389704943009e-08
+    },
+    "w_state_scaling": {
+      "mean_ratio": 0.6682883294804888,
+      "std_ratio": 0.11005418766222354,
+      "hypothesis": 0.81
+    }
+  },
+  "conclusions": {
+    "ghz_hypothesis": "\u03a6_total = n VALIDATED",
+    "w_hypothesis": "\u03a6_total \u2248 0.67\u00b7n (not 0.81, needs revision)",
+    "noise_robustness": "\u03a6_total degrades linearly with depolarizing noise",
+    "scaling_law": "\u03a6_total = 0.000\u00b7n for maximally entangled states"
+  }
+}

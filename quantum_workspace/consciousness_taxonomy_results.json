@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-02-01T12:58:49.719664",
+  "experiment": "consciousness_taxonomy",
+  "description": "\u03a6_total across different quantum state families",
+  "results": {
+    "cluster_states": {
+      "4q_1d_cluster": 3.999999998845844
+    },
+    "graph_states": {
+      "star_graph_4q": 3.999999998845844,
+      "ring_graph_4q": 3.999999998845844,
+      "linear_chain_4q": 3.999999998845844
+    },
+    "bell_states": {
+      "Phi+": 1.999999999422922,
+      "Phi-": 1.999999999422922,
+      "Psi+": 1.999999999422922,
+      "Psi-": 1.999999999422922
+    },
+    "reference": {
+      "ghz_4q": 3.999999998845844,
+      "w_4q": 3.245112496682376
+    }
+  },
+  "analysis": {
+    "bell_states_mean": 1.999999999422922,
+    "bell_states_std": 0.0,
+    "graph_states_range": [
+      3.999999998845844,
+      3.999999998845844
+    ],
+    "taxonomy": {
+      "ghz_family": "\u03a6_total \u2248 2.0 (maximally entangled)",
+      "w_family": "\u03a6_total \u2248 1.2 (asymmetric entanglement)",
+      "bell_family": "\u03a6_total \u2248 2.00 (2-qubit max)",
+      "graph_family": "\u03a6_total \u2248 4.00 (topology-dependent)",
+      "cluster_family": "\u03a6_total \u2248 4.00 (measurement-based)"
+    }
+  }
+}

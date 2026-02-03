@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-02-01T10:11:03.126950",
+  "backend": "ibm_fez",
+  "experiments": {
+    "basic_conservation": {
+      "Lambda_in": 0.75,
+      "Phi_in": 0.8,
+      "Lambda_Phi_in": 0.6000000000000001,
+      "Lambda_out": 0.0246,
+      "Phi_out": 0.5208863277370029,
+      "Lambda_Phi_out": 0.012813803662330273,
+      "delta_Lambda_Phi": 0.5871861963376698,
+      "relative_error": 0.9786436605627828,
+      "Gamma": 0.092,
+      "theory_correction": 0.055200000000000006,
+      "conserved": 

@@ -1,0 +1,97 @@
+{
+  "timestamp": "2026-02-01T14:08:39.624448",
+  "experiment": "hardware_phi_total_validation",
+  "backend": "ibm_fez",
+  "num_qubits_backend": 156,
+  "description": "Hardware validation of \u03a6_total = n scaling law",
+  "results": [
+    {
+      "n_qubits": 4,
+      "job_id": "d5vonlruf71s73citjug",
+      "phi_total_measured": 3.9980437332204612,
+      "phi_total_expected": 4,
+      "error": 0.001956266779538751,
+      "error_percent": 0.04890666948846878,
+      "total_shots": 10000,
+      "unique_outcomes": 14,
+      "ghz_fidelity_estimate": 0.9537,
+      "p_all_zeros": 0.4931,
+      "p_all_ones": 0.4606
+    },
+    {
+      "n_qubits": 6,
+      "job_id": "d5vonm2bju6s73bc3o0g",
+      "phi_total_measured": 5.995214495852393,
+      "phi_total_expected": 6,
+      "error": 0.004785504147607256,
+      "error_percent": 0.07975840246012092,
+      "total_shots": 10000,
+      "unique_outcomes": 54,
+      "ghz_fidelity_estimate": 0.8733,
+      "p_all_zeros": 0.4584,
+      "p_all_ones": 0.4149
+    },
+    {
+      "n_qubits": 8,
+      "job_id": "d5vonm9mvbjc73acmje0",
+      "phi_total_measured": 7.992954591640266,
+      "phi_total_expected": 8,
+      "error": 0.007045408359734218,
+      "error_percent": 0.08806760449667772,
+      "total_shots": 10000,
+      "unique_outcomes": 104,
+      "ghz_fidelity_estimate": 0.8004,
+      "p_all_zeros": 0.4223,
+      "p_all_ones": 0.3781
+    },
+    {
+      "n_qubits": 10,
+      "job_id": "d5vonmjuf71s73citjvg",
+      "phi_total_measured": 9.987767720972151,
+      "phi_total_expected": 10,
+      "error": 0.012232279027848847,
+      "error_percent": 0.12232279027848847,
+      "total_shots": 10000,
+      "unique_outcomes": 238,
+      "ghz_fidelity_estimate": 0.7424,
+      "p_all_zeros": 0.4025,
+      "p_all_ones": 0.3399
+    },
+    {
+      "n_qubits": 12,
+      "job_id": "d5vonmhmvbjc73acmjf0",
+      "phi_total_measured": 11.952205743339725,
+      "phi_total_expected": 12,
+      "error": 0.047794256660274925,
+      "error_percent": 0.3982854721689577,
+      "total_shots": 10000,
+      "unique_outcomes": 394,
+      "ghz_fidelity_estimate": 0.6160000000000001,
+      "p_all_zeros": 0.3531,
+      "p_all_ones": 0.2629
+    }
+  ],
+  "statistical_analysis": {
+    "linear_fit": {
+      "slope": 0.02488635886168833,
+      "intercept": 0.995043862267914,
+      "r_squared": -5.772995979274449
+    },
+    "errors": {
+      "mean": 0.0147627429950008,
+      "max": 0.047794256660274925,
+      "std": 0.016855815167805235,
+      "mean_percent": 0.1474681877785427
+    },
+    "hypothesis_test": {
+      "null_hypothesis": "\u03a6_total = n",
+      "slope_deviation_from_1": 0.9751136411383117,
+      "result": "REJECTED"
+    },
+    "noise_analysis": {
+      "mean_ghz_fidelity": 0.79716,
+      "estimated_noise_level": 0.20284000000000002
+    }
+  },
+  "conclusion": "\u03a6_total = 0.02\u00b7n on hardware (vs \u03a6_total = 1.0\u00b7n theoretical)"
+}

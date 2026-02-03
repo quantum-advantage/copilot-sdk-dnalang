@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+qenv/
+nclm_venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+.venv/
+.venvs/
+qenv_mitiq/
+qenv_mitiq310/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+*.tmp
+.cache/
+
+# Credentials (never commit)
+.env
+.env.local
+*.pem
+*.key
+
+# Large binaries
+*.iso
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Node
+node_modules/
+node-v*/
+
+# Build artifacts
+htmlcov/
+.coverage
+.pytest_cache/
+.mypy_cache/
+
+# Session/personal
+.claude*/
+.copilot/
+.ssh/
+.gnupg/
+.mozilla/
+.config/
+
+# Compiled Python source
+Python-3.10.13/
+python3.10/

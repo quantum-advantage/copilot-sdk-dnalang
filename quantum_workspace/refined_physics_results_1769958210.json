@@ -1,0 +1,32 @@
+{
+  "timestamp": 1769958210,
+  "backend": "ibm_fez",
+  "duration_seconds": 31.316078901290894,
+  "source": "ENKI-420 repository analysis",
+  "constants": {
+    "LAMBDA_PHI": 2.176435e-08,
+    "THETA_LOCK": 51.843,
+    "THETA_PC": 128.157,
+    "CHI_PC": 0.946,
+    "TAU_MEM_ns": 4.594669723653589e+16,
+    "PHI_THRESHOLD": 0.7734,
+    "K_EG": 8.62e-11
+  },
+  "results": {
+    "phase_conjugate_healing": {
+      "test": "phase_conjugate_healing",
+      "job_id": "d5vmm8qbju6s73bc1idg",
+      "qubits": 6,
+      "healing_fidelity": 0.018798828125,
+      "chi_pc_expected": 0.946,
+      "theta_pc": 128.157,
+      "success": false
+    },
+    "memory_timescale": {
+      "test": "memory_timescale",
+      "job_id": "d5vmmat7fc0s73au6p20",
+      "qubits": 4,
+      "memory_coherence": 0.2981907655197489,
+      "tau_mem_ns": 4.594669723653589e+16,
+      "lambda_phi": 2.176435e-08,
+      "success": 

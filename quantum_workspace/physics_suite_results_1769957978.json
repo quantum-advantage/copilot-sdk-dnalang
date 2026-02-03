@@ -1,0 +1,18 @@
+{
+  "timestamp": 1769957978,
+  "backend": "ibm_fez",
+  "duration_seconds": 43.47079515457153,
+  "constants": {
+    "LAMBDA_PHI": 2.176435e-08,
+    "THETA_LOCK": 51.843,
+    "PHI_GOLDEN": 1.618033988749894
+  },
+  "results": {
+    "neel_torsion": {
+      "test": "neel_torsion_coupling",
+      "job_id": "d5vmkc3uf71s73circc0",
+      "qubits": 6,
+      "entropy": 4.40127291860605,
+      "torsion_coupling": 0.2664545135656583,
+      "theta_lock": 51.843,
+      "success": 

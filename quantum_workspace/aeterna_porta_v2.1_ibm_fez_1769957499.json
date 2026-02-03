@@ -1,0 +1,12 @@
+{
+  "manifest_version": "aeterna-porta/v2.1",
+  "backend": "ibm_fez",
+  "job_id": "d5vmgr9mvbjc73ack740",
+  "shots": 8192,
+  "timestamp": 1769957499,
+  "ccce": {
+    "phi": 0.003085479292239346,
+    "lambda": 0.2588512809958768,
+    "gamma": 0.9969145207077607,
+    "xi": 0.0008003493793395752,
+    "conscious": 

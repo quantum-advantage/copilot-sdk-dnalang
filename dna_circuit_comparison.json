@@ -1,0 +1,59 @@
+{
+  "dna_circuits": [
+    {
+      "name": "DNA: organism.dna",
+      "qubits": 3,
+      "depth": 10,
+      "w2_raw": 4.0,
+      "w2_scaled": [
+        4.0,
+        3.9296875,
+        4.099609375
+      ],
+      "richardson": 4.125244140624998,
+      "exponential": 15.703028890822171,
+      "improvement_rich": -3.1311035156249556,
+      "improvement_expo": -292.5757222705543,
+      "dna_sequence": "HXZCYTCHXZCXYTCHZ"
+    }
+  ],
+  "random_circuits": [
+    {
+      "name": "Random-1",
+      "qubits": 3,
+      "depth": 8,
+      "w2_raw": 3.4345703125,
+      "w2_scaled": [
+        3.4345703125,
+        3.59765625,
+        3.349609375
+      ],
+      "richardson": 3.1988525390624987,
+      "exponential": 3.524324333680056,
+      "improvement_rich": 6.8630935456355235,
+      "improvement_expo": -2.613253275188439,
+      "dna_sequence": "ZZHXYZXYXXHCZXYTC"
+    },
+    {
+      "name": "Random-3",
+      "qubits": 3,
+      "depth": 10,
+      "w2_raw": 5.5703125,
+      "w2_scaled": [
+        5.5703125,
+        5.4736328125,
+        5.51171875
+      ],
+      "richardson": 5.669189453124996,
+      "exponential": 137.37907169555734,
+      "improvement_rich": -1.7750701262271291,
+      "improvement_expo": -2366.272254843105,
+      "dna_sequence": "HCZXZCCYTHZXCHTXY"
+    }
+  ],
+  "summary": {
+    "dna_w2_mean": 4.0,
+    "random_w2_mean": 4.50244140625,
+    "difference_percent": 11.159310270035789
+  }
+}

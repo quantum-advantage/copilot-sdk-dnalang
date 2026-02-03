@@ -1,0 +1,59 @@
+{
+  "timestamp": "2026-02-01T12:09:44.036916",
+  "chi_pc": 0.946,
+  "test_type": "entanglement_witness",
+  "trials": [
+    {
+      "chi_factor": 0.0,
+      "phase_rad": 0.0,
+      "concurrence": 0.9999999937348335,
+      "negativity": 0.5,
+      "entropy": 1.0
+    },
+    {
+      "chi_factor": 0.5,
+      "phase_rad": 1.485973325147972,
+      "concurrence": 1.0,
+      "negativity": 0.5000000000000001,
+      "entropy": 0.9999999999999999
+    },
+    {
+      "chi_factor": 0.946,
+      "phase_rad": 2.811461531179963,
+      "concurrence": 0.9999999999999999,
+      "negativity": 0.49999999999999983,
+      "entropy": 1.0
+    },
+    {
+      "chi_factor": 1.0,
+      "phase_rad": 2.971946650295944,
+      "concurrence": 0.9999999999999999,
+      "negativity": 0.5,
+      "entropy": 1.0
+    },
+    {
+      "chi_factor": 1.5,
+      "phase_rad": 4.457919975443916,
+      "concurrence": 0.9999999999999998,
+      "negativity": 0.5000000000000001,
+      "entropy": 1.0
+    },
+    {
+      "chi_factor": 2.0,
+      "phase_rad": 5.943893300591888,
+      "concurrence": 0.9999999874696672,
+      "negativity": 0.5,
+      "entropy": 1.0
+    }
+  ],
+  "summary": {
+    "chi_pc_concurrence": 0.9999999999999999,
+    "chi_pc_negativity": 0.49999999999999983,
+    "chi_pc_entropy": 1.0,
+    "baseline_concurrence": 0.9999999937348335,
+    "baseline_negativity": 0.5,
+    "delta_concurrence": 6.265166385688303e-09,
+    "delta_negativity": 1.6653345369377348e-16,
+    "status": "NOT_DETECTED"
+  }
+}
