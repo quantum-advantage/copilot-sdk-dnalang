@@ -46,6 +46,11 @@
     "completed": [
       "d60bbi2bju6s73bcq0u0",
       "d60bb9l7fc0s73auv0pg"
-    ]
+    ],
+    "latest_submission": {
+      "job_id": "d6153pao8gvs73f0hv60",
+      "backend": "ibm_fez",
+      "timestamp": "2026-02-03T19:52:05.575767Z"
+    }
   }
 }
