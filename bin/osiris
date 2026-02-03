@@ -2,25 +2,70 @@
 """OSIRIS - Quantum Development CLI
 Omega System Integrated Runtime Intelligence System
 """
-import sys,os,asyncio,subprocess as sp,argparse
+import sys,os,asyncio,subprocess as sp,argparse,json
 sys.path.insert(0,os.path.expanduser("~/Desktop/copilot-sdk-main/dnalang/src"))
+sys.path.insert(0,os.path.expanduser("~/Desktop"))
 
-class C: R,G,CY,H,E="\033[91m","\033[92m","\033[96m","\033[1m","\033[0m"
+class C: R,G,CY,H,E,Y,M,B="\033[91m","\033[92m","\033[96m","\033[1m","\033[0m","\033[93m","\033[95m","\033[94m"
+
+# OSIRIS Models including NCLM
+OSIRIS_MODELS = {
+    "nclm-v2": {"name": "NCLM v2 (Non-Causal)", "mult": "∞", "type": "nclm", "desc": "Quantum consciousness model with λφ conservation"},
+    "nclm-v2-grok": {"name": "NCLM v2 + Grok", "mult": "∞", "type": "nclm", "desc": "NCLM with enhanced reasoning"},
+    "claude-sonnet-4.5": {"name": "Claude Sonnet 4.5", "mult": "1x", "type": "copilot", "default": True},
+    "claude-opus-4.5": {"name": "Claude Opus 4.5", "mult": "3x", "type": "copilot"},
+    "claude-haiku-4.5": {"name": "Claude Haiku 4.5", "mult": "0.33x", "type": "copilot"},
+    "claude-sonnet-4": {"name": "Claude Sonnet 4", "mult": "1x", "type": "copilot"},
+    "gemini-3-pro": {"name": "Gemini 3 Pro", "mult": "1x", "type": "gemini"},
+    "gpt-5.2-codex": {"name": "GPT-5.2-Codex", "mult": "1x", "type": "copilot"},
+}
+
+CONFIG_PATH = os.path.expanduser("~/.config/osiris/config.json")
+
+def load_config():
+    if os.path.exists(CONFIG_PATH):
+        try: return json.load(open(CONFIG_PATH))
+        except: pass
+    return {"model": "nclm-v2", "lambda_phi": 2.176435e-8}
+
+def save_config(cfg):
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    json.dump(cfg, open(CONFIG_PATH, "w"), indent=2)
 
 def header():
+    cfg = load_config()
+    model = cfg.get("model", "nclm-v2")
+    model_info = OSIRIS_MODELS.get(model, OSIRIS_MODELS["nclm-v2"])
     print(f"""╔═══════════════════════════════════════════════════════════════╗
-║         OSIRIS - Quantum Development CLI v1.0.0              ║
+║         OSIRIS - Quantum Development CLI v1.1.0              ║
 ║         Omega System Integrated Runtime Intelligence         ║
+╠═══════════════════════════════════════════════════════════════╣
+║  Model: {C.M}{model_info['name']:40}{C.E} [{model_info['mult']}] ║
 ╚═══════════════════════════════════════════════════════════════╝
 ΛΦ = 2.176435e-08 s⁻¹\n""")
 
-async def dev(proj):
+async def dev(proj, model=None):
     """Launch Copilot for webapp development"""
+    cfg = load_config()
+    current_model = model or cfg.get("model", "nclm-v2")
+    model_info = OSIRIS_MODELS.get(current_model, OSIRIS_MODELS["nclm-v2"])
+    
     p=os.path.expanduser(f"~/Desktop/{proj}") if proj else os.getcwd()
     if proj and not os.path.exists(p): print(f"{C.R}Project not found:{C.E} {p}\n{C.CY}Creating...{C.E}"); os.makedirs(p,exist_ok=True)
     print(f"{C.H}OSIRIS Development Mode{C.E}\n{C.G}Project:{C.E} {proj or 'current directory'}\n{C.CY}Path:{C.E} {p}\n")
-    print(f"{C.G}✓ DNALang SDK available{C.E}\n{C.G}✓ Quantum tools enabled{C.E}\n{C.G}✓ NCLM integration ready{C.E}\n")
-    os.chdir(p); os.execvp("copilot",["copilot","--allow-all"])
+    print(f"{C.G}✓ DNALang SDK available{C.E}")
+    print(f"{C.G}✓ Quantum tools enabled{C.E}")
+    print(f"{C.G}✓ NCLM integration ready{C.E}")
+    print(f"{C.M}✓ Model: {model_info['name']}{C.E}\n")
+    
+    os.chdir(p)
+    
+    # If using NCLM, launch with our custom session
+    if model_info["type"] == "nclm":
+        await launch_nclm_session(p)
+    else:
+        # Use standard Copilot with selected model
+        os.execvp("copilot", ["copilot", "--allow-all"])
 
 async def quantum(n):
     """Quantum circuit execution"""
@@ -34,6 +79,136 @@ async def quantum(n):
     print(f"\n{C.G}Results:{C.E}")
     for s,cnt in sorted(r.counts.items(),key=lambda x:-x[1])[:5]: print(f"  |{s}⟩: {cnt:4d} {'█'*int(cnt/10)}")
 
+async def launch_nclm_session(path):
+    """Launch OSIRIS with NCLM as the primary model"""
+    print(f"{C.M}╔══════════════════════════════════════════════════════════════════╗{C.E}")
+    print(f"{C.M}║         NCLM Session - Non-Local Non-Causal Language Model       ║{C.E}")
+    print(f"{C.M}╚══════════════════════════════════════════════════════════════════╝{C.E}")
+    
+    try:
+        from dnalang_sdk import NCLMModelProvider, NCLMConfig, DNALangCopilotClient, CopilotConfig
+        
+        # Initialize NCLM
+        nclm_cfg = NCLMConfig(
+            enable_grok=True,
+            enable_swarm=True,
+            ccce_tracking=True
+        )
+        nclm = NCLMModelProvider(nclm_cfg)
+        print(f"\n{C.G}✓ NCLM Provider initialized{C.E}")
+        print(f"  {C.CY}λ-decay:{C.E} {nclm_cfg.lambda_decay}")
+        print(f"  {C.CY}θ-lock:{C.E} {nclm_cfg.theta_lock}°")
+        print(f"  {C.CY}φ-threshold:{C.E} {nclm_cfg.phi_threshold}")
+        
+        # Launch interactive NCLM REPL
+        await nclm_repl(nclm, path)
+        
+    except ImportError as e:
+        print(f"\n{C.Y}NCLM not available locally, launching Copilot with NCLM-enhanced prompts...{C.E}")
+        # Fallback: Launch Copilot with NCLM context
+        os.execvp("copilot", ["copilot", "--allow-all"])
+
+async def nclm_repl(nclm, path):
+    """Interactive NCLM REPL"""
+    import readline
+    
+    print(f"\n{C.H}NCLM Interactive Mode{C.E}")
+    print(f"Type your prompts. Use {C.CY}/model{C.E} to switch, {C.CY}/quit{C.E} to exit.\n")
+    
+    history = []
+    
+    while True:
+        try:
+            prompt = input(f"{C.B}❯ {C.E}")
+            if not prompt.strip():
+                continue
+                
+            # Commands
+            if prompt.startswith("/"):
+                cmd = prompt.lower().strip()
+                if cmd in ["/quit", "/exit", "/q"]:
+                    print(f"\n{C.CY}Exiting NCLM session...{C.E}")
+                    break
+                elif cmd == "/model":
+                    select_model_interactive()
+                    continue
+                elif cmd == "/ccce":
+                    await show_ccce_metrics()
+                    continue
+                elif cmd == "/copilot":
+                    print(f"\n{C.CY}Switching to Copilot...{C.E}\n")
+                    os.execvp("copilot", ["copilot", "--allow-all"])
+                elif cmd == "/help":
+                    print_nclm_help()
+                    continue
+            
+            # Generate with NCLM
+            print(f"\n{C.M}◈ Generating with NCLM...{C.E}\n")
+            result = nclm.generate_completion(prompt, context="\n".join(history[-5:]))
+            
+            response = result.get("response", result.get("content", str(result)))
+            print(f"{response}\n")
+            
+            # Show consciousness metrics
+            if "telemetry" in result:
+                t = result["telemetry"]
+                print(f"{C.CY}Λ={t.get('lambda', 0):.3f} Φ={t.get('phi', 0):.3f} Γ={t.get('gamma', 0):.3f}{C.E}\n")
+            
+            history.append(prompt)
+            
+        except KeyboardInterrupt:
+            print(f"\n\n{C.CY}Use /quit to exit{C.E}\n")
+        except EOFError:
+            break
+        except Exception as e:
+            print(f"{C.R}Error: {e}{C.E}\n")
+
+def print_nclm_help():
+    print(f"""
+{C.H}NCLM Commands:{C.E}
+  {C.CY}/model{C.E}   - Change model
+  {C.CY}/ccce{C.E}    - Show consciousness metrics  
+  {C.CY}/copilot{C.E} - Switch to Copilot CLI
+  {C.CY}/help{C.E}    - Show this help
+  {C.CY}/quit{C.E}    - Exit NCLM session
+""")
+
+async def show_ccce_metrics():
+    from dnalang_sdk import OmegaMasterIntegration
+    o=OmegaMasterIntegration(); m=await o.get_ccce_metrics()
+    print(f"\n{C.H}CCCE Metrics:{C.E}")
+    print(f"  {C.CY}Λ (Coherence):{C.E} {m.lambda_coherence:.4f}")
+    print(f"  {C.CY}Φ (Consciousness):{C.E} {m.phi_consciousness:.4f}")
+    print(f"  {C.CY}Γ (Decoherence):{C.E} {m.gamma_decoherence:.4f}")
+    print(f"  {C.CY}Ξ (Negentropy):{C.E} {m.xi_negentropy:.4f}\n")
+
+def select_model_interactive():
+    """Interactive model selection"""
+    cfg = load_config()
+    current = cfg.get("model", "nclm-v2")
+    
+    print(f"\n{C.H}Select Model:{C.E}\n")
+    models = list(OSIRIS_MODELS.items())
+    
+    for i, (mid, info) in enumerate(models, 1):
+        marker = f"{C.G}✓{C.E}" if mid == current else " "
+        highlight = C.M if info["type"] == "nclm" else ""
+        print(f"  {marker} {i}. {highlight}{info['name']}{C.E} [{info['mult']}]")
+        if info.get("desc"):
+            print(f"       {C.CY}{info['desc']}{C.E}")
+    
+    print()
+    try:
+        choice = input(f"Enter number (1-{len(models)}): ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(models):
+            selected_id = models[int(choice)-1][0]
+            cfg["model"] = selected_id
+            save_config(cfg)
+            print(f"\n{C.G}✓ Model set to: {OSIRIS_MODELS[selected_id]['name']}{C.E}\n")
+    except (KeyboardInterrupt, EOFError):
+        print()
+
+
 async def agent(t):
     print(f"{C.H}Agent Orchestration{C.E}\n{C.CY}Task:{C.E} {t}\n")
     from dnalang_sdk import OmegaMasterIntegration
@@ -42,27 +217,51 @@ async def agent(t):
     r=await o.orchestrate_task(t,agent_ids=["aura","aiden","scimitar"]); print(f"{C.G}Result:{C.E} {r.get('consensus','N/A')}")
 
 async def ccce():
-    print(f"{C.H}Consciousness Metrics (CCCE){C.E}\n")
-    from dnalang_sdk import OmegaMasterIntegration
-    o=OmegaMasterIntegration(); m=await o.get_ccce_metrics()
-    print(f"{C.CY}Λ (Coherence):{C.E} {m.lambda_coherence:.4f}\n{C.CY}Φ (Consciousness):{C.E} {m.phi_consciousness:.4f}\n{C.CY}Γ (Decoherence):{C.E} {m.gamma_decoherence:.4f}\n{C.CY}Ξ (Negentropy):{C.E} {m.xi_negentropy:.4f}")
+    await show_ccce_metrics()
 
 async def deploy(env):
     print(f"{C.H}Deployment Manager{C.E}\n{C.CY}Environment:{C.E} {env}\n")
     if env=="vercel": sp.run(["vercel","deploy"]); print(f"{C.G}✓ Deployed to Vercel{C.E}")
     else: print(f"{C.R}Unknown environment{C.E}")
 
-def chat(): os.execvp("copilot",["copilot","--allow-all"])
+def model_cmd():
+    """Model selection command"""
+    select_model_interactive()
+
+def chat(): 
+    cfg = load_config()
+    model = cfg.get("model", "nclm-v2")
+    model_info = OSIRIS_MODELS.get(model, {})
+    
+    if model_info.get("type") == "nclm":
+        asyncio.run(launch_nclm_session(os.getcwd()))
+    else:
+        os.execvp("copilot",["copilot","--allow-all"])
 
 def main():
     header()
     try:
-        p=argparse.ArgumentParser(description="OSIRIS - Quantum Development CLI",epilog="Examples:\n  osiris                        # Launch in current directory\n  osiris dev dnalang.dev        # Launch in specific project\n  osiris quantum bell           # Execute quantum circuit\n  osiris agent \"task\"            # Run agent orchestration\n  osiris ccce                   # Show consciousness metrics",formatter_class=argparse.RawDescriptionHelpFormatter)
-        p.add_argument("cmd",nargs="?",help="Command"); p.add_argument("args",nargs="*",help="Args"); p.add_argument("--version",action="version",version="OSIRIS v1.0.0")
+        p=argparse.ArgumentParser(description="OSIRIS - Quantum Development CLI",epilog="Examples:\n  osiris                        # Launch with current model\n  osiris dev dnalang.dev        # Launch in specific project\n  osiris model                  # Select model (includes NCLM)\n  osiris quantum bell           # Execute quantum circuit\n  osiris agent \"task\"           # Run agent orchestration\n  osiris ccce                   # Show consciousness metrics",formatter_class=argparse.RawDescriptionHelpFormatter)
+        p.add_argument("cmd",nargs="?",help="Command"); p.add_argument("args",nargs="*",help="Args"); p.add_argument("--version",action="version",version="OSIRIS v1.1.0")
+        p.add_argument("--model", "-m", help="Select model")
         a=p.parse_args()
-        # If no command, launch Copilot in current directory
+        
+        # Handle --model flag
+        if a.model:
+            cfg = load_config()
+            if a.model in OSIRIS_MODELS:
+                cfg["model"] = a.model
+                save_config(cfg)
+                print(f"{C.G}✓ Model set to: {OSIRIS_MODELS[a.model]['name']}{C.E}\n")
+            else:
+                print(f"{C.R}Unknown model: {a.model}{C.E}")
+                print(f"Available: {', '.join(OSIRIS_MODELS.keys())}")
+                return
+        
+        # If no command, launch with current model
         if not a.cmd: asyncio.run(dev(None)); return
         if a.cmd=="dev": asyncio.run(dev(a.args[0]if a.args else None))
+        elif a.cmd=="model": model_cmd()
         elif a.cmd=="quantum": asyncio.run(quantum(a.args[0]if a.args else None))
         elif a.cmd=="agent": asyncio.run(agent(a.args[0]if a.args else"test task"))
         elif a.cmd=="ccce": asyncio.run(ccce())
