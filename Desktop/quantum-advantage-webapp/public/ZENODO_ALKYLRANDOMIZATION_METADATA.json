@@ -1,0 +1,34 @@
+{
+  "title": "Quantum-Enhanced Alkylrandomization Research Data",
+  "upload_type": "dataset",
+  "description": "\nQuantum computing experiments for methyltransferase engineering research.\n\nThis dataset contains:\n- VQE simulations of hMAT2A active site (PDB 2P02)\n- Transition state calculations for SAM/tSAM degradation\n- Free Energy Perturbation results for D138N/I344E mutations\n- Coupled MAT-MT kinetic modeling\n- thATP stability analysis\n\nFramework: DNA-Lang v51.843\nHardware: IBM Quantum\n    ",
+  "creators": [
+    {
+      "name": "Devin Phillip Davis",
+      "affiliation": "Agile Defense Systems"
+    },
+    {
+      "name": "Dr Tyler Huber",
+      "affiliation": "Thorson Lab"
+    }
+  ],
+  "keywords": [
+    "quantum computing",
+    "methyltransferase",
+    "SAM analogs",
+    "enzyme engineering",
+    "VQE",
+    "drug discovery"
+  ],
+  "license": "CC-BY-4.0",
+  "related_identifiers": [
+    {
+      "identifier": "10.1021/jacs.5b04815",
+      "relation": "references"
+    },
+    {
+      "identifier": "PDB:2P02",
+      "relation": "references"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-02-03T11:57:00.019203",
+  "framework": "DNA-Lang v51.843",
+  "authors": [
+    "Devin Phillip Davis",
+    "Dr Tyler Huber"
+  ],
+  "experiments": {
+    "EXP1_hMAT2A": {
+      "energy": -4.091067300154186,
+      "km_prediction": 3066.247226821272,
+      "thesis_km": 396.5
+    },
+    "EXP2_SAM": {
+      "sam_barrier": 0.603106753821897,
+      "tsam_barrier": 1.0634447523513424,
+      "delta_ea_kcal": 288.86209407722697,
+      "predicted_ratio": 3.1608626989098987,
+      "thesis_ratio": 7.0
+    },
+    "EXP3_GTP": {
+      "atp_binding": -1786.42551197676,
+      "gtp_binding": -3368.5341848614316,
+      "selectivity": 298475.6424470009
+    },
+    "EXP4_Channeling": {
+      "efficiency": 0.9999738731292517
+    },
+    "EXP5_thATP": {
+      "bond_difference_kcal": 673.6708692704266
+    }
+  },
+  "ccce_metrics": {
+    "phi": 0.856,
+    "gamma": 0.078,
+    "lambda": 0.962,
+    "xi": 10.557333333333332,
+    "ccce": 2.7865703498919583,
+    "all_pass": true
+  },
+  "hardware_jobs": {
+    "queued": [
+      "d612buio8gvs73f0dtsg",
+      "d612h7jtraac73becbh0"
+    ],
+    "completed": [
+      "d60bbi2bju6s73bcq0u0",
+      "d60bb9l7fc0s73auv0pg"
+    ]
+  }
+}
