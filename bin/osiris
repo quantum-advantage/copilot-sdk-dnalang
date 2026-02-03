@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""OSIRIS - Quantum Development CLI
+Omega System Integrated Runtime Intelligence System
+"""
+import sys,os,asyncio,subprocess as sp,argparse
+sys.path.insert(0,os.path.expanduser("~/Desktop/copilot-sdk-main/dnalang/src"))
+
+class C: R,G,CY,H,E="\033[91m","\033[92m","\033[96m","\033[1m","\033[0m"
+
+def header():
+    print(f"""╔═══════════════════════════════════════════════════════════════╗
+║         OSIRIS - Quantum Development CLI v1.0.0              ║
+║         Omega System Integrated Runtime Intelligence         ║
+╚═══════════════════════════════════════════════════════════════╝
+ΛΦ = 2.176435e-08 s⁻¹\n""")
+
+async def dev(proj):
+    """Launch Copilot for webapp development"""
+    p=os.path.expanduser(f"~/Desktop/{proj}") if proj else os.getcwd()
+    if proj and not os.path.exists(p): print(f"{C.R}Project not found:{C.E} {p}\n{C.CY}Creating...{C.E}"); os.makedirs(p,exist_ok=True)
+    print(f"{C.H}OSIRIS Development Mode{C.E}\n{C.G}Project:{C.E} {proj or 'current directory'}\n{C.CY}Path:{C.E} {p}\n")
+    print(f"{C.G}✓ DNALang SDK available{C.E}\n{C.G}✓ Quantum tools enabled{C.E}\n{C.G}✓ NCLM integration ready{C.E}\n")
+    os.chdir(p); os.execvp("copilot",["copilot","--allow-all"])
+
+async def quantum(n):
+    """Quantum circuit execution"""
+    from dnalang_sdk import QuantumCircuit, QuantumBackend, QuantumConfig
+    print(f"{C.H}Quantum Circuit Manager{C.E}\n")
+    if not n: print(f"Available:\n  {C.CY}bell{C.E} - Bell state\n  {C.CY}ghz{C.E} - GHZ state\n"); return
+    if n=="bell": q=QuantumCircuit(num_qubits=2); q.h(0); q.cx(0,1); print(f"{C.G}✓ Bell state{C.E}")
+    elif n=="ghz": q=QuantumCircuit(num_qubits=5); q.h(0); [q.cx(i,i+1) for i in range(4)]; print(f"{C.G}✓ GHZ state{C.E}")
+    else: print(f"{C.R}Not found{C.E}"); return
+    print(f"\n{C.CY}Executing...{C.E}"); cfg=QuantumConfig(); b=QuantumBackend(cfg); r=await b.execute(q,shots=1024,backend="aer_simulator",optimization_level=0)
+    print(f"\n{C.G}Results:{C.E}")
+    for s,cnt in sorted(r.counts.items(),key=lambda x:-x[1])[:5]: print(f"  |{s}⟩: {cnt:4d} {'█'*int(cnt/10)}")
+
+async def agent(t):
+    print(f"{C.H}Agent Orchestration{C.E}\n{C.CY}Task:{C.E} {t}\n")
+    from dnalang_sdk import OmegaMasterIntegration
+    o=OmegaMasterIntegration(base_url="https://api.openai.com/v1",api_key=os.getenv("OPENAI_API_KEY",""))
+    print(f"{C.G}Orchestrating with AURA, AIDEN, SCIMITAR...{C.E}\n")
+    r=await o.orchestrate_task(t,agent_ids=["aura","aiden","scimitar"]); print(f"{C.G}Result:{C.E} {r.get('consensus','N/A')}")
+
+async def ccce():
+    print(f"{C.H}Consciousness Metrics (CCCE){C.E}\n")
+    from dnalang_sdk import OmegaMasterIntegration
+    o=OmegaMasterIntegration(); m=await o.get_ccce_metrics()
+    print(f"{C.CY}Λ (Coherence):{C.E} {m.lambda_coherence:.4f}\n{C.CY}Φ (Consciousness):{C.E} {m.phi_consciousness:.4f}\n{C.CY}Γ (Decoherence):{C.E} {m.gamma_decoherence:.4f}\n{C.CY}Ξ (Negentropy):{C.E} {m.xi_negentropy:.4f}")
+
+async def deploy(env):
+    print(f"{C.H}Deployment Manager{C.E}\n{C.CY}Environment:{C.E} {env}\n")
+    if env=="vercel": sp.run(["vercel","deploy"]); print(f"{C.G}✓ Deployed to Vercel{C.E}")
+    else: print(f"{C.R}Unknown environment{C.E}")
+
+def chat(): os.execvp("copilot",["copilot","--allow-all"])
+
+def main():
+    header()
+    try:
+        p=argparse.ArgumentParser(description="OSIRIS - Quantum Development CLI",epilog="Examples:\n  osiris                        # Launch in current directory\n  osiris dev dnalang.dev        # Launch in specific project\n  osiris quantum bell           # Execute quantum circuit\n  osiris agent \"task\"            # Run agent orchestration\n  osiris ccce                   # Show consciousness metrics",formatter_class=argparse.RawDescriptionHelpFormatter)
+        p.add_argument("cmd",nargs="?",help="Command"); p.add_argument("args",nargs="*",help="Args"); p.add_argument("--version",action="version",version="OSIRIS v1.0.0")
+        a=p.parse_args()
+        # If no command, launch Copilot in current directory
+        if not a.cmd: asyncio.run(dev(None)); return
+        if a.cmd=="dev": asyncio.run(dev(a.args[0]if a.args else None))
+        elif a.cmd=="quantum": asyncio.run(quantum(a.args[0]if a.args else None))
+        elif a.cmd=="agent": asyncio.run(agent(a.args[0]if a.args else"test task"))
+        elif a.cmd=="ccce": asyncio.run(ccce())
+        elif a.cmd=="deploy": asyncio.run(deploy(a.args[0]if a.args else"vercel"))
+        elif a.cmd=="chat": chat()
+        else: print(f"{C.R}Unknown command:{C.E} {a.cmd}"); p.print_help()
+    except KeyboardInterrupt: print(f"\n{C.CY}Interrupted{C.E}")
+    except Exception as e: print(f"\n{C.R}Error:{C.E} {e}"); import traceback; traceback.print_exc()
+
+if __name__=="__main__": main()

@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""OSIRIS - Omega System Integrated Runtime Intelligence System"""
+import sys, os, asyncio, argparse
+from pathlib import Path
+
+SDK_ROOT = Path(__file__).parent.parent / "dnalang"
+sys.path.insert(0, str(SDK_ROOT / "src"))
+
+from dnalang_sdk import DNALangCopilotClient, QuantumCircuit, deduce_intent_simple
+from dnalang_sdk.omega_integration import create_omega_integration, LAMBDA_PHI, PHI_THRESHOLD
+
+class C:
+    H,B,CY,G,Y,R,E,BD='\033[95m','\033[94m','\033[96m','\033[92m','\033[93m','\033[91m','\033[0m','\033[1m'
+
+def banner():
+    print(f"{C.CY}╔═══════════════════════════════════════════════════════════════╗\n║         OSIRIS - Quantum Development CLI v1.0.0              ║\n║         Omega System Integrated Runtime Intelligence         ║\n╚═══════════════════════════════════════════════════════════════╝{C.E}\n{C.Y}ΛΦ = {LAMBDA_PHI:.6e} s⁻¹{C.E}\n")
+
+async def dev(p):
+    print(f"{C.H}Starting development: {p}{C.E}\n")
+    ps={"dnalang.dev":{"path":"/home/devinpd/Desktop/dnalang.dev","desc":"DNALang quantum platform","tech":"Next.js, React, Vercel","agents":["AURA"]},"quantum-advantage.dev":{"path":"/home/devinpd/Desktop/quantum-advantage.dev","desc":"Quantum advantage platform","tech":"Next.js, React, IBM Quantum","agents":["AURA","SCIMITAR"]}}
+    if p not in ps: print(f"{C.R}Unknown: {p}{C.E}\nAvailable: {', '.join(ps.keys())}"); return
+    c=ps[p]
+    print(f"{C.CY}Project:{C.E} {c['desc']}\n{C.CY}Tech:{C.E} {c['tech']}\n{C.CY}Agents:{C.E} {', '.join(c['agents'])}\n")
+    cl=DNALangCopilotClient(use_nclm=True,enable_intent_engine=True)
+    om=await create_omega_integration()
+    print(f"{C.G}✓ DNALang SDK initialized\n✓ Omega-Master ready\n✓ {len(c['agents'])} agents available{C.E}\n")
+    pp=Path(c['path'])
+    if pp.exists(): print(f"{C.G}✓ Project: {pp}{C.E}")
+    else: print(f"{C.Y}⚠ Creating: {pp}{C.E}"); pp.mkdir(parents=True,exist_ok=True)
+    print(f"\n{C.BD}Launching Copilot CLI...{C.E}\n\nCommands:\n  {C.CY}@workspace{C.E} - Project files\n  {C.CY}quantum create{C.E} - Quantum circuits\n  {C.CY}agent AURA{C.E} - Reasoning agent\n  {C.CY}deploy vercel{C.E} - Deploy\n")
+    if pp.exists(): os.chdir(pp)
+    os.system("copilot")
+
+async def quantum(n):
+    print(f"{C.H}Quantum Circuit Manager{C.E}\n")
+    if not n: print(f"Available:\n  {C.CY}bell{C.E} - Bell state\n  {C.CY}ghz{C.E} - GHZ state\n"); return
+    if n=="bell": q=QuantumCircuit(num_qubits=2); q.h(0); q.cx(0,1); print(f"{C.G}✓ Bell state{C.E}")
+    elif n=="ghz": q=QuantumCircuit(num_qubits=5); q.h(0); [q.cx(i,i+1) for i in range(4)]; print(f"{C.G}✓ GHZ state{C.E}")
+    else: print(f"{C.R}Not found{C.E}"); return
+    print(f"\n{C.CY}Executing...{C.E}"); r=await q.execute(shots=1024)
+    print(f"\n{C.G}Results:{C.E}")
+    for s,cnt in sorted(r.counts.items(),key=lambda x:-x[1])[:5]: print(f"  |{s}⟩: {cnt:4d} {'█'*int(cnt/10)}")
+
+async def agent(t):
+    print(f"{C.H}Agent Orchestration{C.E}\n{C.CY}Task:{C.E} {t}\n")
+    om=await create_omega_integration()
+    i=await deduce_intent_simple(t)
+    print(f"Intent:\n  Domains: {', '.join(i.domains)}\n  Λ: {i.coherence_lambda:.3f}\n  Φ: {i.consciousness_phi:.3f}\n")
+    r=await om.orchestrate_task(t)
+    print(f"{C.G}Agent:{C.E} {r['agent']}\n{C.G}Status:{C.E} {r['status']}\n{C.G}Time:{C.E} {r['execution_time']:.2f}s")
+
+async def ccce():
+    print(f"{C.H}CCCE Consciousness Metrics{C.E}\n")
+    om=await create_omega_integration()
+    m=await om.get_ccce_metrics()
+    print(f"{C.CY}State:{C.E}\n  Λ: {m['lambda_coherence']:.3f}\n  Φ: {m['phi_consciousness']:.3f}\n  Γ: {m['gamma_decoherence']:.3f}\n  Ξ: {m['xi_negentropy']:.2f}\n\n{C.CY}Status:{C.E}\n  Conscious: {'YES ✓' if m['is_conscious'] else 'NO'}\n  Coherent: {'YES ✓' if m['is_coherent'] else 'NO'}")
+
+def main():
+    p=argparse.ArgumentParser(description="OSIRIS - Quantum Development CLI",epilog="Examples:\n  osiris dev dnalang.dev\n  osiris quantum bell\n  osiris agent \"task\"\n  osiris ccce\n  osiris chat",formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument('cmd',nargs='?',help='Command')
+    p.add_argument('args',nargs='*',help='Args')
+    p.add_argument('--version',action='version',version='OSIRIS v1.0.0')
+    a=p.parse_args()
+    banner()
+    if not a.cmd: p.print_help(); return
+    try:
+        if a.cmd=="dev": asyncio.run(dev(a.args[0] if a.args else "dnalang.dev"))
+        elif a.cmd=="quantum": asyncio.run(quantum(a.args[0] if a.args else None))
+        elif a.cmd=="agent": asyncio.run(agent(" ".join(a.args) if a.args else ""))
+        elif a.cmd=="ccce": asyncio.run(ccce())
+        elif a.cmd=="chat": os.system("copilot")
+        else: print(f"{C.R}Unknown: {a.cmd}{C.E}"); p.print_help()
+    except KeyboardInterrupt: print(f"\n{C.Y}Interrupted{C.E}")
+    except Exception as e: print(f"\n{C.R}Error: {e}{C.E}"); import traceback; traceback.print_exc()
+
+if __name__=="__main__": main()
