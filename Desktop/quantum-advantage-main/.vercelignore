@@ -1,18 +1,23 @@
-# Ignore common large and system files
-node_modules
-**/node_modules
-*.zip
-*.tar.gz
-Archive*
-*.tar
-*.tgz
-.DS_Store
-.env
-.env.*
-*.log
-.vscode
-.cache
-tmp
-tests
-__pycache__
-*.pyc
+# Ignore everything by default
+/*
+# Keep essential project files and dirs
+!/.vercelignore
+!/package.json
+!/pnpm-lock.yaml
+!/package-lock.json
+!/yarn.lock
+!/next.config.mjs
+!/next.config.js
+!/vercel.json
+!/README.md
+!/postcss.config.mjs
+!/tsconfig.json
+!/public
+!/public/**
+!/app
+!/app/**
+!/src
+!/src/**
+!/pages
+!/pages/**
+!/package.json
