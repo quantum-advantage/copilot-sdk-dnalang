@@ -22,7 +22,7 @@ class TesseractDecoderOrganism:
     """
 
     def __init__(self, detectors, error_map, error_weights=None, det_cost=None,
-                 beam_width=20, pqlimit=10**6, c_detection=1.0, forbidden_mode='at_most_two'):
+                 beam_width=20, pqlimit=10000000*6, c_detection=1.0, forbidden_mode='at_most_two'):
         self.detectors = set(detectors)
         self.error_map = {int(e): set(ds) for e, ds in error_map.items()}
         self.detector_to_errors = {}

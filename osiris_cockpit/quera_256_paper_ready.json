@@ -1,0 +1,11 @@
+{
+  "atoms": 256,
+  "rounds": 3,
+  "logical_errors": [26,137],
+  "decoder_result": {
+    "correction": "pauli_X(q[26,137])",
+    "nodes_explored": 84723,
+    "best_cost": 0.077,
+    "confidence": 0.923
+  }
+}
