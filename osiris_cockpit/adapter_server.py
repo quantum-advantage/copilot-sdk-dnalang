@@ -62,6 +62,16 @@ class AdapterHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _auth_failed(self):
+        self._send_json(401, {"error": "unauthorized"})
+
+    def _check_api_key(self):
+        expected = os.environ.get('Q_ADAPTER_API_KEY')
+        if not expected:
+            return True  # no API key configured, allow local access
+        key = self.headers.get('X-Api-Key') or self.headers.get('x-api-key')
+        return key == expected
+
     def do_GET(self):
         if self.path.startswith('/health'):
             uptime = time.time() - START_TS
@@ -71,6 +81,9 @@ class AdapterHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         if self.path.startswith('/run'):
+            if not self._check_api_key():
+                return self._auth_failed()
+
             length = int(self.headers.get('Content-Length', 0) or 0)
             raw = self.rfile.read(length) if length else b''
             try:
