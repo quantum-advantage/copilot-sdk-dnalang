@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "workspaces": [
+    "webapps/*"
+  ],
+  "scripts": {
+    "dev:quantum-advantage": "pnpm --prefix webapps/quantum-advantage dev",
+    "build:quantum-advantage": "pnpm --prefix webapps/quantum-advantage build",
+    "start:quantum-advantage": "pnpm --prefix webapps/quantum-advantage start",
+    "install:workspaces": "pnpm install -w"
+  }
+}
