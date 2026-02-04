@@ -1,5 +1,10 @@
+import sys
+import os
 import pytest
-from osiris_cockpit.osiris_bridge_cli import OsirisBridgeCLI
+
+# Ensure project root is on path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from osiris_bridge_cli import OsirisBridgeCLI
 
 
 def test_cmd_bootstrap():
