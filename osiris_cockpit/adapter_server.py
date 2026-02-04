@@ -54,6 +54,11 @@ def normalize(o):
 class AdapterHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    # Simple in-memory rate limiter state: {ip: [timestamps]}
+    RATE_LIMIT_WINDOW = int(os.environ.get('Q_ADAPTER_RATE_WINDOW', '60'))  # seconds
+    RATE_LIMIT_MAX = int(os.environ.get('Q_ADAPTER_RATE_MAX', '10'))  # requests per window
+    _rate_state = {}
+
     def _send_json(self, code, data):
         body = json.dumps(data).encode("utf-8")
         self.send_response(code)
@@ -72,6 +77,22 @@ class AdapterHandler(BaseHTTPRequestHandler):
         key = self.headers.get('X-Api-Key') or self.headers.get('x-api-key')
         return key == expected
 
+    def _rate_exceeded(self):
+        # get client IP (trusting X-Forwarded-For if present for proxied envs)
+        client_ip = self.headers.get('X-Forwarded-For') or self.client_address[0]
+        now = time.time()
+        window = self.RATE_LIMIT_WINDOW
+        maxreq = self.RATE_LIMIT_MAX
+        timestamps = self._rate_state.get(client_ip, [])
+        # keep only recent timestamps
+        timestamps = [t for t in timestamps if t > now - window]
+        if len(timestamps) >= maxreq:
+            self._rate_state[client_ip] = timestamps
+            return True
+        timestamps.append(now)
+        self._rate_state[client_ip] = timestamps
+        return False
+
     def do_GET(self):
         if self.path.startswith('/health'):
             uptime = time.time() - START_TS
@@ -83,6 +104,10 @@ class AdapterHandler(BaseHTTPRequestHandler):
         if self.path.startswith('/run'):
             if not self._check_api_key():
                 return self._auth_failed()
+
+            if self._rate_exceeded():
+                self._send_json(429, {"error": "rate_limited"})
+                return
 
             length = int(self.headers.get('Content-Length', 0) or 0)
             raw = self.rfile.read(length) if length else b''
