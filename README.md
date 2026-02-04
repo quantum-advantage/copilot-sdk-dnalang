@@ -35,7 +35,7 @@ OSIRIS provides the **exact same interface as Copilot** but with DNALang SDK too
 
 ```bash
 # Install
-git clone https://github.com/YOUR_USERNAME/copilot-sdk.git
+git clone https://github.com/quantum-advantage/copilot-sdk.git
 cd copilot-sdk
 bash install-osiris.sh
 
