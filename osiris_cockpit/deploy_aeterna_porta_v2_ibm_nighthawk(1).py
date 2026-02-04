@@ -46,17 +46,17 @@ qc = QuantumCircuit(TOTAL_QUBITS, TOTAL_QUBITS)
 
 # Stage 1: TFD Preparation (ER Bridge)
 for i in range(min(n_L, n_R)):
-     = i          # Left cluster qubit
+    l = i          # Left cluster qubit
     r = n_L + i    # Right cluster qubit
 
     # H on left (create superposition)
-    qc.h()
+    qc.h(l)
 
     # Rotation with _lock (Lenoir frequency)
-    qc.ry(np.deg2rad(THETA_LOCK), )
+    qc.ry(np.deg2rad(THETA_LOCK), l)
 
     # Entangle with right (create ER bridge)
-    qc.cx(, r)
+    qc.cx(l, r)
 
     # Calibration rotation on right
     qc.ry(np.deg2rad(THETA_LOCK / 2), r)
