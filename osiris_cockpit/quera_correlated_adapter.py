@@ -101,26 +101,62 @@ class QuEraCorrelatedAdapter:
         return self.decoder.decode(merged_syndrome, beam=beam, pqlimit=pqlimit)
 
 
+def load_config():
+    """Load configuration from environment variables with sensible defaults."""
+    import os
+
+    cfg = {
+        'atoms': int(os.getenv('Q_ADAPTER_ATOMS', '256')),
+        'rounds': int(os.getenv('Q_ADAPTER_ROUNDS', '3')),
+        'seed': os.getenv('Q_ADAPTER_SEED', None),
+        'out': os.getenv('Q_ADAPTER_OUT', 'quera_256_dryrun.json'),
+        'beam': int(os.getenv('Q_ADAPTER_BEAM', '64')),
+        'pqlimit': int(os.getenv('Q_ADAPTER_PQLIMIT', '500000')),
+    }
+    # convert seed to int if present
+    if cfg['seed'] is not None:
+        try:
+            cfg['seed'] = int(cfg['seed'])
+        except ValueError:
+            logger.warning('Invalid Q_ADAPTER_SEED value, ignoring')
+            cfg['seed'] = None
+    return cfg
+
+
 def main():
     parser = argparse.ArgumentParser(description='QuEra correlated decoder adapter dry-run')
-    parser.add_argument('--atoms', type=int, default=256)
-    parser.add_argument('--rounds', type=int, default=3)
-    parser.add_argument('--seed', type=int, default=42)
-    parser.add_argument('--out', default='quera_256_dryrun.json')
+    parser.add_argument('--atoms', type=int, default=None)
+    parser.add_argument('--rounds', type=int, default=None)
+    parser.add_argument('--seed', type=int, default=None)
+    parser.add_argument('--out', default=None)
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
 
-    adapter = QuEraCorrelatedAdapter(atoms=args.atoms, rounds=args.rounds, seed=args.seed)
+    cfg = load_config()
+    atoms = args.atoms if args.atoms is not None else cfg['atoms']
+    rounds = args.rounds if args.rounds is not None else cfg['rounds']
+    seed = args.seed if args.seed is not None else cfg['seed']
+    out_path = args.out if args.out is not None else cfg['out']
+    beam = cfg['beam']
+    pqlimit = cfg['pqlimit']
+
+    logger.info(f"Running adapter with atoms={atoms} rounds={rounds} seed={seed} beam={beam} pqlimit={pqlimit}")
+
+    adapter = QuEraCorrelatedAdapter(atoms=atoms, rounds=rounds, seed=seed, pqlimit=pqlimit)
     S_rounds, logical_errors, S_true = adapter.generate_round_syndromes(per_detector_noise=0.02)
     merged = adapter.correlated_merge_rounds(S_rounds)
 
     # decode with moderate resource limits for a dry-run
-    decode_result = adapter.decode_merged(merged, beam=64, pqlimit=50000000)
+    try:
+        decode_result = adapter.decode_merged(merged, beam=beam, pqlimit=pqlimit)
+    except Exception:
+        logger.exception('Decoder failed')
+        decode_result = {'error': 'decoder_failed'}
 
     out = {
-        'atoms': args.atoms,
-        'rounds': args.rounds,
-        'seed': args.seed,
+        'atoms': atoms,
+        'rounds': rounds,
+        'seed': seed,
         'logical_errors': sorted(list(logical_errors)),
         'S_true': sorted(list(S_true)),
         'S_rounds': [sorted(list(s)) for s in S_rounds],
@@ -129,11 +165,12 @@ def main():
         'timestamp': time.time(),
     }
 
-    with open(args.out, 'w') as fh:
-        json.dump(out, fh, indent=2)
-
-    print(f"Wrote dry-run output to {args.out}")
-    print('Decoder summary:', json.dumps(decode_result))
+    try:
+        with open(out_path, 'w') as fh:
+            json.dump(out, fh, indent=2)
+        logger.info(f"Wrote dry-run output to {out_path}")
+    except Exception:
+        logger.exception('Failed to write output file')
 
 
 if __name__ == '__main__':
