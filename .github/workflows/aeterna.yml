@@ -1,0 +1,1 @@
+name: Aeterna-VUP\non: push\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n    - uses: actions/checkout@v4\n    - run: copilot agent vup_pulse
