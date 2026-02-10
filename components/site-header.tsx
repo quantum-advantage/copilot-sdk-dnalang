@@ -6,9 +6,9 @@ import Link from "next/link";
 const navLinks = [
   { label: "Features", href: "/#features" },
   { label: "Metrics", href: "/#metrics" },
+  { label: "Shield", href: "/#shield" },
   { label: "Dashboard", href: "/dashboard" },
   { label: "Docs", href: "/docs" },
-  { label: "Benchmarks", href: "/#benchmarks" },
 ];
 
 export function SiteHeader() {
