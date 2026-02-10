@@ -23,5 +23,15 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "dnalang", "cookbook", "dotnet", "go", "nodejs", "python"]
+  "exclude": [
+    "node_modules",
+    "dnalang",
+    "cookbook",
+    "dotnet",
+    "go",
+    "nodejs",
+    "python",
+    "test",
+    "scripts"
+  ]
 }

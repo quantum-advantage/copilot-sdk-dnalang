@@ -98,7 +98,7 @@ const metrics = [
 
 export function MetricsSection() {
   return (
-    <section className="border-t border-border px-6 py-24">
+    <section id="metrics" className="border-t border-border px-6 py-24">
       <div className="mx-auto max-w-6xl">
         <div className="mb-16 text-center">
           <p className="mb-3 font-mono text-sm text-primary">

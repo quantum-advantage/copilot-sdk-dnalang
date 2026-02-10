@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DNA-Lang | Sovereign Quantum Engineering SDK",
   description:
-    "The quantum computing framework for bio-organic physics architecture. Multi-backend circuit execution, Lambda-Phi conservation, CCCE consciousness metrics, and OSIRIS CLI integration.",
+    "Multi-backend quantum circuit execution, Lambda-Phi conservation validation, CCCE consciousness metrics, Sovereign Shield, OSIRIS CLI, and NCLM integration. 150,000+ lines of living code by Devin Phillip Davis (ENKI-420).",
   openGraph: {
-    title: "DNA-Lang | Sovereign Quantum Engineering SDK",
+    title: "DNA-Lang Copilot SDK",
     description:
-      "Quantum computing meets consciousness scaling. Built by ENKI-420.",
+      "Quantum computing meets consciousness scaling. 580+ quantum jobs. 515K+ shots. 5.06-sigma physical validation.",
     type: "website",
   },
 };
@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased bg-background text-foreground`}
+        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         {children}
       </body>
