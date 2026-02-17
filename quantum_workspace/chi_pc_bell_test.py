@@ -238,10 +238,18 @@ class ChiPcBellTest:
         print(f"\n{'='*70}\n")
     
     def save_results(self, filename="chi_pc_bell_test_results.json"):
-        """Save results"""
+        """Save results (convert numpy types to native Python)"""
         filepath = f"/home/devinpd/quantum_workspace/{filename}"
+
+        def _convert(o):
+            # Convert numpy scalars and other objects when possible
+            try:
+                return o.item()
+            except Exception:
+                return str(o)
+
         with open(filepath, "w") as f:
-            json.dump(self.results, indent=2, fp=f)
+            json.dump(self.results, f, indent=2, default=_convert)
         print(f"✓ Results saved to {filepath}")
 
 
