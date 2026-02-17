@@ -12,9 +12,20 @@ import argparse
 import asyncio
 import json
 import logging
+import os
+import subprocess
+import shutil
 from typing import Any, Dict
 
 logging.basicConfig(level=logging.INFO)
+
+
+def get_token(name: str) -> bool:
+    """Return True if the named token is present in environment (without revealing value)."""
+    try:
+        return bool(os.environ.get(name))
+    except Exception:
+        return False
 
 async def run_pipeline(prompt: str, output: str) -> Dict[str, Any]:
     """Run the Claude -> OSIRIS distillation pipeline.
@@ -32,12 +43,18 @@ async def run_pipeline(prompt: str, output: str) -> Dict[str, Any]:
             "prompt": prompt,
             "status": "stub",
             "notes": "copilot_quantum SDK not installed; replace with real SDK in your environment",
+            "tokens": {
+                "V0_DEV_TOKEN": get_token("V0_DEV_TOKEN"),
+                "VERCEL_TOKEN": get_token("VERCEL_TOKEN"),
+            },
         }
         with open(output, "w") as f:
             json.dump(result, f, indent=2)
         return result
 
     # Instantiate agent and run -- adjust params as needed for your environment
+    v0_dev_token_present = get_token("V0_DEV_TOKEN")
+    vercel_token_present = get_token("VERCEL_TOKEN")
     agent = EnhancedSovereignAgent(quantum_backend=AeternaPorta(), enable_lambda_phi=True)
     logging.info("Running EnhancedSovereignAgent.execute...")
 
@@ -49,6 +66,10 @@ async def run_pipeline(prompt: str, output: str) -> Dict[str, Any]:
         "code": getattr(res, "code", None),
         "quantum_metrics": getattr(res, "quantum_metrics", None),
         "success": getattr(res, "success", None),
+        "tokens": {
+            "V0_DEV_TOKEN": v0_dev_token_present,
+            "VERCEL_TOKEN": vercel_token_present,
+        },
     }
 
     # Write structured JSON scorecard

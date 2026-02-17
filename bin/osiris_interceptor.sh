@@ -6,6 +6,18 @@ NCCT_DIR="${OSIRIS_NCCT_DIR:-/media/devinpd/26F5-3744/copilot-sdk-main/ncct_gene
 
 mkdir -p "$NCCT_DIR"
 
+# Detect token presence without exposing values
+if [[ -n "${V0_DEV_TOKEN:-}" ]]; then
+    echo "$(date): V0_DEV_TOKEN present: yes" >> "$LOG"
+else
+    echo "$(date): V0_DEV_TOKEN present: no" >> "$LOG"
+fi
+if [[ -n "${VERCEL_TOKEN:-}" ]]; then
+    echo "$(date): VERCEL_TOKEN present: yes" >> "$LOG"
+else
+    echo "$(date): VERCEL_TOKEN present: no" >> "$LOG"
+fi
+
 echo "$(date): Intercepting '$@' → Generating NCCT" >> "$LOG"
 
 # Extract prompt/context from args
