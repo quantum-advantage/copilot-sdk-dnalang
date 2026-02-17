@@ -207,13 +207,13 @@ class ChiPcBellTest:
         # Simplified: For |Φ+⟩, concurrence = 1
         # Let's see if χ_pc appears in any entanglement measure
         
-        from qiskit.quantum_info import concurrence, entropy, mutual_information
+        from qiskit.quantum_info import concurrence, entropy, mutual_information, partial_trace
         
         # Concurrence
         C = concurrence(rho)
         
         # Entanglement entropy (should be 1 for Bell state)
-        S_A = entropy(rho.partial_trace([1]))
+        S_A = entropy(partial_trace(rho, [1]), base=2)
         
         print(f"\nEntanglement measures for Bell state:")
         print(f"  Concurrence: C = {C:.4f}")
