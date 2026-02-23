@@ -876,24 +876,37 @@ class Osiris:
             return Result(False, f"  {red('✗')} {e}")
 
     def _demo(self, text, p):
-        """AWS meeting demo mode."""
+        """Investor demo — live CLI walkthrough or web dashboard."""
+        demo_dir = self.oc / "demo"
+        live_script = demo_dir / "demo_live.py"
+        dashboard = demo_dir / "dashboard.html"
+
+        if "web" in text or "dashboard" in text or "browser" in text:
+            if dashboard.exists():
+                subprocess.Popen(["xdg-open", str(dashboard)],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return Result(True, f"  {green('✓')} Dashboard opened in browser\n"
+                              f"  {dim(str(dashboard))}")
+            return Result(False, f"  {red('✗')} Dashboard not found at {dashboard}")
+
+        if live_script.exists():
+            fast = "--fast" if ("fast" in text or "quick" in text) else ""
+            no_cloud = "--no-cloud" if "offline" in text else ""
+            args = [sys.executable, str(live_script)]
+            if fast: args.append("--fast")
+            if no_cloud: args.append("--no-cloud")
+            subprocess.run(args)
+            return Result(True, f"\n  {green('✓')} Demo complete")
+
+        # Fallback: show talking points
         try:
             sys.path.insert(0, str(self.oc))
             from experiments import DEMO_TALKING_POINTS, hardware_summary
             lines = [DEMO_TALKING_POINTS]
-
             hw = hardware_summary()
             if hw:
                 lines.append(f"\n  {green('✓')} Hardware results: {bold(hw['backend'])} │ "
                              f"{hw['n_experiments']} experiments │ {hw['timestamp'][:10]}")
-            else:
-                lines.append(f"\n  {yellow('⚠')} No hardware results — demo will use simulator")
-
-            lines.append(f"\n  {dim('Quick demo sequence:')}")
-            for cmd in ["show identity", "run experiments", "show hardware",
-                        "show metrics", "show architecture", "evolve swarm 5 cycles",
-                        "benchmark decoder 512"]:
-                lines.append(f"    {cyan('osiris')} {dim('›')} {cmd}")
             return Result(True, "\n".join(lines))
         except Exception as e:
             return Result(False, f"  {red('✗')} {e}")

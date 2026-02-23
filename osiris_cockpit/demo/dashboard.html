@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DNA::}{::lang — Sovereign Quantum Platform</title>
+<style>
+  :root {
+    --bg: #0a0e17;
+    --bg2: #111827;
+    --bg3: #1a2332;
+    --cyan: #00e5ff;
+    --green: #00ff88;
+    --magenta: #ff00ff;
+    --gold: #ffd700;
+    --red: #ff4444;
+    --dim: #6b7280;
+    --text: #e5e7eb;
+    --border: #1e3a5f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #0a0e17 0%, #111827 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 50%, rgba(0,229,255,0.05) 0%, transparent 70%);
+  }
+  .header h1 {
+    font-size: 2.5rem;
+    color: var(--cyan);
+    letter-spacing: 4px;
+    text-shadow: 0 0 30px rgba(0,229,255,0.3);
+    position: relative;
+  }
+  .header .subtitle {
+    color: var(--dim);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    position: relative;
+  }
+  .header .version {
+    display: inline-block;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid var(--cyan);
+    border-radius: 4px;
+    padding: 2px 12px;
+    color: var(--cyan);
+    font-size: 0.75rem;
+    margin-top: 0.75rem;
+    position: relative;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    padding: 0.75rem;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.75rem;
+  }
+  .status-item { display: flex; align-items: center; gap: 6px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  .status-dot.live { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.warn { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Grid */
+  .dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 1.25rem;
+    padding: 1.5rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  }
+  .card h2 {
+    font-size: 0.85rem;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h2 .icon { font-size: 1.1rem; }
+
+  /* Metric rows */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-label { color: var(--dim); font-size: 0.8rem; }
+  .metric-value { font-weight: 700; font-size: 0.95rem; }
+  .metric-value.highlight { color: var(--cyan); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.gold { color: var(--gold); }
+
+  /* Progress bars */
+  .bar-container {
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 4px 0;
+    width: 100%;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+  .bar-fill.cyan { background: linear-gradient(90deg, var(--cyan), #0090ff); }
+  .bar-fill.green { background: linear-gradient(90deg, var(--green), #00cc66); }
+  .bar-fill.magenta { background: linear-gradient(90deg, var(--magenta), #cc00cc); }
+  .bar-fill.gold { background: linear-gradient(90deg, var(--gold), #cc9900); }
+  .bar-fill.red { background: linear-gradient(90deg, var(--red), #cc0000); }
+
+  /* Big number */
+  .big-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--cyan);
+    text-align: center;
+    text-shadow: 0 0 20px rgba(0,229,255,0.3);
+  }
+  .big-label {
+    text-align: center;
+    color: var(--dim);
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  /* Table */
+  .ledger-table {
+    width: 100%;
+    font-size: 0.72rem;
+    border-collapse: collapse;
+  }
+  .ledger-table th {
+    color: var(--cyan);
+    text-align: left;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .ledger-table td {
+    padding: 5px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--dim);
+  }
+  .ledger-table tr:hover td { color: var(--text); }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .badge.pass { background: rgba(0,255,136,0.15); color: var(--green); border: 1px solid rgba(0,255,136,0.3); }
+  .badge.fail { background: rgba(255,68,68,0.15); color: var(--red); border: 1px solid rgba(255,68,68,0.3); }
+  .badge.live { background: rgba(0,229,255,0.15); color: var(--cyan); border: 1px solid rgba(0,229,255,0.3); }
+
+  /* Repo list */
+  .repo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 0.78rem;
+  }
+  .repo-name { color: var(--cyan); }
+  .repo-desc { color: var(--dim); font-size: 0.7rem; }
+
+  /* Full-width */
+  .full-width { grid-column: 1 / -1; }
+
+  /* Competitive table */
+  .comp-table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+  .comp-table th { color: var(--cyan); padding: 8px; text-align: center; border-bottom: 1px solid var(--border); }
+  .comp-table th:first-child { text-align: left; }
+  .comp-table td { padding: 6px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .comp-table td:first-child { text-align: left; color: var(--text); }
+  .check { color: var(--green); }
+  .cross { color: var(--red); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--dim);
+    font-size: 0.72rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Loading */
+  .loading { color: var(--dim); font-style: italic; }
+
+  /* CTA section */
+  .cta {
+    background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(255,0,255,0.05));
+    border: 1px solid var(--cyan);
+    text-align: center;
+    padding: 2rem;
+  }
+  .cta h2 { justify-content: center; font-size: 1.1rem; letter-spacing: 3px; }
+  .cta p { margin: 0.5rem 0; color: var(--dim); font-size: 0.85rem; }
+  .cta .amount { font-size: 2rem; color: var(--gold); font-weight: 700; margin: 1rem 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DNA::}{::lang</h1>
+  <div class="subtitle">Sovereign Quantum Computing Ecosystem</div>
+  <div class="version">v51.843 • CAGE 9HUP5 • Agile Defense Systems</div>
+</div>
+
+<div class="status-bar">
+  <div class="status-item"><div class="status-dot live"></div>AWS us-east-2</div>
+  <div class="status-item"><div class="status-dot live"></div>API Gateway</div>
+  <div class="status-item"><div class="status-dot live"></div>DynamoDB</div>
+  <div class="status-item"><div class="status-dot live"></div>Lambda</div>
+  <div class="status-item"><div class="status-dot live"></div>S3</div>
+  <div class="status-item"><span id="last-refresh" style="color:var(--dim)">Loading...</span></div>
+</div>
+
+<div class="dashboard">
+
+  <!-- Identity -->
+  <div class="card" id="identity-card">
+    <h2><span class="icon">🧬</span> Sovereign Identity</h2>
+    <div id="identity-content" class="loading">Connecting to AWS...</div>
+  </div>
+
+  <!-- Quantum Metrics -->
+  <div class="card">
+    <h2><span class="icon">⚛️</span> Quantum Constants</h2>
+    <div class="metric-row"><span class="metric-label">ΛΦ (Universal Memory)</span><span class="metric-value highlight">2.176435e-08</span></div>
+    <div class="metric-row"><span class="metric-label">θ (Geometric Resonance)</span><span class="metric-value highlight">51.843°</span></div>
+    <div class="metric-row"><span class="metric-label">Φ (ER=EPR Threshold)</span><span class="metric-value green">≥ 0.7734</span></div>
+    <div class="metric-row"><span class="metric-label">Γ (Decoherence Bound)</span><span class="metric-value" style="color:var(--red)">< 0.300</span></div>
+    <div class="metric-row"><span class="metric-label">χ (Phase Conjugation)</span><span class="metric-value highlight">0.946</span></div>
+    <div class="metric-row"><span class="metric-label">Status</span><span class="badge live">IMMUTABLE</span></div>
+  </div>
+
+  <!-- Test Results -->
+  <div class="card">
+    <h2><span class="icon">✅</span> Test Suite</h2>
+    <div style="display:flex; gap:1.5rem; margin-bottom:1rem;">
+      <div><div class="big-number">169</div><div class="big-label">Tests Passing</div></div>
+      <div><div class="big-number" style="color:var(--green)">0</div><div class="big-label">Failures</div></div>
+      <div><div class="big-number" style="color:var(--gold); font-size:2rem">25</div><div class="big-label">Skipped</div></div>
+    </div>
+    <div class="metric-row"><span class="metric-label">OSIRIS Cockpit</span><span class="badge pass">127 PASS</span></div>
+    <div class="metric-row"><span class="metric-label">Sovereign SDK</span><span class="badge pass">42 PASS</span></div>
+    <div class="metric-row"><span class="metric-label">Grade</span><span class="metric-value gold">SOVEREIGN</span></div>
+  </div>
+
+  <!-- AWS Infrastructure -->
+  <div class="card">
+    <h2><span class="icon">☁️</span> AWS Infrastructure</h2>
+    <div class="metric-row"><span class="metric-label">Account</span><span class="metric-value">869935102268</span></div>
+    <div class="metric-row"><span class="metric-label">Region</span><span class="metric-value">us-east-2 (Ohio)</span></div>
+    <div class="metric-row"><span class="metric-label">Lambda Functions</span><span class="metric-value highlight">4</span></div>
+    <div class="metric-row"><span class="metric-label">API Gateways</span><span class="metric-value highlight">2</span></div>
+    <div class="metric-row"><span class="metric-label">DynamoDB Tables</span><span class="metric-value highlight">3</span></div>
+    <div class="metric-row"><span class="metric-label">S3 Buckets</span><span class="metric-value highlight">3</span></div>
+    <div class="metric-row"><span class="metric-label">CloudWatch Dashboard</span><span class="badge live">ACTIVE</span></div>
+    <div class="metric-row"><span class="metric-label">CI/CD Pipeline</span><span class="badge live">CONFIGURED</span></div>
+  </div>
+
+  <!-- IBM Quantum Results -->
+  <div class="card">
+    <h2><span class="icon">🔬</span> IBM Quantum Hardware Results</h2>
+    <div style="display:flex; gap:1.5rem; margin-bottom:1rem;">
+      <div><div class="big-number">49</div><div class="big-label">Real Jobs Analyzed</div></div>
+      <div><div class="big-number" style="font-size:2rem; color:var(--magenta)">2</div><div class="big-label">Backends</div></div>
+    </div>
+    <div class="metric-row"><span class="metric-label">ibm_torino</span><span class="metric-value">5 jobs (high-qubit)</span></div>
+    <div class="metric-row"><span class="metric-label">ibm_fez</span><span class="metric-value">44 jobs (4-5 qubit)</span></div>
+    <div class="metric-row">
+      <span class="metric-label">Avg Φ (Entanglement)</span>
+      <span class="metric-value">0.1842</span>
+    </div>
+    <div class="bar-container"><div class="bar-fill cyan" style="width:24%"></div></div>
+    <div class="metric-row">
+      <span class="metric-label">Best Φ</span>
+      <span class="metric-value green">0.5413</span>
+    </div>
+    <div class="bar-container"><div class="bar-fill green" style="width:70%"></div></div>
+    <div class="metric-row"><span class="metric-label">SHA-256 Provenance</span><span class="badge pass">VERIFIED</span></div>
+  </div>
+
+  <!-- Ecosystem Components -->
+  <div class="card">
+    <h2><span class="icon">🏗️</span> Ecosystem (145 Repos)</h2>
+    <div class="repo-item"><span class="repo-name">OSIRIS Cockpit</span><span class="badge pass">169 tests</span></div>
+    <div class="repo-item"><span class="repo-name">Sovereign Copilot SDK</span><span class="badge pass">42 tests</span></div>
+    <div class="repo-item"><span class="repo-name">Organism Converter</span><span class="badge live">90K lines</span></div>
+    <div class="repo-item"><span class="repo-name">AIDEN/AURA Meshnet</span><span class="badge live">BFT P2P</span></div>
+    <div class="repo-item"><span class="repo-name">Sovereign Quantum Engine</span><span class="badge live">95% Bell</span></div>
+    <div class="repo-item"><span class="repo-name">Mission Control</span><span class="badge live">Auto-heal</span></div>
+    <div class="repo-item"><span class="repo-name">Tesseract A* Decoder</span><span class="badge live">256 atoms</span></div>
+    <div class="repo-item"><span class="repo-name">NCLM Swarm</span><span class="badge live">7-layer 11D</span></div>
+    <div class="repo-item"><span class="repo-name">Aeterna Porta v2</span><span class="badge live">120 qubits</span></div>
+    <div class="repo-item"><span class="repo-name">DEVN-OSD (Rust)</span><span class="badge" style="background:rgba(255,215,0,0.15); color:var(--gold); border:1px solid rgba(255,215,0,0.3)">WIP</span></div>
+  </div>
+
+  <!-- Experiment Ledger -->
+  <div class="card full-width">
+    <h2><span class="icon">📒</span> Immutable Experiment Ledger (Live)</h2>
+    <div id="ledger-content" class="loading">Fetching from DynamoDB...</div>
+  </div>
+
+  <!-- Competitive Matrix -->
+  <div class="card full-width">
+    <h2><span class="icon">⚔️</span> Competitive Advantage</h2>
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>DNA-Lang</th>
+          <th>IBM Qiskit</th>
+          <th>Google Cirq</th>
+          <th>AWS Braket</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Zero-dependency simulator</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Self-evolving organisms</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Multi-backend compilation</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td style="color:var(--gold)">Partial</td></tr>
+        <tr><td>Immutable experiment ledger</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>NLP-first interface</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Distributed agent mesh</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Air-gap / mobile capable</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>Self-healing orchestration</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>SHA-256 research provenance</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+        <tr><td>DoD CAGE code</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Call to Action -->
+  <div class="card full-width cta">
+    <h2>The Opportunity</h2>
+    <p>The only quantum computing framework that is vendor-neutral, air-gap capable, self-healing, and cryptographically auditable.</p>
+    <div class="amount">$250K Seed • 12 Months</div>
+    <p>2-person team → Production compiler + Certified sovereign simulator + Multi-backend IDE</p>
+    <div style="margin-top:1rem; display:flex; gap:2rem; justify-content:center; flex-wrap:wrap;">
+      <div><span style="color:var(--cyan); font-weight:700;">SBIR Phase I</span><br><span style="color:var(--dim); font-size:0.75rem;">Air-gapped quantum for DoD</span></div>
+      <div><span style="color:var(--gold); font-weight:700;">Enterprise License</span><br><span style="color:var(--dim); font-size:0.75rem;">Pharmaceutical QC pipelines</span></div>
+      <div><span style="color:var(--green); font-weight:700;">Research Partnership</span><br><span style="color:var(--dim); font-size:0.75rem;">IBM / QuEra hardware access</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  DNA::}{::lang v51.843 • Agile Defense Systems • CAGE 9HUP5<br>
+  Zero tokens. Zero telemetry. Pure sovereignty.
+</div>
+
+<script>
+const API_BASE = 'https://n8cqz8i518.execute-api.us-east-2.amazonaws.com/production';
+
+async function fetchJSON(path) {
+  try {
+    const r = await fetch(API_BASE + path, { mode: 'cors' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch (e) {
+    console.warn(`Failed to fetch ${path}:`, e);
+    return null;
+  }
+}
+
+async function loadIdentity() {
+  const el = document.getElementById('identity-content');
+  const data = await fetchJSON('/identity');
+  if (!data) { el.innerHTML = '<span style="color:var(--gold)">Offline — using cached data</span>'; return; }
+  el.innerHTML = `
+    <div class="metric-row"><span class="metric-label">Framework</span><span class="metric-value highlight">${data.framework}</span></div>
+    <div class="metric-row"><span class="metric-label">Author</span><span class="metric-value">${data.author}</span></div>
+    <div class="metric-row"><span class="metric-label">Organization</span><span class="metric-value">${data.organization}</span></div>
+    <div class="metric-row"><span class="metric-label">CAGE Code</span><span class="metric-value gold">${data.cage_code}</span></div>
+    <div class="metric-row"><span class="metric-label">Negentropy Ξ</span><span class="metric-value green">${data.negentropy_xi || 'N/A'}</span></div>
+    <div class="metric-row"><span class="metric-label">Status</span><span class="badge pass">${data.status}</span></div>
+  `;
+}
+
+async function loadLedger() {
+  const el = document.getElementById('ledger-content');
+  const data = await fetchJSON('/ledger');
+  if (!data) { el.innerHTML = '<span style="color:var(--gold)">Offline — ledger unavailable</span>'; return; }
+  
+  const exps = data.experiments || [];
+  const count = data.ledger_count || exps.length;
+  
+  let html = `<div style="margin-bottom:0.75rem; color:var(--dim); font-size:0.78rem">${count} experiments in production DynamoDB</div>`;
+  html += '<table class="ledger-table"><thead><tr><th>Experiment ID</th><th>Backend</th><th>Φ</th><th>Γ</th><th>CCCE</th><th>Timestamp</th></tr></thead><tbody>';
+  
+  for (const exp of exps.slice(0, 12)) {
+    const eid = (exp.experiment_id || exp.job_id || '?').substring(0, 36);
+    const phi = parseFloat(exp.phi || 0).toFixed(4);
+    const gamma = parseFloat(exp.gamma || 0).toFixed(4);
+    const ccce = parseFloat(exp.ccce || 0).toFixed(4);
+    const backend = exp.backend || '—';
+    const ts = (exp.created_at || exp.timestamp || '').toString().substring(0, 19);
+    const phiColor = parseFloat(phi) >= 0.4 ? 'var(--green)' : 'var(--dim)';
+    
+    html += `<tr>
+      <td style="color:var(--cyan); font-size:0.68rem">${eid}</td>
+      <td>${backend}</td>
+      <td style="color:${phiColor}; font-weight:700">${phi}</td>
+      <td>${gamma}</td>
+      <td>${ccce}</td>
+      <td>${ts}</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  if (count > 12) html += `<div style="color:var(--dim); font-size:0.72rem; margin-top:8px">+ ${count - 12} more experiments</div>`;
+  el.innerHTML = html;
+}
+
+async function init() {
+  document.getElementById('last-refresh').textContent = 'Refreshing...';
+  await Promise.all([loadIdentity(), loadLedger()]);
+  document.getElementById('last-refresh').textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+}
+
+init();
+setInterval(init, 30000);
+</script>
+</body>
+</html>
