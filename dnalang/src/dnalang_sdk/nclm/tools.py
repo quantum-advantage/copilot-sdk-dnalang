@@ -292,6 +292,296 @@ def tool_webapp_status() -> str:
     return "\n".join(lines)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  GITHUB API — Repo management, issues, PRs, Actions via PAT            ██
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _github_api(endpoint: str, method: str = "GET", data: dict = None) -> dict:
+    """Call GitHub REST API. Returns parsed JSON or error dict."""
+    import urllib.request, urllib.error
+    token = os.environ.get("GITHUB_PAT_TOKEN", "")
+    if not token:
+        return {"error": "No GITHUB_PAT_TOKEN set. Export it first."}
+    url = f"https://api.github.com{endpoint}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    body = json.dumps(data).encode() if data else None
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    if body:
+        req.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode() if e.fp else ""
+        return {"error": f"HTTP {e.code}: {err_body[:200]}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def tool_github_repos() -> str:
+    """List user's GitHub repositories."""
+    result = _github_api("/user/repos?sort=updated&per_page=15&type=owner")
+    if isinstance(result, dict) and "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}GitHub Repositories{C.E}", ""]
+    for repo in result:
+        vis = "🔒" if repo.get("private") else "🌐"
+        lang = repo.get("language") or "—"
+        stars = repo.get("stargazers_count", 0)
+        lines.append(f"  {vis} {C.CY}{repo['full_name']}{C.E}  ⭐{stars}  {C.DIM}{lang}{C.E}")
+        if repo.get("description"):
+            lines.append(f"      {C.DIM}{repo['description'][:70]}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_github_issues(repo: str = "quantum-advantage/copilot-sdk-dnalang", state: str = "open") -> str:
+    """List issues for a repository."""
+    result = _github_api(f"/repos/{repo}/issues?state={state}&per_page=15")
+    if isinstance(result, dict) and "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}Issues — {repo} ({state}){C.E}", ""]
+    if not result:
+        lines.append(f"  {C.DIM}No {state} issues{C.E}")
+    for issue in result:
+        if issue.get("pull_request"):
+            continue  # skip PRs
+        labels = " ".join(f"[{l['name']}]" for l in issue.get("labels", []))
+        lines.append(f"  #{issue['number']}  {C.CY}{issue['title']}{C.E}  {C.DIM}{labels}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_github_create_issue(repo: str, title: str, body: str = "") -> str:
+    """Create a new issue."""
+    result = _github_api(f"/repos/{repo}/issues", method="POST", data={"title": title, "body": body})
+    if "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    return f"  {C.G}✓ Issue #{result['number']} created:{C.E} {result['html_url']}"
+
+
+def tool_github_prs(repo: str = "quantum-advantage/copilot-sdk-dnalang", state: str = "open") -> str:
+    """List pull requests."""
+    result = _github_api(f"/repos/{repo}/pulls?state={state}&per_page=10")
+    if isinstance(result, dict) and "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}Pull Requests — {repo} ({state}){C.E}", ""]
+    if not result:
+        lines.append(f"  {C.DIM}No {state} PRs{C.E}")
+    for pr in result:
+        status = "🟢" if pr.get("mergeable_state") == "clean" else "🔵"
+        lines.append(f"  {status} #{pr['number']}  {C.CY}{pr['title']}{C.E}  ← {C.DIM}{pr['head']['ref']}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_github_actions(repo: str = "quantum-advantage/copilot-sdk-dnalang") -> str:
+    """Show recent CI/CD workflow runs."""
+    result = _github_api(f"/repos/{repo}/actions/runs?per_page=8")
+    if isinstance(result, dict) and "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}GitHub Actions — {repo}{C.E}", ""]
+    for run in result.get("workflow_runs", []):
+        icon = {"completed": "✅", "in_progress": "🔄", "queued": "⏳", "failure": "❌"}.get(
+            run.get("conclusion") or run.get("status"), "❓")
+        branch = run.get("head_branch", "?")
+        name = run.get("name", "?")
+        lines.append(f"  {icon} {C.CY}{name}{C.E}  {C.DIM}on {branch}  ({run.get('conclusion', run.get('status'))}){C.E}")
+    return "\n".join(lines)
+
+
+def tool_github_push(message: str = None, cwd: str = None) -> str:
+    """Stage, commit, and push to GitHub."""
+    cwd = cwd or WEBAPP_DIR
+    lines = []
+    # Stage all
+    r = subprocess.run("git add -A", shell=True, capture_output=True, text=True, cwd=cwd)
+    # Check if anything to commit
+    r = subprocess.run("git diff --cached --stat", shell=True, capture_output=True, text=True, cwd=cwd)
+    if not r.stdout.strip():
+        return f"  {C.DIM}Nothing to commit — working tree clean{C.E}"
+    lines.append(f"  {C.DIM}Staged:{C.E}")
+    for line in r.stdout.strip().split("\n")[-5:]:
+        lines.append(f"    {line}")
+    # Commit
+    msg = message or f"OSIRIS auto-commit — {time.strftime('%Y-%m-%d %H:%M')}"
+    r = subprocess.run(
+        f'git commit -m "{msg}\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"',
+        shell=True, capture_output=True, text=True, cwd=cwd,
+    )
+    if r.returncode != 0:
+        return f"  {C.R}✗ Commit failed:{C.E} {r.stderr.strip()}"
+    lines.append(f"  {C.G}✓ Committed:{C.E} {msg}")
+    # Push — use PAT if available
+    token = os.environ.get("GITHUB_PAT_TOKEN", "")
+    if token:
+        r_remote = subprocess.run("git remote get-url origin", shell=True, capture_output=True, text=True, cwd=cwd)
+        origin = r_remote.stdout.strip()
+        # Inject PAT into push URL
+        if "github.com" in origin:
+            push_url = origin.replace("https://", f"https://{token}@")
+            r = subprocess.run(
+                f"git push {push_url} HEAD 2>&1", shell=True, capture_output=True, text=True, cwd=cwd, timeout=60,
+            )
+        else:
+            r = subprocess.run("git push origin HEAD 2>&1", shell=True, capture_output=True, text=True, cwd=cwd, timeout=60)
+    else:
+        r = subprocess.run("git push origin HEAD 2>&1", shell=True, capture_output=True, text=True, cwd=cwd, timeout=60)
+    if r.returncode == 0:
+        lines.append(f"  {C.G}✓ Pushed to GitHub{C.E}")
+    else:
+        lines.append(f"  {C.R}✗ Push failed:{C.E} {r.stdout.strip()}")
+    return "\n".join(lines)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  VERCEL API — Deployments, domains, env vars, project management       ██
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _vercel_api(endpoint: str, method: str = "GET", data: dict = None) -> dict:
+    """Call Vercel REST API."""
+    import urllib.request, urllib.error
+    token = os.environ.get("VERCEL_TOKEN", "")
+    if not token:
+        return {"error": "No VERCEL_TOKEN set. Export it first."}
+    url = f"https://api.vercel.com{endpoint}"
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    body = json.dumps(data).encode() if data else None
+    req = urllib.request.Request(url, data=body, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read()
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode() if e.fp else ""
+        return {"error": f"HTTP {e.code}: {err_body[:200]}"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def tool_vercel_projects() -> str:
+    """List Vercel projects."""
+    result = _vercel_api("/v9/projects")
+    if "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}Vercel Projects{C.E}", ""]
+    for proj in result.get("projects", []):
+        framework = proj.get("framework", "—")
+        lines.append(f"  🔷 {C.CY}{proj['name']}{C.E}  {C.DIM}({framework}){C.E}")
+        if proj.get("link", {}).get("repo"):
+            lines.append(f"      GitHub: {C.DIM}{proj['link'].get('org','')}/{proj['link'].get('repo','')}{C.E}")
+        # Show production domain
+        targets = proj.get("targets", {})
+        if targets.get("production", {}).get("url"):
+            lines.append(f"      🌐 https://{targets['production']['url']}")
+    return "\n".join(lines)
+
+
+def tool_vercel_deployments(project: str = None, limit: int = 8) -> str:
+    """List recent Vercel deployments."""
+    params = f"?limit={limit}"
+    if project:
+        params += f"&projectId={project}"
+    result = _vercel_api(f"/v6/deployments{params}")
+    if "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}Recent Deployments{C.E}", ""]
+    for dep in result.get("deployments", []):
+        state = dep.get("state", dep.get("readyState", "?"))
+        icon = {"READY": "✅", "ERROR": "❌", "BUILDING": "🔄", "QUEUED": "⏳", "CANCELED": "⚪"}.get(state, "❓")
+        name = dep.get("name", "?")
+        url = dep.get("url", "")
+        created = dep.get("createdAt", 0)
+        if created:
+            ts = time.strftime("%Y-%m-%d %H:%M", time.gmtime(created / 1000))
+        else:
+            ts = "?"
+        meta = dep.get("meta", {})
+        commit_msg = meta.get("githubCommitMessage", "")[:50]
+        lines.append(f"  {icon} {C.CY}{name}{C.E}  {C.DIM}{state}  {ts}{C.E}")
+        if url:
+            lines.append(f"      🌐 https://{url}")
+        if commit_msg:
+            lines.append(f"      {C.DIM}💬 {commit_msg}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_vercel_domains() -> str:
+    """List Vercel domains."""
+    result = _vercel_api("/v5/domains")
+    if "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}Vercel Domains{C.E}", ""]
+    for domain in result.get("domains", []):
+        verified = "✅" if domain.get("verified") else "⚠️"
+        lines.append(f"  {verified} {C.CY}{domain['name']}{C.E}  {C.DIM}NS: {domain.get('serviceType','?')}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_vercel_env(project_id: str) -> str:
+    """List environment variables for a Vercel project."""
+    result = _vercel_api(f"/v9/projects/{project_id}/env")
+    if "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    lines = [f"  {C.H}Environment Variables — {project_id}{C.E}", ""]
+    for env in result.get("envs", []):
+        target = ",".join(env.get("target", []))
+        val_preview = env.get("value", "")
+        if val_preview and len(val_preview) > 4:
+            val_preview = val_preview[:4] + "****"
+        lines.append(f"  🔑 {C.CY}{env['key']}{C.E} = {C.DIM}{val_preview}  [{target}]{C.E}")
+    return "\n".join(lines)
+
+
+def tool_vercel_deploy(cwd: str = None) -> str:
+    """Deploy current project to Vercel production."""
+    cwd = cwd or WEBAPP_DIR
+    token = os.environ.get("VERCEL_TOKEN", "")
+    if not token:
+        return f"  {C.R}✗ No VERCEL_TOKEN. Export it first.{C.E}"
+    if not os.path.isdir(cwd):
+        return f"  {C.R}✗ Directory not found: {cwd}{C.E}"
+    print(f"  {C.M}⚡ Deploying to Vercel production...{C.E}", flush=True)
+    try:
+        r = subprocess.run(
+            f"npx vercel --prod --yes --token={token} 2>&1",
+            shell=True, capture_output=True, text=True, timeout=300, cwd=cwd,
+        )
+        output = r.stdout.strip()
+        if r.returncode == 0:
+            # Extract URL from output
+            url_line = ""
+            for line in output.split("\n"):
+                if "http" in line:
+                    url_line = line.strip()
+            return f"  {C.G}✓ Deployed!{C.E}\n  🌐 {url_line}\n\n{C.DIM}{output[-300:]}{C.E}"
+        else:
+            return f"  {C.R}✗ Deploy failed{C.E}\n{output[-500:]}"
+    except subprocess.TimeoutExpired:
+        return f"  {C.R}✗ Deploy timed out (300s){C.E}"
+
+
+def tool_vercel_redeploy(deployment_url: str = None) -> str:
+    """Trigger redeployment of the latest or specified deployment."""
+    if deployment_url:
+        result = _vercel_api(f"/v13/deployments", method="POST",
+                             data={"name": "quantum-advantage", "deploymentId": deployment_url})
+    else:
+        # Get latest deployment and redeploy
+        deps = _vercel_api("/v6/deployments?limit=1")
+        if "error" in deps:
+            return f"  {C.R}✗ {deps['error']}{C.E}"
+        latest = deps.get("deployments", [{}])[0]
+        if not latest:
+            return f"  {C.R}✗ No deployments found{C.E}"
+        dep_id = latest.get("uid", "")
+        result = _vercel_api(f"/v13/deployments/{dep_id}/redeploy", method="POST")
+    if isinstance(result, dict) and "error" in result:
+        return f"  {C.R}✗ {result['error']}{C.E}"
+    return f"  {C.G}✓ Redeployment triggered{C.E}"
+
+
 # ── RESEARCH DATA ────────────────────────────────────────────────────────────
 
 def _load_research_data() -> Dict[str, Any]:
@@ -1303,13 +1593,58 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     if "build" in lower and ("webapp" in lower or "app" in lower or "next" in lower or "site" in lower):
         return tool_webapp_build()
     
-    # Deploy webapp
-    if "deploy" in lower and ("webapp" in lower or "app" in lower or "vercel" in lower or "site" in lower):
-        return tool_webapp_deploy()
+    # Deploy webapp (Vercel)
+    if "deploy" in lower and ("webapp" in lower or "app" in lower or "vercel" in lower or "site" in lower or "prod" in lower):
+        return tool_vercel_deploy()
     
     # Webapp status
     if ("status" in lower or "info" in lower) and ("webapp" in lower or "app" in lower or "site" in lower):
         return tool_webapp_status()
+    
+    # ── GITHUB API ──
+    if ("repo" in lower or "repos" in lower) and ("github" in lower or "list" in lower or "show" in lower or "my" in lower):
+        return tool_github_repos()
+    
+    if ("issue" in lower or "issues" in lower) and ("github" in lower or "list" in lower or "show" in lower or "open" in lower or "create" in lower):
+        if "create" in lower or "new" in lower or "open" in lower and "list" not in lower:
+            # Parse: "create issue <title>" or "github create issue <title>"
+            import re
+            m = re.search(r'(?:create|new|open)\s+issue\s+(.+)', user_input, re.I)
+            if m:
+                title = m.group(1).strip()
+                return tool_github_create_issue("quantum-advantage/copilot-sdk-dnalang", title)
+        return tool_github_issues()
+    
+    if ("pr " in lower or "pull request" in lower or "prs" in lower) and ("github" in lower or "list" in lower or "show" in lower or "open" in lower):
+        return tool_github_prs()
+    
+    if ("action" in lower or "ci" in lower or "pipeline" in lower or "workflow" in lower) and ("github" in lower or "show" in lower or "status" in lower):
+        return tool_github_actions()
+    
+    if ("push" in lower) and ("github" in lower or "commit" in lower or "code" in lower):
+        # Extract commit message if provided
+        import re
+        m = re.search(r'(?:push|commit)\s+["\']?(.+?)["\']?\s*$', user_input, re.I)
+        msg = m.group(1) if m else None
+        return tool_github_push(message=msg)
+    
+    # ── VERCEL API ──
+    if ("project" in lower or "projects" in lower) and ("vercel" in lower):
+        return tool_vercel_projects()
+    
+    if ("deploy" in lower or "deployment" in lower) and ("vercel" in lower or "list" in lower):
+        if "redeploy" in lower:
+            return tool_vercel_redeploy()
+        return tool_vercel_deployments()
+    
+    if ("domain" in lower or "dns" in lower) and ("vercel" in lower):
+        return tool_vercel_domains()
+    
+    if ("env" in lower or "variable" in lower or "secret" in lower) and ("vercel" in lower):
+        return tool_vercel_env("quantum-advantage")
+    
+    if "redeploy" in lower and ("vercel" in lower or "site" in lower):
+        return tool_vercel_redeploy()
     
     # Research queries
     if any(k in lower for k in ["research", "breakthrough", "ibm job", "quera", "constant", "publication", "zenodo"]):

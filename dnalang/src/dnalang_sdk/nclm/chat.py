@@ -29,6 +29,10 @@ from .tools import (
     tool_analyze, tool_fix, tool_explain, tool_llm,
     tool_quantum_backends, tool_quantum_submit, tool_quantum_status,
     tool_quantum_submit_script,
+    tool_github_repos, tool_github_issues, tool_github_create_issue,
+    tool_github_prs, tool_github_actions, tool_github_push,
+    tool_vercel_projects, tool_vercel_deployments, tool_vercel_domains,
+    tool_vercel_env, tool_vercel_deploy, tool_vercel_redeploy,
     CIRCUIT_TEMPLATES,
     C,
 )
@@ -91,6 +95,8 @@ SLASH_COMMANDS = [
     "/backends", "/submit", "/quantum", "/design",
     "/research", "/demo", "/dashboard",
     "/exec", "/shell",
+    "/github", "/vercel", "/push", "/repos", "/issues", "/prs", "/actions",
+    "/domains", "/deployments", "/redeploy",
 ]
 
 CIRCUIT_NAMES = list(CIRCUIT_TEMPLATES.keys()) if CIRCUIT_TEMPLATES else [
@@ -750,6 +756,41 @@ class NCLMChat:
             self._cmd_demo(arg)
         elif command == "/dashboard":
             self._cmd_dashboard()
+        # ── GITHUB + VERCEL (Generation 5.4) ──────────────
+        elif command == "/github":
+            self._cmd_github(arg)
+        elif command == "/vercel":
+            self._cmd_vercel(arg)
+        elif command == "/push":
+            self._cmd_push(arg)
+        elif command == "/repos":
+            with Spinner("Querying GitHub repos", frames="orbital"):
+                result = tool_github_repos()
+            print(f"\n{result}\n")
+        elif command == "/issues":
+            with Spinner("Querying issues"):
+                result = tool_github_issues()
+            print(f"\n{result}\n")
+        elif command == "/prs":
+            with Spinner("Querying pull requests"):
+                result = tool_github_prs()
+            print(f"\n{result}\n")
+        elif command == "/actions":
+            with Spinner("Querying CI/CD", frames="orbital"):
+                result = tool_github_actions()
+            print(f"\n{result}\n")
+        elif command == "/deployments":
+            with Spinner("Querying deployments"):
+                result = tool_vercel_deployments()
+            print(f"\n{result}\n")
+        elif command == "/domains":
+            with Spinner("Querying domains"):
+                result = tool_vercel_domains()
+            print(f"\n{result}\n")
+        elif command == "/redeploy":
+            with Spinner("Triggering redeployment"):
+                result = tool_vercel_redeploy()
+            print(f"\n{result}\n")
         else:
             print(f"  {C.R}Unknown command: {command}{C.E}")
             print(f"  {C.DIM}Type /help for available commands{C.E}")
@@ -773,10 +814,20 @@ class NCLMChat:
   {C.CY}/grep <pattern>{C.E}     Search in files     {C.CY}/git <cmd>{C.E}    Git command
   {C.CY}/run <cmd>{C.E}          Execute shell command
 
-  {C.H}🌐 Webapp (quantum-advantage.dev){C.E}
+  {C.H}🌐 Webapp & Vercel{C.E}
   {C.CY}/webapp{C.E}             Project status
   {C.CY}/build{C.E}              Build Next.js app
-  {C.CY}/deploy [token]{C.E}     Deploy to Vercel
+  {C.CY}/deploy{C.E}             Deploy to Vercel production
+  {C.CY}/vercel projects{C.E}    List Vercel projects
+  {C.CY}/vercel deployments{C.E} Recent deployments
+  {C.CY}/vercel domains{C.E}     List domains
+  {C.CY}/vercel env{C.E}         Show env vars         {C.CY}/redeploy{C.E}   Re-trigger
+
+  {C.H}🐙 GitHub{C.E}
+  {C.CY}/github repos{C.E}       List your repositories
+  {C.CY}/github issues{C.E}      Open issues           {C.CY}/github prs{C.E}     Pull requests
+  {C.CY}/github actions{C.E}     CI/CD workflow status
+  {C.CY}/push [msg]{C.E}         Stage, commit & push to GitHub
 
   {C.H}⚛ IBM Quantum Hardware{C.E}
   {C.CY}/backends{C.E}           List available QPUs
@@ -1188,6 +1239,107 @@ class NCLMChat:
         except Exception as e:
             print(f"  {C.R}Error: {e}{C.E}")
         print()
+
+    # ── GITHUB + VERCEL COMMANDS (Generation 5.4) ─────────────────────────────
+
+    def _cmd_github(self, arg: str):
+        """GitHub operations via PAT."""
+        if not arg:
+            print(f"  {C.H}GitHub Commands:{C.E}")
+            print(f"  {C.CY}/github repos{C.E}           List your repositories")
+            print(f"  {C.CY}/github issues{C.E}          List open issues")
+            print(f"  {C.CY}/github prs{C.E}             List pull requests")
+            print(f"  {C.CY}/github actions{C.E}          Show CI/CD status")
+            print(f"  {C.CY}/github push [msg]{C.E}       Stage, commit & push")
+            print()
+            return
+        parts = arg.strip().split(None, 1)
+        subcmd = parts[0].lower()
+        rest = parts[1] if len(parts) > 1 else ""
+        if subcmd in ("repos", "repo"):
+            with Spinner("Querying GitHub repos", frames="orbital"):
+                result = tool_github_repos()
+            print(f"\n{result}\n")
+        elif subcmd in ("issues", "issue"):
+            with Spinner("Querying issues"):
+                result = tool_github_issues()
+            print(f"\n{result}\n")
+        elif subcmd in ("prs", "pr", "pulls"):
+            with Spinner("Querying pull requests"):
+                result = tool_github_prs()
+            print(f"\n{result}\n")
+        elif subcmd in ("actions", "ci", "workflow", "workflows"):
+            with Spinner("Querying CI/CD", frames="orbital"):
+                result = tool_github_actions()
+            print(f"\n{result}\n")
+        elif subcmd in ("push", "commit"):
+            msg = rest if rest else None
+            with Spinner("Pushing to GitHub", frames="dna"):
+                result = tool_github_push(message=msg)
+            print(f"\n{result}\n")
+        elif subcmd in ("create",):
+            if "issue" in rest.lower():
+                title = rest.replace("issue", "").strip()
+                if title:
+                    result = tool_github_create_issue("quantum-advantage/copilot-sdk-dnalang", title)
+                    print(f"\n{result}\n")
+                else:
+                    print(f"  {C.R}Usage: /github create issue <title>{C.E}\n")
+            else:
+                print(f"  {C.R}Usage: /github create issue <title>{C.E}\n")
+        else:
+            print(f"  {C.R}Unknown GitHub command: {subcmd}{C.E}")
+            print(f"  {C.DIM}Available: repos, issues, prs, actions, push, create{C.E}\n")
+
+    def _cmd_vercel(self, arg: str):
+        """Vercel operations via token."""
+        if not arg:
+            print(f"  {C.H}Vercel Commands:{C.E}")
+            print(f"  {C.CY}/vercel projects{C.E}        List projects")
+            print(f"  {C.CY}/vercel deployments{C.E}     Recent deployments")
+            print(f"  {C.CY}/vercel domains{C.E}         List domains")
+            print(f"  {C.CY}/vercel env{C.E}             Show environment variables")
+            print(f"  {C.CY}/vercel deploy{C.E}          Deploy to production")
+            print(f"  {C.CY}/vercel redeploy{C.E}        Re-trigger latest deployment")
+            print()
+            return
+        parts = arg.strip().split(None, 1)
+        subcmd = parts[0].lower()
+        rest = parts[1] if len(parts) > 1 else ""
+        if subcmd in ("projects", "project"):
+            with Spinner("Querying Vercel projects", frames="orbital"):
+                result = tool_vercel_projects()
+            print(f"\n{result}\n")
+        elif subcmd in ("deployments", "deployment", "deploys"):
+            with Spinner("Querying deployments"):
+                result = tool_vercel_deployments()
+            print(f"\n{result}\n")
+        elif subcmd in ("domains", "domain", "dns"):
+            with Spinner("Querying domains"):
+                result = tool_vercel_domains()
+            print(f"\n{result}\n")
+        elif subcmd in ("env", "vars", "secrets"):
+            proj = rest.strip() or "quantum-advantage"
+            with Spinner("Querying env vars"):
+                result = tool_vercel_env(proj)
+            print(f"\n{result}\n")
+        elif subcmd in ("deploy", "ship"):
+            with Spinner("Deploying to Vercel production", frames="dna"):
+                result = tool_vercel_deploy()
+            print(f"\n{result}\n")
+        elif subcmd in ("redeploy", "rebuild"):
+            with Spinner("Triggering redeployment"):
+                result = tool_vercel_redeploy()
+            print(f"\n{result}\n")
+        else:
+            print(f"  {C.R}Unknown Vercel command: {subcmd}{C.E}")
+            print(f"  {C.DIM}Available: projects, deployments, domains, env, deploy, redeploy{C.E}\n")
+
+    def _cmd_push(self, arg: str):
+        """Quick alias for github push."""
+        with Spinner("Pushing to GitHub", frames="dna"):
+            result = tool_github_push(message=arg if arg else None)
+        print(f"\n{result}\n")
 
     def _stream_response(self, text: str, delay: float = 0.008):
         """Stream text character by character for that CLI feel."""
