@@ -213,6 +213,12 @@ class LambdaPhiEngine:
         self.phi_threshold = PHI_THRESHOLD_FIDELITY
         self.gamma_critical = GAMMA_CRITICAL_RATE
         self.chi_pc = CHI_PC_QUALITY
+        # Aliases for test compatibility
+        self.THETA_LOCK_DEG = THETA_LOCK_DEG
+        self.LAMBDA_PHI_M = LAMBDA_PHI_M
+        self.PHI_THRESHOLD_FIDELITY = PHI_THRESHOLD_FIDELITY
+        self.GAMMA_CRITICAL_RATE = GAMMA_CRITICAL_RATE
+        self.theta = THETA_LOCK_DEG
     
     def calculate_resonance(self, frequency_hz: float) -> float:
         """Calculate geometric resonance factor"""

@@ -240,7 +240,7 @@ Result: Classical execution completed successfully.
     def get_stats(self) -> Dict[str, Any]:
         """Get agent execution statistics"""
         if not self.execution_history:
-            return {"total_executions": 0}
+            return {"total_executions": 0, "success_rate": 0.0}
         
         total = len(self.execution_history)
         successful = sum(1 for r in self.execution_history if r.success)

@@ -324,12 +324,15 @@ def _validate_experiment(event):
     record["above_threshold"] = phi >= PHI_THRESH
     record["is_coherent"] = gamma < GAMMA_CRIT
 
-    # Store in DynamoDB
+    # Store in DynamoDB (experiments table uses job_id + created_at)
     table_name = EXPERIMENTS_TABLE or TELEMETRY_TABLE
     if table_name:
         try:
             table = dynamodb.Table(table_name)
-            table.put_item(Item=_float_to_decimal(record))
+            ddb_item = _float_to_decimal(record)
+            ddb_item["job_id"] = experiment_id
+            ddb_item["created_at"] = timestamp
+            table.put_item(Item=ddb_item)
         except Exception as e:
             record["ddb_warning"] = str(e)
 
@@ -374,18 +377,25 @@ def _verify_experiment(event):
 
     try:
         table = dynamodb.Table(table_name)
-        resp = table.get_item(Key={"experiment_id": experiment_id})
+        # Query by job_id (hash key) since we store experiment_id as job_id
+        resp = table.query(
+            KeyConditionExpression=Key('job_id').eq(experiment_id),
+            ScanIndexForward=False,
+            Limit=1,
+        )
     except Exception as e:
         return _json_response(500, {"error": str(e)})
 
-    item = resp.get("Item")
-    if not item:
+    items = resp.get("Items", [])
+    if not items:
         return _json_response(404, {"error": f"Experiment {experiment_id} not found"})
 
+    item = items[0]
     integrity = item.get("integrity", {})
     stored_hash = integrity.get("record_hash", "")
 
-    verify_record = {k: v for k, v in item.items() if k != "integrity"}
+    verify_record = {k: v for k, v in item.items()
+                     if k not in ("integrity", "job_id", "created_at")}
     recomputed = _sign_record(_decimal_to_float(verify_record))
 
     return _json_response(200, {
