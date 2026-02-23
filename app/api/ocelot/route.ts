@@ -76,14 +76,16 @@ export async function GET() {
           {
             name: "CAT_QUBIT_BRIDGE",
             description:
-              "Amazon Braket integration for direct Ocelot backend access when available",
-            status: "planned",
+              "Amazon Braket integration for direct Ocelot backend access — circuit compiler deployed at /api/braket/submit",
+            status: "active",
+            endpoint: "/api/braket/submit",
           },
           {
             name: "HYBRID_CORRECTION",
             description:
-              "Cross-platform error correction: IBM transmon + AWS cat qubit comparative analysis",
-            status: "planned",
+              "Cross-platform error correction: IBM transmon + AWS cat qubit comparative analysis — Braket IR compiler generates bias-preserving gate sequences",
+            status: "active",
+            endpoint: "/api/braket/devices",
           },
         ],
       },

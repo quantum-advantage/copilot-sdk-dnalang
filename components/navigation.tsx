@@ -52,6 +52,7 @@ import {
   Lock,
   Microscope,
   Fingerprint,
+  Cloud,
 } from "lucide-react"
 
 const navGroups = [
@@ -242,6 +243,13 @@ const navGroups = [
         icon: Boxes,
         description: "Strategic Assets Dashboard",
         shortcut: "A R",
+      },
+      {
+        href: "/braket-integration",
+        label: "Braket Integration",
+        icon: Cloud,
+        description: "Amazon Braket × DNA-Lang",
+        shortcut: "A B",
       },
       {
         href: "/clinical-trials",

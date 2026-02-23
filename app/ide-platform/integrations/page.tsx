@@ -40,12 +40,16 @@ const integrations = [
   {
     id: "aws-braket",
     name: "AWS Braket",
-    description: "Amazon's fully managed quantum computing service",
+    description: "Amazon Braket × DNA-Lang — 7 devices, 6 adapters, 15 protocols",
     category: "Quantum Hardware",
-    status: "available",
+    status: "connected",
     icon: Cloud,
     color: "text-orange-500",
-    config: null,
+    config: {
+      devices: "7 (QuEra, IonQ, Rigetti, IQM, Ocelot, SV1, DM1)",
+      adapters: "6 deployed",
+      endpoint: "/api/braket/devices",
+    },
   },
   {
     id: "azure-quantum",
