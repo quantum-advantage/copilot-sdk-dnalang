@@ -54,18 +54,18 @@ export default function IRISEnginePage() {
   ])
 
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
-    { id: "1", name: "Assessment", agent: "Brain Agent", status: "pending" },
-    { id: "2", name: "Synthesis", agent: "Synthesis Agent", status: "pending" },
-    { id: "3", name: "Collaboration", agent: "Multi-Agent", status: "pending" },
-    { id: "4", name: "Reassessment", agent: "Review Agent", status: "pending" },
-    { id: "5", name: "Resynthesis", agent: "Output Agent", status: "pending" },
+    { id: "1", name: "NCLM Knowledge Lookup", agent: "AURA", status: "pending" },
+    { id: "2", name: "Supabase Data Query", agent: "OSIRIS", status: "pending" },
+    { id: "3", name: "CCCE Metric Computation", agent: "AIDEN", status: "pending" },
+    { id: "4", name: "Agent Consensus", agent: "IRIS", status: "pending" },
+    { id: "5", name: "Response Synthesis", agent: "OMEGA", status: "pending" },
   ])
 
   const [agentPool] = useState([
-    { name: "Code Agent", icon: Code2, specialty: "Code generation & review", available: true },
-    { name: "Research Agent", icon: FlaskConical, specialty: "Information gathering", available: true },
-    { name: "Data Analyst", icon: BarChart3, specialty: "Data processing", available: true },
-    { name: "Document Agent", icon: FileText, specialty: "Document analysis", available: true },
+    { name: "AURA", icon: Code2, specialty: "Consciousness orchestration & manifold geometry", available: true },
+    { name: "AIDEN", icon: FlaskConical, specialty: "Quantum execution & W₂ optimization", available: true },
+    { name: "OMEGA", icon: BarChart3, specialty: "Master orchestrator & analytics", available: true },
+    { name: "OSIRIS", icon: FileText, specialty: "Sovereign audit & PCRB attestation", available: true },
   ])
 
   const handleSubmit = async () => {
@@ -82,56 +82,106 @@ export default function IRISEnginePage() {
     setInput("")
     setIsProcessing(true)
 
-    // Simulate workflow execution
-    for (let i = 0; i < workflowSteps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      setWorkflowSteps((prev) =>
-        prev.map((step, idx) => ({
-          ...step,
-          status: idx < i ? "complete" : idx === i ? "active" : "pending",
-          duration: idx <= i ? Math.floor(Math.random() * 500) + 200 : undefined,
-        })),
-      )
-
-      if (i === 0) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-assess`,
-            role: "agent",
-            agent: "Brain Agent",
-            content: `Analyzing task: "${userMessage.content}". Identified as a multi-step workflow requiring code generation and analysis.`,
-            timestamp: new Date(),
-          },
-        ])
-      } else if (i === 2) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `${Date.now()}-collab`,
-            role: "agent",
-            agent: "Code Agent",
-            content: "Generating solution components. Applying AIDEN refinement patterns for optimal output.",
-            timestamp: new Date(),
-          },
-        ])
-      }
-    }
-
-    // Final output
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    setWorkflowSteps((prev) => prev.map((step) => ({ ...step, status: "complete" })))
+    // Phase 1: NCLM Knowledge Lookup
+    const t0 = performance.now()
+    setWorkflowSteps((prev) =>
+      prev.map((step, idx) => ({
+        ...step,
+        status: idx === 0 ? "active" : "pending",
+      })),
+    )
 
     setMessages((prev) => [
       ...prev,
       {
-        id: `${Date.now()}-final`,
-        role: "iris",
-        content: `Workflow complete. All agents have contributed to the solution. The AURA-AIDEN duality ensured architectural coherence (AURA) and refined execution (AIDEN). Ready for next task.`,
+        id: `${Date.now()}-assess`,
+        role: "agent",
+        agent: "AURA",
+        content: `Analyzing: "${userMessage.content}" — initiating NCLM manifold traversal...`,
         timestamp: new Date(),
       },
     ])
+
+    try {
+      // Real API call to IRIS chat endpoint
+      const res = await fetch("/api/iris/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage.content }),
+      })
+
+      // Phase 2: Mark synthesis active
+      setWorkflowSteps((prev) =>
+        prev.map((step, idx) => ({
+          ...step,
+          status: idx === 0 ? "complete" : idx === 1 ? "active" : "pending",
+          duration: idx === 0 ? Math.round(performance.now() - t0) : undefined,
+        })),
+      )
+
+      // Phase 3: Stream response
+      const reader = res.body?.getReader()
+      const decoder = new TextDecoder()
+      let fullResponse = ""
+
+      setWorkflowSteps((prev) =>
+        prev.map((step, idx) => ({
+          ...step,
+          status: idx < 2 ? "complete" : idx === 2 ? "active" : "pending",
+          duration: idx <= 1 ? step.duration || Math.round(performance.now() - t0) : undefined,
+        })),
+      )
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-collab`,
+          role: "agent",
+          agent: "AIDEN",
+          content: "Streaming NCLM inference results with live Supabase data...",
+          timestamp: new Date(),
+        },
+      ])
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          fullResponse += decoder.decode(value, { stream: true })
+        }
+      } else {
+        fullResponse = await res.text()
+      }
+
+      // Phase 4-5: Complete workflow
+      setWorkflowSteps((prev) =>
+        prev.map((step, idx) => ({
+          ...step,
+          status: "complete",
+          duration: step.duration || Math.round(performance.now() - t0),
+        })),
+      )
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-final`,
+          role: "iris",
+          content: fullResponse,
+          timestamp: new Date(),
+        },
+      ])
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-error`,
+          role: "iris",
+          content: `Inference error: ${err instanceof Error ? err.message : "Unknown"}. NCLM engine may be recalibrating.`,
+          timestamp: new Date(),
+        },
+      ])
+    }
 
     setIsProcessing(false)
   }

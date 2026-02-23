@@ -970,27 +970,41 @@ export default function DNANotebookPage() {
     setAuditLog(prev => [{ id: `audit-${Date.now()}`, timestamp: Date.now(), action, cellId, user: "sovereign@enki.bio" }, ...prev].slice(0, 50))
   }, [])
 
-  const runCell = useCallback((cellId: string) => {
+  const runCell = useCallback(async (cellId: string) => {
     setKernelStatus("busy")
     setCells(prev => prev.map(c => c.id === cellId ? { ...c, isRunning: true } : c))
     addAuditEntry("CELL_EXECUTE", cellId)
-    const delay = 800 + Math.random() * 2000
-    setTimeout(() => {
+    const cell = cells.find(c => c.id === cellId)
+    const t0 = performance.now()
+    try {
+      const res = await fetch("/api/notebook/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: cell?.content || "", language: cell?.detectedLang || "python", cellType: cell?.type }),
+      })
+      const data = await res.json()
+      const elapsed = Math.round(performance.now() - t0)
       const newCount = globalExecCount + 1
       setGlobalExecCount(newCount)
-      setCells(prev => prev.map(c => c.id !== cellId ? c : { ...c, isRunning: false, executionCount: newCount, executionTime: Math.round(delay) }))
-      setKernelStatus("idle")
-      addAuditEntry("CELL_COMPLETE", cellId)
-    }, delay)
-  }, [globalExecCount, addAuditEntry])
+      setCells(prev => prev.map(c => c.id !== cellId ? c : {
+        ...c,
+        isRunning: false,
+        executionCount: newCount,
+        executionTime: elapsed,
+        output: data.output || data.error || "Executed",
+      }))
+    } catch {
+      setCells(prev => prev.map(c => c.id !== cellId ? c : { ...c, isRunning: false, output: "Execution error — NCLM engine unavailable" }))
+    }
+    setKernelStatus("idle")
+    addAuditEntry("CELL_COMPLETE", cellId)
+  }, [globalExecCount, addAuditEntry, cells])
 
-  const runAllCells = useCallback(() => {
-    let delayAccum = 0
-    cells.filter(c => c.type !== "markdown").forEach((c) => {
-      const d = 600 + Math.random() * 1500
-      delayAccum += d
-      setTimeout(() => runCell(c.id), delayAccum)
-    })
+  const runAllCells = useCallback(async () => {
+    const codeCells = cells.filter(c => c.type !== "markdown")
+    for (const c of codeCells) {
+      await runCell(c.id)
+    }
   }, [cells, runCell])
 
   const addCell = useCallback((type: CellType) => {
