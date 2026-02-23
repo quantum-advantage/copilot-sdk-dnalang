@@ -56,6 +56,13 @@ IMMUTABLE_CONSTANTS = {
     "DRIVE_AMPLITUDE": 0.7734,
 }
 
+# AWS infrastructure
+AWS_REGION = "us-east-2"
+AWS_ACCOUNT_ID = "869935102268"
+AWS_S3_BUCKET = f"agile-defense-quantum-results-{AWS_ACCOUNT_ID}"
+AWS_DYNAMO_TABLE = "agile-defense-quantum-experiment-ledger"
+AWS_API_URL = "https://mwkeczoay4.execute-api.us-east-2.amazonaws.com"
+
 # ANSI colors
 class C:
     R  = "\033[91m";  G  = "\033[92m";  Y  = "\033[93m"
@@ -3306,6 +3313,158 @@ def tool_full_constellation() -> str:
     return "\n".join(lines)
 
 
+# ── AWS CLOUD OPERATIONS ─────────────────────────────────────────────────────
+
+def _aws_cmd(cmd: str) -> str:
+    """Run an AWS CLI command with pager disabled."""
+    env = os.environ.copy()
+    env["AWS_PAGER"] = ""
+    try:
+        r = subprocess.run(
+            cmd, shell=True, capture_output=True, text=True, timeout=30, env=env
+        )
+        return r.stdout.strip() if r.returncode == 0 else r.stderr.strip()
+    except Exception as e:
+        return str(e)
+
+
+def tool_aws_status() -> str:
+    """Show sovereign cloud infrastructure status."""
+    lines = [
+        f"  {C.H}╔══════════════════════════════════════════════╗{C.E}",
+        f"  {C.H}║   SOVEREIGN CLOUD — AWS Infrastructure       ║{C.E}",
+        f"  {C.H}╚══════════════════════════════════════════════╝{C.E}",
+        f"",
+        f"  {C.H}Region:{C.E}  {AWS_REGION}",
+        f"  {C.H}Account:{C.E} {AWS_ACCOUNT_ID}",
+        f"  {C.H}API:{C.E}     {AWS_API_URL}",
+        f"",
+    ]
+
+    # Check S3
+    s3_out = _aws_cmd(f"aws s3 ls s3://{AWS_S3_BUCKET}/ --recursive --summarize --region {AWS_REGION} 2>/dev/null | tail -3")
+    lines.append(f"  {C.H}S3 Bucket:{C.E} {AWS_S3_BUCKET}")
+    for line in s3_out.strip().split("\n"):
+        if line.strip():
+            lines.append(f"    {line.strip()}")
+
+    # Check DynamoDB
+    db_out = _aws_cmd(f"aws dynamodb scan --table-name {AWS_DYNAMO_TABLE} --select COUNT --region {AWS_REGION} --query 'Count' --output text 2>/dev/null")
+    lines.append(f"")
+    lines.append(f"  {C.H}DynamoDB:{C.E} {AWS_DYNAMO_TABLE}")
+    lines.append(f"    Experiments indexed: {C.G}{db_out}{C.E}")
+
+    # Check Lambda
+    lam_out = _aws_cmd(f"aws lambda list-functions --region {AWS_REGION} --query 'Functions[?starts_with(FunctionName,`agile-defense-quantum`)].FunctionName' --output text 2>/dev/null")
+    lines.append(f"")
+    lines.append(f"  {C.H}Lambda Functions:{C.E}")
+    for fn in lam_out.split():
+        lines.append(f"    {C.G}✓{C.E} {fn}")
+
+    # API test
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"{AWS_API_URL}/api/osiris/status", timeout=5) as resp:
+            data = json.loads(resp.read())
+            lines.append(f"")
+            lines.append(f"  {C.H}API Status:{C.E} {C.G}LIVE{C.E}")
+            lines.append(f"    Endpoints: {', '.join(data.get('endpoints', []))}" if 'endpoints' in data else f"    Status: {data.get('status', '?')}")
+    except Exception:
+        lines.append(f"")
+        lines.append(f"  {C.H}API Status:{C.E} {C.R}UNREACHABLE{C.E}")
+
+    lines.append(f"")
+    lines.append(f"  {C.DIM}Commands: /aws experiments · /aws upload <file> · /aws api{C.E}")
+    return "\n".join(lines)
+
+
+def tool_aws_experiments() -> str:
+    """List all experiments indexed in DynamoDB."""
+    try:
+        import urllib.request
+        with urllib.request.urlopen(f"{AWS_API_URL}/api/experiments", timeout=10) as resp:
+            data = json.loads(resp.read())
+    except Exception:
+        return f"  {C.R}Cannot reach API at {AWS_API_URL}{C.E}"
+
+    experiments = data.get("experiments", [])
+    lines = [
+        f"  {C.H}╔═══════════════════════════════════════════════╗{C.E}",
+        f"  {C.H}║   EXPERIMENT LEDGER — {len(experiments)} records              ║{C.E}",
+        f"  {C.H}╚═══════════════════════════════════════════════╝{C.E}",
+        f"",
+    ]
+    for exp in experiments:
+        backend = exp.get("backend", "?")
+        bcol = C.CY if "fez" in backend else C.M if "torino" in backend else C.Y if "marrakesh" in backend else C.G
+        lines.append(f"  {C.H}ID:{C.E} {exp.get('id', '?')}")
+        lines.append(f"    Protocol: {exp.get('protocol', '?')}")
+        lines.append(f"    Backend:  {bcol}{backend}{C.E}")
+        lines.append(f"    Time:     {exp.get('timestamp', '?')}")
+        lines.append(f"    Hash:     {C.DIM}{exp.get('integrity_hash', '?')}{C.E}")
+        lines.append(f"")
+    return "\n".join(lines)
+
+
+def tool_aws_upload(filepath: str) -> str:
+    """Upload an experiment result to S3 (auto-indexes via Lambda)."""
+    filepath = os.path.expanduser(filepath.strip())
+    if not os.path.isfile(filepath):
+        return f"  {C.R}File not found: {filepath}{C.E}"
+    fname = os.path.basename(filepath)
+    s3_key = f"experiments/{fname}"
+    out = _aws_cmd(f"aws s3 cp '{filepath}' 's3://{AWS_S3_BUCKET}/{s3_key}' --region {AWS_REGION}")
+    if "upload" in out.lower() or not out:
+        result = f"  {C.G}✓ Uploaded{C.E} {fname} → s3://{AWS_S3_BUCKET}/{s3_key}"
+        if fname.endswith(".json"):
+            result += f"\n  {C.CY}⚡ Lambda will auto-index to DynamoDB{C.E}"
+        return result
+    return f"  {C.R}Upload failed: {out}{C.E}"
+
+
+def tool_aws_api(args: str = "") -> str:
+    """Query OSIRIS API endpoints or show API reference."""
+    args = args.strip().lower()
+    endpoints = {
+        "status": "/api/osiris/status",
+        "metrics": "/api/ccce/metrics",
+        "experiments": "/api/experiments",
+    }
+
+    if args in endpoints:
+        url = f"{AWS_API_URL}{endpoints[args]}"
+    elif args.startswith("/"):
+        url = f"{AWS_API_URL}{args}"
+    else:
+        lines = [
+            f"  {C.H}╔═══════════════════════════════════════════════════════╗{C.E}",
+            f"  {C.H}║   OSIRIS QUANTUM API — Live Endpoints                ║{C.E}",
+            f"  {C.H}╚═══════════════════════════════════════════════════════╝{C.E}",
+            f"",
+            f"  {C.H}Base URL:{C.E} {C.CY}{AWS_API_URL}{C.E}",
+            f"",
+            f"  {C.G}GET {C.E} /api/osiris/status    Platform health + capabilities",
+            f"  {C.G}GET {C.E} /api/ccce/metrics      Real-time CCCE telemetry",
+            f"  {C.G}GET {C.E} /api/experiments        All indexed experiments",
+            f"  {C.M}POST{C.E} /api/nclm/infer        NC-LM inference",
+            f"  {C.M}POST{C.E} /api/attestation        SHA-256 attestation",
+            f"",
+            f"  {C.H}CORS:{C.E} Enabled (all origins)",
+            f"  {C.H}Auth:{C.E} Public (future: Kyber-1024 token auth)",
+            f"",
+            f"  {C.DIM}Usage: /aws api status · /aws api metrics · /aws api /api/ccce/metrics{C.E}",
+        ]
+        return "\n".join(lines)
+
+    try:
+        import urllib.request
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read())
+            return f"  {C.G}✓{C.E} {url}\n\n{json.dumps(data, indent=2, cls=type('DE', (json.JSONEncoder,), {'default': lambda s,o: float(o) if hasattr(o,'__float__') else str(o)}))}"
+    except Exception as e:
+        return f"  {C.R}API error: {e}{C.E}"
+
+
 # ── INTENT → TOOL DISPATCH ──────────────────────────────────────────────────
 
 def dispatch_tool(user_input: str) -> Optional[str]:
@@ -3439,6 +3598,23 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     if lower.startswith("agent "):
         rest = user_input.split(None, 1)[1].strip() if " " in user_input else ""
         return tool_agent_invoke(rest)
+
+    # ── AWS / CLOUD COMMANDS ──
+    if lower.startswith("aws ") or lower.startswith("cloud "):
+        rest = user_input.split(None, 1)[1].strip() if " " in user_input else ""
+        rest_lower = rest.lower()
+        if rest_lower.startswith("status") or rest_lower.startswith("info") or not rest:
+            return tool_aws_status()
+        elif rest_lower.startswith("experiment") or rest_lower.startswith("ledger"):
+            return tool_aws_experiments()
+        elif rest_lower.startswith("upload "):
+            filepath = rest.split(None, 1)[1] if " " in rest else ""
+            return tool_aws_upload(filepath)
+        elif rest_lower.startswith("api"):
+            api_args = rest.split(None, 1)[1] if " " in rest else ""
+            return tool_aws_api(api_args)
+        else:
+            return tool_aws_status()
 
     # Lab commands
     if lower.startswith("lab "):
