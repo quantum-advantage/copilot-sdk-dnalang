@@ -3568,6 +3568,26 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     if lower.startswith("git "):
         return tool_git(user_input[4:].strip())
     
+    # Diff
+    if lower == "diff" or lower.startswith("diff ") or lower.startswith("git diff"):
+        path = ""
+        if lower.startswith("diff "):
+            path = user_input[5:].strip()
+        elif lower.startswith("git diff"):
+            path = user_input[8:].strip()
+        return tool_diff(path)
+    
+    # Test
+    if lower == "test" or lower.startswith("test ") or lower.startswith("run tests"):
+        arg = ""
+        if lower.startswith("test "):
+            arg = user_input[5:].strip()
+        return tool_test(arg)
+    
+    # Profile / Who am I
+    if lower in ("profile", "whoami", "who am i", "identity"):
+        return tool_profile()
+    
     # Shell command (explicit)
     if lower.startswith("$ ") or lower.startswith("run "):
         cmd = user_input[2:].strip() if lower.startswith("$ ") else user_input[4:].strip()

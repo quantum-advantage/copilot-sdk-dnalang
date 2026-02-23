@@ -831,6 +831,8 @@ class NCLMChat:
             print(f"\n{result}\n")
         elif command == "/profile":
             print(f"\n{tool_profile()}\n")
+        elif command == "/whoami":
+            print(f"\n{tool_profile()}\n")
         # ── GITHUB + VERCEL (Generation 5.4) ──────────────
         elif command == "/github":
             self._cmd_github(arg)
