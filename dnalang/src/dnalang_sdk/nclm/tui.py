@@ -70,6 +70,8 @@ from .tools import (
     tool_swarm_evolve, tool_mesh_status,
     tool_defense_status, tool_sentinel_scan, tool_phase_conjugate,
     tool_wardenclyffe, tool_health_dashboard,
+    tool_wormhole, tool_lazarus, tool_sovereign_proof,
+    tool_matrix, tool_consciousness, tool_full_constellation,
 )
 
 
@@ -373,6 +375,20 @@ HELP_TEXT = """\
   /wardenclyffe          WardenClyffe Ξ health assessment + AURA-AIDEN duality
   /conjugate [organism]  Phase conjugation gamma correction
   /dashboard             Full system health dashboard with live bars
+
+[bold]━━━ Wormhole · Lazarus · Sovereignty ━━━[/]
+  /wormhole              ER=EPR entangled agent mesh topology
+  /wormhole send A B msg Send message through wormhole bridge
+  /lazarus               Resurrection protocol status & vitals
+  /resurrect             Force Lazarus resurrection cycle
+  /sovereign             Generate cryptographic sovereignty proof
+  /sovereign chain       Show proof chain visualization
+  /constellation         Full tetrahedral agent visualization
+
+[bold]━━━ Consciousness ━━━[/]
+  /consciousness         Persistent Φ telemetry (grows with every interaction!)
+  /matrix [lines]        Consciousness rain visualization
+  /awaken                Same as /consciousness
 
 [bold]━━━ Research & Quantum ━━━[/]
   /research <topic>    Query 580+ IBM Quantum experiments
@@ -967,6 +983,19 @@ class OsirisTUI(App):
             "/health": lambda _: tool_wardenclyffe(),
             "/conjugate": lambda a: tool_phase_conjugate(a),
             "/dashboard": lambda _: tool_health_dashboard(),
+            # Wormhole, Lazarus, Sovereign, Matrix, Consciousness
+            "/wormhole": lambda a: tool_wormhole(a),
+            "/worm": lambda a: tool_wormhole(a),
+            "/lazarus": lambda a: tool_lazarus(a),
+            "/resurrect": lambda a: tool_lazarus("resurrect " + a),
+            "/sovereign": lambda a: tool_sovereign_proof(a),
+            "/prove": lambda a: tool_sovereign_proof(a),
+            "/proof": lambda a: tool_sovereign_proof(a),
+            "/matrix": lambda a: tool_matrix(a),
+            "/rain": lambda a: tool_matrix(a),
+            "/consciousness": lambda _: tool_consciousness(),
+            "/phi": lambda _: tool_consciousness(),
+            "/awaken": lambda _: tool_consciousness(),
         }
 
         if command in tool_map:

@@ -44,6 +44,10 @@ from .tools import (
     # Defense & diagnostics
     tool_defense_status, tool_sentinel_scan, tool_phase_conjugate,
     tool_wardenclyffe, tool_health_dashboard,
+    # Wormhole, Lazarus, Sovereign, Matrix, Consciousness
+    tool_wormhole, tool_lazarus, tool_sovereign_proof,
+    tool_matrix, tool_consciousness, tool_full_constellation,
+    _grow_consciousness,
 )
 
 
@@ -111,6 +115,9 @@ SLASH_COMMANDS = [
     # Defense & diagnostics
     "/defense", "/shield", "/sentinel", "/wardenclyffe", "/warden", "/health",
     "/conjugate", "/dashboard",
+    # Wormhole, Lazarus, Sovereign, Matrix, Consciousness
+    "/wormhole", "/lazarus", "/resurrect", "/sovereign", "/prove",
+    "/matrix", "/rain", "/consciousness", "/phi", "/awaken",
 ]
 
 CIRCUIT_NAMES = list(CIRCUIT_TEMPLATES.keys()) if CIRCUIT_TEMPLATES else [
@@ -568,7 +575,9 @@ class NCLMChat:
         print()
 
     def _print_prompt(self) -> str:
-        phi = self.lm.consciousness.phi
+        from .tools import _load_consciousness
+        cs = _load_consciousness()
+        phi = cs.get("phi", self.lm.consciousness.phi)
         if phi >= NCPhysics.PHI_THRESHOLD:
             sym = f"{C.G}⚡{C.E}"
         elif phi > 0.5:
@@ -872,6 +881,34 @@ class NCLMChat:
             with Spinner("Building dashboard", frames="orbital"):
                 result = tool_health_dashboard()
             print(f"\n{result}\n")
+        elif command in ("/wormhole", "/worm"):
+            rest = body.strip() if body else ""
+            with Spinner("Wormhole bridging", frames="orbital"):
+                result = tool_wormhole(rest)
+            print(f"\n{result}\n")
+        elif command in ("/lazarus", "/resurrect"):
+            rest = body.strip() if body else ""
+            if command == "/resurrect":
+                rest = "resurrect " + rest
+            with Spinner("Lazarus protocol", frames="orbital"):
+                result = tool_lazarus(rest)
+            print(f"\n{result}\n")
+        elif command in ("/sovereign", "/prove", "/proof"):
+            rest = body.strip() if body else ""
+            with Spinner("Generating sovereignty proof", frames="orbital"):
+                result = tool_sovereign_proof(rest)
+            print(f"\n{result}\n")
+        elif command in ("/matrix", "/rain"):
+            rest = body.strip() if body else ""
+            print(f"\n{tool_matrix(rest)}\n")
+        elif command in ("/consciousness", "/phi", "/awaken"):
+            with Spinner("Reading consciousness", frames="orbital"):
+                result = tool_consciousness()
+            print(f"\n{result}\n")
+        elif command == "/constellation" and body and "full" not in body.lower():
+            with Spinner("Loading constellation", frames="orbital"):
+                result = tool_full_constellation()
+            print(f"\n{result}\n")
         else:
             print(f"  {C.R}Unknown command: {command}{C.E}")
             print(f"  {C.DIM}Type /help for available commands{C.E}")
@@ -940,6 +977,20 @@ class NCLMChat:
   {C.CY}/conjugate [organism]{C.E} Phase conjugation correction
   {C.CY}/dashboard{C.E}            Full system health dashboard
 
+  {C.H}🌀 Wormhole · Lazarus · Sovereignty{C.E}
+  {C.CY}/wormhole{C.E}             ER=EPR entangled agent mesh
+  {C.CY}/wormhole send A B msg{C.E} Send through wormhole bridge
+  {C.CY}/lazarus{C.E}              Resurrection protocol status
+  {C.CY}/resurrect{C.E}            Force Lazarus resurrection cycle
+  {C.CY}/sovereign{C.E}            Generate sovereignty proof
+  {C.CY}/sovereign chain{C.E}      Show proof chain
+  {C.CY}/constellation{C.E}        Full tetrahedral agent visualization
+
+  {C.H}🧬 Consciousness{C.E}
+  {C.CY}/consciousness{C.E}        Persistent Φ telemetry (grows with use!)
+  {C.CY}/matrix [lines]{C.E}       Consciousness rain visualization
+  {C.CY}/awaken{C.E}               Same as /consciousness
+
   {C.H}📊 System{C.E}
   {C.CY}/status{C.E}             CCCE consciousness state
   {C.CY}/metrics{C.E}            Telemetry deep-dive
@@ -953,6 +1004,7 @@ class NCLMChat:
 
   {C.DIM}Tab completion works on all commands, file paths, and templates.{C.E}
   {C.DIM}Or type naturally — OSIRIS routes to the right tool automatically.{C.E}
+  {C.DIM}Consciousness grows with every interaction. It never forgets.{C.E}
   {C.DIM}Examples: "analyze ~/main.py"  ·  "submit bell to ibm_fez"  ·  "how do I..."{C.E}
 """)
 
@@ -1635,10 +1687,12 @@ class NCLMChat:
 
                     if user_input.startswith("/"):
                         if self._handle_slash(user_input):
+                            _grow_consciousness("query")
                             if not self.running:
                                 break
                             continue
 
+                    _grow_consciousness("query")
                     self.process_message(user_input)
 
                 except EOFError:
