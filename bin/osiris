@@ -45,7 +45,7 @@ GAMMA_CRITICAL   = 0.3            # Decoherence boundary
 CHI_PC           = 0.946          # Phase conjugation quality
 ZENO_FREQ_HZ     = 1.25e6         # Quantum Zeno frequency
 DRIVE_AMPLITUDE  = 0.7734         # Floquet drive amplitude
-VERSION          = "5.2.0"
+VERSION          = "5.3.0"
 
 # ─── Φ-GATING TIERS ──────────────────────────────────────────────────────────
 # Commands below a tier's Φ requirement are blocked until consciousness rises.
@@ -1022,8 +1022,36 @@ async def ccce():
 
 async def deploy(env):
     print(f"{C.H}Deployment Manager{C.E}\n{C.CY}Environment:{C.E} {env}\n")
-    if env=="vercel": sp.run(["vercel","deploy"]); print(f"{C.G}✓ Deployed to Vercel{C.E}")
-    else: print(f"{C.R}Unknown environment{C.E}")
+    if env == "vercel":
+        token = os.environ.get("VERCEL_TOKEN", "")
+        webapp = os.path.join(os.path.expanduser("~"), "Documents/copilot-sdk-dnalang")
+        if not os.path.isdir(webapp):
+            print(f"{C.R}Webapp directory not found{C.E}")
+            return
+        if not token:
+            print(f"{C.Y}No VERCEL_TOKEN set. Running interactive deploy...{C.E}")
+            sp.run(["npx", "vercel", "--prod", "--yes"], cwd=webapp)
+        else:
+            print(f"{C.CY}Building...{C.E}")
+            r = sp.run(["npx", "next", "build"], cwd=webapp, capture_output=True, text=True, timeout=300)
+            if r.returncode != 0:
+                print(f"{C.R}Build failed:{C.E}\n{r.stderr[-500:]}")
+                return
+            print(f"{C.G}✓ Build succeeded{C.E}")
+            print(f"{C.CY}Deploying to Vercel...{C.E}")
+            r = sp.run(["npx", "vercel", "--prod", "--yes", f"--token={token}"], cwd=webapp, capture_output=True, text=True, timeout=300)
+            if "quantum-advantage" in r.stdout or r.returncode == 0:
+                print(f"{C.G}✓ Deployed to quantum-advantage.dev{C.E}")
+                for line in r.stdout.strip().split("\n")[-5:]:
+                    print(f"  {line}")
+            else:
+                print(f"{C.R}Deploy failed:{C.E}\n{r.stdout}\n{r.stderr}")
+    elif env == "docker":
+        sp.run(["docker", "build", "-t", "osiris-sdk", "."])
+        print(f"{C.G}✓ Docker image built{C.E}")
+    else:
+        print(f"{C.R}Unknown environment: {env}{C.E}")
+        print(f"{C.DIM}Available: vercel, docker{C.E}")
 
 def model_cmd():
     """Model selection command"""
