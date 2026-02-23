@@ -401,7 +401,7 @@ class NCLMChat:
         os.makedirs(os.path.dirname(self.HISTORY_FILE), exist_ok=True)
         try:
             readline.read_history_file(self.HISTORY_FILE)
-        except FileNotFoundError:
+        except (FileNotFoundError, PermissionError, OSError):
             pass
         readline.set_history_length(2000)
         readline.set_completer(_completer)
