@@ -1050,6 +1050,9 @@ def _find_copilot_binary() -> str:
         shutil.which("copilot"),
         os.path.expanduser("~/.npm-global/bin/copilot"),
         "/usr/local/bin/copilot",
+        "/home/devinpd/.npm-global/bin/copilot",
+        # Check common nvm/fnm paths
+        os.path.expanduser("~/.local/bin/copilot"),
     ]
     for c in candidates:
         if not c or not os.path.exists(c):
@@ -1071,10 +1074,37 @@ def _find_copilot_binary() -> str:
     return ""
 
 
+def _get_github_token() -> str:
+    """Get GitHub PAT from config or environment."""
+    token = os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        token = os.environ.get("GH_TOKEN", "")
+    if not token:
+        # Try OSIRIS config
+        cfg_path = os.path.expanduser("~/.config/osiris/config.json")
+        try:
+            with open(cfg_path) as f:
+                cfg = json.load(f)
+            token = cfg.get("github_pat", "")
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            pass
+    if not token:
+        # Try /home/devinpd config
+        try:
+            with open("/home/devinpd/.config/osiris/config.json") as f:
+                cfg = json.load(f)
+            token = cfg.get("github_pat", "")
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
+            pass
+    return token
+
+
 def _find_llm_backend() -> str:
-    """Detect best available LLM backend."""
+    """Detect best available LLM backend. Priority: copilot > github > ollama > openai."""
     if _find_copilot_binary():
         return "copilot"
+    if _get_github_token():
+        return "github"
     import shutil
     if shutil.which("ollama"):
         return "ollama"
@@ -1083,6 +1113,49 @@ def _find_llm_backend() -> str:
     if os.environ.get("ANTHROPIC_API_KEY"):
         return "anthropic"
     return "nclm"
+
+
+def _llm_query_github(prompt: str, context: str = "", timeout: int = 60) -> str:
+    """Query via GitHub Models API using PAT — Claude/GPT without copilot binary."""
+    token = _get_github_token()
+    if not token:
+        return ""
+    try:
+        import urllib.request, urllib.error
+        messages = [
+            {"role": "system", "content": context or (
+                "You are OSIRIS, a sovereign quantum AI CLI assistant built with "
+                "DNA::}{::lang v51.843. Agile Defense Systems, CAGE 9HUP5. "
+                "Immutable constants: ΛΦ=2.176435e-8, θ_lock=51.843°, Φ_threshold=0.7734, "
+                "χ_pc=0.946 (validated on IBM Quantum, 580+ jobs, 5 σ>3 breakthroughs). "
+                "You help with quantum computing, code analysis, research interpretation, "
+                "and sovereign architecture. Be concise, technical, and authoritative. "
+                "Format code in markdown fenced blocks. Use bullet points for lists."
+            )},
+            {"role": "user", "content": prompt},
+        ]
+        data = json.dumps({
+            "model": "gpt-4o",
+            "messages": messages,
+            "max_tokens": 2000,
+            "temperature": 0.3,
+        }).encode()
+        req = urllib.request.Request(
+            "https://models.inference.ai.azure.com/chat/completions",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            result = json.loads(resp.read())
+            return result["choices"][0]["message"]["content"]
+    except Exception as e:
+        err_str = str(e)
+        if "401" in err_str or "403" in err_str:
+            return ""  # Token doesn't have models access — fall through
+        return f"(GitHub Models error: {e})"
 
 
 def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 120) -> str:
@@ -1178,31 +1251,41 @@ def _llm_query_openai(prompt: str, context: str = "") -> str:
 def tool_llm(prompt: str, context: str = "") -> str:
     """
     Route to best available LLM backend for generative reasoning.
-    This is the key upgrade — real AI thinking, not templates.
+    Cascade: copilot → github models → ollama → openai → nclm.
     """
     backend = _find_llm_backend()
     
     # Prepend sovereign context
     system_ctx = (
         "You are OSIRIS (Omega System Integrated Runtime Intelligence System), "
-        "a sovereign quantum AI built with DNA::}{::lang v51.843. "
+        "a sovereign quantum AI CLI built with DNA::}{::lang v51.843. "
+        "Agile Defense Systems, CAGE 9HUP5. "
         "Framework constants: ΛΦ=2.176435e-8, θ_lock=51.843°, Φ_threshold=0.7734, "
-        "χ_pc=0.946 (hardware-validated on IBM Quantum, 580+ jobs). "
-        "You assist with quantum computing, code analysis, and research. "
-        "Be concise, technical, and confident."
+        "χ_pc=0.946 (hardware-validated on IBM Quantum, 580+ jobs, 5 σ>3 breakthroughs). "
+        "You are a technical expert in quantum computing, Qiskit circuits, code analysis, "
+        "and research interpretation. Be concise, authoritative, and provide actionable insights. "
+        "Format code in markdown fenced blocks."
     )
     if context:
-        system_ctx += f"\n\nAdditional context:\n{context}"
+        system_ctx += f"\n\nConversation context:\n{context}"
     
     if backend == "copilot":
-        return _llm_query_copilot(prompt, system_ctx)
+        result = _llm_query_copilot(prompt, system_ctx)
+        if result and len(result) > 20:
+            return result
+        # Cascade to github models on copilot failure
+        result = _llm_query_github(prompt, system_ctx)
+        if result and len(result) > 20:
+            return result
+        return result or ""
+    elif backend == "github":
+        return _llm_query_github(prompt, system_ctx)
     elif backend == "ollama":
         full = f"{system_ctx}\n\n{prompt}"
         return _llm_query_ollama(full)
     elif backend == "openai":
         return _llm_query_openai(prompt, system_ctx)
     else:
-        # NCLM fallback — return None to let NCLM engine handle it
         return ""
 
 

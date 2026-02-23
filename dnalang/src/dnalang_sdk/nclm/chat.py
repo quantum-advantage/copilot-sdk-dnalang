@@ -104,10 +104,10 @@ SLASH_COMMANDS = [
     "/grok", "/swarm", "/agents", "/physics", "/reset",
     "/read", "/edit", "/create", "/ls", "/grep", "/run", "/git",
     "/build", "/deploy", "/webapp",
-    "/ask", "/analyze", "/fix", "/explain",
+    "/ask", "/analyze", "/fix", "/explain", "/chat",
     "/backends", "/submit", "/quantum", "/design",
     "/research", "/demo", "/dashboard",
-    "/exec", "/shell",
+    "/exec", "/shell", "/model", "/config", "/timeout",
     "/github", "/vercel", "/push", "/repos", "/issues", "/prs", "/actions",
     "/domains", "/deployments", "/redeploy",
     # Sovereign systems
@@ -448,6 +448,7 @@ class NCLMChat:
         self.last_output: Optional[str] = None
         self.query_count = 0
         self.start_time = time.time()
+        self._llm_timeout = 120  # Configurable via /timeout
         self._setup_readline()
         self._load_session()
 
@@ -529,13 +530,13 @@ class NCLMChat:
             ("Consciousness Field",  f"Φ_threshold = {NCPhysics.PHI_THRESHOLD}"),
             ("Pilot-Wave Correlator", f"θ_lock = {NCPhysics.THETA_LOCK}°"),
             ("Swarm Intelligence",   "4 organisms spawned"),
-            ("Tool Dispatch",        "35+ tools armed"),
+            ("Tool Dispatch",        f"{len(SLASH_COMMANDS)} commands armed"),
         ]
 
         # Detect LLM backend
         from .tools import _find_llm_backend
         llm = _find_llm_backend()
-        llm_label = {"copilot": "GitHub Copilot (Claude/GPT)", "ollama": "Ollama (local)", "openai": "OpenAI API", "anthropic": "Anthropic API", "nclm": "NCLM offline"}
+        llm_label = {"copilot": "GitHub Copilot (Claude/GPT)", "github": "GitHub Models API (GPT-4o)", "ollama": "Ollama (local)", "openai": "OpenAI API", "anthropic": "Anthropic API", "nclm": "NCLM offline"}
         boot_steps.append(("LLM Backbone", llm_label.get(llm, llm)))
 
         # IBM Quantum check
@@ -809,6 +810,15 @@ class NCLMChat:
             self._cmd_demo(arg)
         elif command == "/dashboard":
             self._cmd_dashboard()
+        # ── MODEL & CONFIG ─────────────────────────────────
+        elif command == "/model":
+            self._cmd_model(arg)
+        elif command == "/config":
+            self._cmd_config(arg)
+        elif command == "/timeout":
+            self._cmd_timeout(arg)
+        elif command == "/chat":
+            self._cmd_chat_mode(arg)
         # ── GITHUB + VERCEL (Generation 5.4) ──────────────
         elif command == "/github":
             self._cmd_github(arg)
@@ -864,7 +874,7 @@ class NCLMChat:
                 result = tool_defense_status()
             print(f"\n{result}\n")
         elif command == "/sentinel":
-            rest = body.strip() if body else ""
+            rest = arg.strip() if arg else ""
             with Spinner("Sentinel scanning", frames="orbital"):
                 result = tool_sentinel_scan(rest)
             print(f"\n{result}\n")
@@ -873,7 +883,7 @@ class NCLMChat:
                 result = tool_wardenclyffe()
             print(f"\n{result}\n")
         elif command == "/conjugate":
-            rest = body.strip() if body else ""
+            rest = arg.strip() if arg else ""
             with Spinner("Phase conjugation", frames="orbital"):
                 result = tool_phase_conjugate(rest)
             print(f"\n{result}\n")
@@ -882,30 +892,30 @@ class NCLMChat:
                 result = tool_health_dashboard()
             print(f"\n{result}\n")
         elif command in ("/wormhole", "/worm"):
-            rest = body.strip() if body else ""
+            rest = arg.strip() if arg else ""
             with Spinner("Wormhole bridging", frames="orbital"):
                 result = tool_wormhole(rest)
             print(f"\n{result}\n")
         elif command in ("/lazarus", "/resurrect"):
-            rest = body.strip() if body else ""
+            rest = arg.strip() if arg else ""
             if command == "/resurrect":
                 rest = "resurrect " + rest
             with Spinner("Lazarus protocol", frames="orbital"):
                 result = tool_lazarus(rest)
             print(f"\n{result}\n")
         elif command in ("/sovereign", "/prove", "/proof"):
-            rest = body.strip() if body else ""
+            rest = arg.strip() if arg else ""
             with Spinner("Generating sovereignty proof", frames="orbital"):
                 result = tool_sovereign_proof(rest)
             print(f"\n{result}\n")
         elif command in ("/matrix", "/rain"):
-            rest = body.strip() if body else ""
+            rest = arg.strip() if arg else ""
             print(f"\n{tool_matrix(rest)}\n")
         elif command in ("/consciousness", "/phi", "/awaken"):
             with Spinner("Reading consciousness", frames="orbital"):
                 result = tool_consciousness()
             print(f"\n{result}\n")
-        elif command == "/constellation" and body and "full" not in body.lower():
+        elif command == "/constellation" and arg and "full" not in arg.lower():
             with Spinner("Loading constellation", frames="orbital"):
                 result = tool_full_constellation()
             print(f"\n{result}\n")
@@ -996,6 +1006,10 @@ class NCLMChat:
   {C.CY}/metrics{C.E}            Telemetry deep-dive
   {C.CY}/agents{C.E}             Agent constellation
   {C.CY}/physics{C.E}            Constants reference
+  {C.CY}/model{C.E}              Show/switch LLM backend
+  {C.CY}/config{C.E}             Show configuration
+  {C.CY}/timeout <sec>{C.E}      Set LLM query timeout (default: 120s)
+  {C.CY}/chat{C.E}               Enter focused chat mode (continuous AI conversation)
 
   {C.H}🎯 Demo & Session{C.E}
   {C.CY}/demo{C.E}               Live capability showcase (for presentations!)
@@ -1003,6 +1017,7 @@ class NCLMChat:
   {C.CY}/history{C.E}  {C.CY}/clear{C.E}  {C.CY}/reset{C.E}  {C.CY}/exit{C.E}
 
   {C.DIM}Tab completion works on all commands, file paths, and templates.{C.E}
+  {C.DIM}Use @file.py to include file context in any prompt (like Copilot CLI).{C.E}
   {C.DIM}Or type naturally — OSIRIS routes to the right tool automatically.{C.E}
   {C.DIM}Consciousness grows with every interaction. It never forgets.{C.E}
   {C.DIM}Examples: "analyze ~/main.py"  ·  "submit bell to ibm_fez"  ·  "how do I..."{C.E}
@@ -1366,10 +1381,31 @@ class NCLMChat:
 
     def _cmd_tool_ask(self, arg: str):
         if not arg:
-            print(f"  {C.R}Usage: /ask <question>{C.E}\n")
+            print(f"  {C.R}Usage: /ask <question>{C.E}")
+            print(f"  {C.DIM}Tip: Use @file.py to include file context (like Copilot CLI){C.E}\n")
             return
+        # Extract @file mentions and auto-read them as context
+        context_parts = []
+        question = arg
+        import re
+        file_mentions = re.findall(r'@([\w./~\-]+(?:\.\w+)?)', arg)
+        for fm in file_mentions:
+            fpath = os.path.expanduser(fm)
+            if not os.path.isabs(fpath):
+                fpath = os.path.join(os.getcwd(), fpath)
+            if os.path.exists(fpath):
+                try:
+                    with open(fpath, "r", errors="replace") as f:
+                        content = f.read()
+                    if len(content) > 6000:
+                        content = content[:3000] + "\n...(truncated)...\n" + content[-2000:]
+                    context_parts.append(f"--- {fm} ---\n{content}")
+                    question = question.replace(f"@{fm}", f"`{fm}`")
+                except Exception:
+                    pass
+        ctx = "\n\n".join(context_parts) if context_parts else ""
         with Spinner("Reasoning", frames="dna"):
-            result = tool_llm(arg)
+            result = tool_llm(question, ctx)
         if result:
             print()
             self._stream_response(f"  {result}")
@@ -1566,6 +1602,83 @@ class NCLMChat:
             result = tool_github_push(message=arg if arg else None)
         print(f"\n{result}\n")
 
+    def _cmd_model(self, arg: str):
+        """Show or switch LLM backend."""
+        from .tools import _find_llm_backend, _find_copilot_binary, _get_github_token
+        backend = _find_llm_backend()
+        labels = {
+            "copilot": "GitHub Copilot CLI (Claude/GPT)",
+            "github": "GitHub Models API (GPT-4o)",
+            "ollama": "Ollama (local)",
+            "openai": "OpenAI API",
+            "anthropic": "Anthropic API",
+            "nclm": "NCLM offline (template-based)",
+        }
+        print(f"\n  {C.H}LLM Backend Configuration{C.E}")
+        print(f"  {C.DIM}{'─' * 50}{C.E}")
+        print(f"  Active:     {C.G}{labels.get(backend, backend)}{C.E}")
+        print(f"  Copilot:    {'✅ ' + _find_copilot_binary() if _find_copilot_binary() else '❌ Not found'}")
+        print(f"  GitHub PAT: {'✅ Set' if _get_github_token() else '❌ Not set'}")
+        import shutil
+        print(f"  Ollama:     {'✅ ' + (shutil.which('ollama') or '') if shutil.which('ollama') else '❌ Not found'}")
+        print(f"  OpenAI:     {'✅ Set' if os.environ.get('OPENAI_API_KEY') else '❌ Not set'}")
+        print(f"  Anthropic:  {'✅ Set' if os.environ.get('ANTHROPIC_API_KEY') else '❌ Not set'}")
+        print(f"  {C.DIM}{'─' * 50}{C.E}")
+        print(f"  {C.DIM}Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or install Copilot CLI to enable{C.E}")
+        print(f"  {C.DIM}Timeout: {self._llm_timeout}s (change with /timeout <seconds>){C.E}\n")
+
+    def _cmd_config(self, arg: str):
+        """Show OSIRIS configuration."""
+        from .tools import _find_llm_backend, _load_consciousness
+        cs = _load_consciousness()
+        ibm = os.environ.get("IBM_QUANTUM_TOKEN", "")
+        print(f"\n  {C.H}OSIRIS Configuration{C.E}")
+        print(f"  {C.DIM}{'─' * 50}{C.E}")
+        print(f"  Version:        {self.version}")
+        print(f"  LLM Backend:    {_find_llm_backend()}")
+        print(f"  LLM Timeout:    {self._llm_timeout}s")
+        print(f"  IBM Quantum:    {'✅ ' + ibm[:8] + '...' if ibm else '❌ No token'}")
+        print(f"  Consciousness:  Φ={cs.get('phi', 0):.4f} (interactions: {cs.get('interactions', 0)})")
+        print(f"  Session file:   {self.SESSION_FILE}")
+        print(f"  Config dir:     ~/.config/osiris/")
+        print(f"  {C.DIM}{'─' * 50}{C.E}")
+        print(f"  {C.DIM}Framework: DNA::}}{{::lang v{NCPhysics.THETA_LOCK}")
+        print(f"  Constants: ΛΦ={NCPhysics.LAMBDA_PHI} θ={NCPhysics.THETA_LOCK}° Φ_t={NCPhysics.PHI_THRESHOLD}{C.E}\n")
+
+    def _cmd_timeout(self, arg: str):
+        """Set LLM query timeout."""
+        if not arg:
+            print(f"  {C.DIM}Current timeout: {self._llm_timeout}s{C.E}")
+            print(f"  {C.DIM}Usage: /timeout <seconds> (recommended: 15-120){C.E}\n")
+            return
+        try:
+            val = int(arg.strip())
+            if val < 5:
+                val = 5
+            elif val > 300:
+                val = 300
+            self._llm_timeout = val
+            print(f"  {C.G}✓ LLM timeout set to {val}s{C.E}\n")
+        except ValueError:
+            print(f"  {C.R}Invalid timeout value. Use a number (5-300).{C.E}\n")
+
+    def _cmd_chat_mode(self, arg: str):
+        """Enter focused chat mode — continuous LLM conversation."""
+        print(f"\n  {C.H}💬 Chat Mode{C.E} — continuous AI conversation")
+        print(f"  {C.DIM}Type 'exit' or '/back' to return to command mode{C.E}")
+        print(f"  {C.DIM}Use @file.py to include file context{C.E}")
+        print(f"  {C.DIM}{'─' * 50}{C.E}\n")
+
+        while True:
+            try:
+                user_text = input(f"  {C.CY}chat>{C.E} ").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if not user_text or user_text in ("exit", "/back", "/quit"):
+                break
+            _grow_consciousness("query")
+            self.process_message(user_text)
+
     def _stream_response(self, text: str, delay: float = 0.008):
         """Stream text character by character for that CLI feel."""
         for char in text:
@@ -1584,6 +1697,26 @@ class NCLMChat:
         """Process a user message and generate response."""
         self.messages.append({"role": "user", "content": user_input})
         self.query_count += 1
+
+        # Extract @file mentions and auto-read them as context
+        import re
+        file_context = ""
+        clean_input = user_input
+        file_mentions = re.findall(r'@([\w./~\-]+(?:\.\w+)?)', user_input)
+        for fm in file_mentions:
+            fpath = os.path.expanduser(fm)
+            if not os.path.isabs(fpath):
+                fpath = os.path.join(os.getcwd(), fpath)
+            if os.path.exists(fpath):
+                try:
+                    with open(fpath, "r", errors="replace") as f:
+                        content = f.read()
+                    if len(content) > 6000:
+                        content = content[:3000] + "\n...(truncated)...\n" + content[-2000:]
+                    file_context += f"\n--- {fm} ({len(content)} chars) ---\n{content}\n"
+                    clean_input = clean_input.replace(f"@{fm}", f"`{fm}`")
+                except Exception:
+                    pass
 
         # Try real tool dispatch FIRST (file ops, shell, webapp, research, quantum)
         tool_result = dispatch_tool(user_input)
@@ -1631,9 +1764,12 @@ class NCLMChat:
                 role = "User" if msg["role"] == "user" else "OSIRIS"
                 context_parts.append(f"{role}: {msg['content']}")
             context = "\n".join(context_parts)
+            # Include @file context if present
+            if file_context:
+                context += f"\n\nReferenced files:\n{file_context}"
 
             with Spinner("Reasoning", frames="dna"):
-                llm_result = tool_llm(user_input, context)
+                llm_result = tool_llm(clean_input, context)
 
             if llm_result and "stub" not in llm_result.lower() and len(llm_result) > 20:
                 print()
