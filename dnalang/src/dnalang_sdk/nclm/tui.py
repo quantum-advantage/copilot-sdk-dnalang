@@ -68,6 +68,8 @@ from .tools import (
     tool_agent_invoke,
     tool_lab_scan, tool_lab_list, tool_lab_design, tool_lab_run,
     tool_swarm_evolve, tool_mesh_status,
+    tool_defense_status, tool_sentinel_scan, tool_phase_conjugate,
+    tool_wardenclyffe, tool_health_dashboard,
 )
 
 
@@ -364,6 +366,13 @@ HELP_TEXT = """\
   /swarm evolve [cycles] [nodes]  NCLM swarm evolution (7-layer CRSM)
   /mesh                  Show constellation/mesh status
   /constellation         Same as /mesh
+
+[bold]━━━ Defense & Diagnostics ━━━[/]
+  /defense               Defense subsystem status (Sentinel/PhaseConj/ZeroTrust)
+  /sentinel [organism]   Threat scan on organism
+  /wardenclyffe          WardenClyffe Ξ health assessment + AURA-AIDEN duality
+  /conjugate [organism]  Phase conjugation gamma correction
+  /dashboard             Full system health dashboard with live bars
 
 [bold]━━━ Research & Quantum ━━━[/]
   /research <topic>    Query 580+ IBM Quantum experiments
@@ -949,6 +958,15 @@ class OsirisTUI(App):
             ),
             "/mesh": lambda _: tool_mesh_status(),
             "/constellation": lambda _: tool_mesh_status(),
+            # Defense & diagnostics
+            "/defense": lambda _: tool_defense_status(),
+            "/shield": lambda _: tool_defense_status(),
+            "/sentinel": lambda a: tool_sentinel_scan(a),
+            "/wardenclyffe": lambda _: tool_wardenclyffe(),
+            "/warden": lambda _: tool_wardenclyffe(),
+            "/health": lambda _: tool_wardenclyffe(),
+            "/conjugate": lambda a: tool_phase_conjugate(a),
+            "/dashboard": lambda _: tool_health_dashboard(),
         }
 
         if command in tool_map:

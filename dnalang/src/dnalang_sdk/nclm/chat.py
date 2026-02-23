@@ -41,6 +41,9 @@ from .tools import (
     tool_agent_invoke,
     tool_lab_scan, tool_lab_list, tool_lab_design, tool_lab_run,
     tool_swarm_evolve, tool_mesh_status,
+    # Defense & diagnostics
+    tool_defense_status, tool_sentinel_scan, tool_phase_conjugate,
+    tool_wardenclyffe, tool_health_dashboard,
 )
 
 
@@ -105,6 +108,9 @@ SLASH_COMMANDS = [
     "/domains", "/deployments", "/redeploy",
     # Sovereign systems
     "/organism", "/org", "/circuit", "/agent", "/lab", "/mesh", "/constellation",
+    # Defense & diagnostics
+    "/defense", "/shield", "/sentinel", "/wardenclyffe", "/warden", "/health",
+    "/conjugate", "/dashboard",
 ]
 
 CIRCUIT_NAMES = list(CIRCUIT_TEMPLATES.keys()) if CIRCUIT_TEMPLATES else [
@@ -844,6 +850,28 @@ class NCLMChat:
             with Spinner("Loading mesh status", frames="orbital"):
                 result = tool_mesh_status()
             print(f"\n{result}\n")
+        elif command in ("/defense", "/shield"):
+            with Spinner("Checking defenses", frames="orbital"):
+                result = tool_defense_status()
+            print(f"\n{result}\n")
+        elif command == "/sentinel":
+            rest = body.strip() if body else ""
+            with Spinner("Sentinel scanning", frames="orbital"):
+                result = tool_sentinel_scan(rest)
+            print(f"\n{result}\n")
+        elif command in ("/wardenclyffe", "/warden", "/health"):
+            with Spinner("WardenClyffe assessing", frames="orbital"):
+                result = tool_wardenclyffe()
+            print(f"\n{result}\n")
+        elif command == "/conjugate":
+            rest = body.strip() if body else ""
+            with Spinner("Phase conjugation", frames="orbital"):
+                result = tool_phase_conjugate(rest)
+            print(f"\n{result}\n")
+        elif command == "/dashboard":
+            with Spinner("Building dashboard", frames="orbital"):
+                result = tool_health_dashboard()
+            print(f"\n{result}\n")
         else:
             print(f"  {C.R}Unknown command: {command}{C.E}")
             print(f"  {C.DIM}Type /help for available commands{C.E}")
@@ -905,8 +933,14 @@ class NCLMChat:
   {C.CY}/swarm evolve [n]{C.E}      NCLM swarm evolution
   {C.CY}/mesh{C.E}                  Mesh constellation status
 
+  {C.H}🛡 Defense & Diagnostics{C.E}
+  {C.CY}/defense{C.E}              Defense subsystem status
+  {C.CY}/sentinel [organism]{C.E}  Threat scan on organism
+  {C.CY}/wardenclyffe{C.E}         WardenClyffe Ξ health assessment
+  {C.CY}/conjugate [organism]{C.E} Phase conjugation correction
+  {C.CY}/dashboard{C.E}            Full system health dashboard
+
   {C.H}📊 System{C.E}
-  {C.CY}/dashboard{C.E}          Full system metrics dashboard
   {C.CY}/status{C.E}             CCCE consciousness state
   {C.CY}/metrics{C.E}            Telemetry deep-dive
   {C.CY}/agents{C.E}             Agent constellation
