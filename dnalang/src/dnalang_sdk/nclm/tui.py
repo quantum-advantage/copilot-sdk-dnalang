@@ -328,6 +328,8 @@ HELP_TEXT = """\
 
 [bold]━━━ Chat Commands ━━━[/]
   Just type naturally — AI reasoning via {backend}
+  /chat <prompt>       Force LLM reasoning (skip tool dispatch)
+  /ask <question>      Same as /chat — direct AI query
   /help                Show this help
   /clear               Clear chat history
   /demo                Live capability showcase
@@ -772,6 +774,27 @@ class OsirisTUI(App):
             self._handle_memory(arg)
             return
 
+        # /chat and /ask — force LLM reasoning (bypass tool dispatch)
+        if command in ("/chat", "/ask"):
+            if not arg:
+                chat.write(Text(f"Usage: {command} <your question or prompt>", style="yellow"))
+                return
+            # Show user message inline
+            user_msg = Text()
+            user_msg.append(f"\n  You  ", style="bold green on rgb(20,40,20)")
+            user_msg.append(f" {'─' * 50}", style="dim green")
+            chat.write(user_msg)
+            chat.write(Text(f"  {arg}", style="green"))
+            self.messages.append({"role": "user", "content": arg})
+            self.memory.add(arg, "user_query")
+            self.telemetry.queries += 1
+            self.bus.emit("llm.force_query", {"cmd": command, "input": arg})
+            events.write(Text(f"LLM direct → {self.telemetry.llm_backend}", style="cyan"))
+            thinking = Text("  ⚛ Reasoning...", style="bold magenta italic")
+            chat.write(thinking)
+            self._run_llm(arg)
+            return
+
         # Tool-dispatched commands
         tool_map = {
             "/research": lambda a: tool_research_query(a or "breakthroughs"),
@@ -965,9 +988,9 @@ class OsirisTUI(App):
 
         t0 = time.time()
 
-        # Build context from recent messages
+        # Build context from recent messages (12-turn window for complex prompts)
         context_parts = []
-        for msg in self.messages[-8:]:
+        for msg in self.messages[-12:]:
             role = "User" if msg["role"] == "user" else "OSIRIS"
             context_parts.append(f"{role}: {msg['content']}")
         context = "\n".join(context_parts)

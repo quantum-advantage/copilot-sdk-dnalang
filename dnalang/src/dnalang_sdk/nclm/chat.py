@@ -1432,7 +1432,7 @@ class NCLMChat:
         if llm_backend != "nclm":
             # Real LLM available — use it for genuine AI responses
             context_parts = []
-            for msg in self.messages[-6:]:
+            for msg in self.messages[-12:]:
                 role = "User" if msg["role"] == "user" else "OSIRIS"
                 context_parts.append(f"{role}: {msg['content']}")
             context = "\n".join(context_parts)

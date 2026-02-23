@@ -1085,8 +1085,12 @@ def _find_llm_backend() -> str:
     return "nclm"
 
 
-def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 90) -> str:
-    """Query via copilot binary (Claude/GPT backend)."""
+def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 120) -> str:
+    """Query via copilot binary (Claude/GPT backend).
+    
+    Default timeout raised to 120s — complex multi-sentence prompts and
+    code analysis requests routinely take 30-60s on the copilot backend.
+    """
     copilot = _find_copilot_binary()
     if not copilot:
         return ""
@@ -1095,29 +1099,43 @@ def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 90) -> str
     if context:
         full_prompt = f"Context:\n{context}\n\nQuestion: {prompt}"
     
-    try:
-        r = subprocess.run(
-            [copilot, "-p", full_prompt],
-            capture_output=True, text=True, timeout=timeout,
-            env={**os.environ, "NO_COLOR": "1"},
-        )
-        output = r.stdout.strip() if r.stdout else ""
-        if not output:
-            return r.stderr.strip() if r.stderr else "(No response)"
-        # Strip copilot telemetry footer
-        lines = output.split("\n")
-        clean = []
-        for line in lines:
-            if line.strip().startswith("Total usage est:"):
-                break
-            if line.strip().startswith("API time spent:"):
-                break
-            clean.append(line)
-        return "\n".join(clean).strip()
-    except subprocess.TimeoutExpired:
-        return f"(LLM timed out after {timeout}s)"
-    except Exception as e:
-        return f"(LLM error: {e})"
+    # Retry once on timeout with extended deadline
+    attempts = [(timeout, full_prompt)]
+    if len(full_prompt) > 500:
+        # Long prompts get a second attempt with trimmed context
+        attempts.append((timeout + 30, prompt))
+
+    for attempt_timeout, attempt_prompt in attempts:
+        try:
+            r = subprocess.run(
+                [copilot, "-p", attempt_prompt],
+                capture_output=True, text=True, timeout=attempt_timeout,
+                env={**os.environ, "NO_COLOR": "1"},
+            )
+            output = r.stdout.strip() if r.stdout else ""
+            if not output:
+                output = r.stderr.strip() if r.stderr else ""
+            if not output:
+                continue
+            # Strip copilot telemetry footer
+            lines = output.split("\n")
+            clean = []
+            for line in lines:
+                if line.strip().startswith("Total usage est:"):
+                    break
+                if line.strip().startswith("API time spent:"):
+                    break
+                clean.append(line)
+            result = "\n".join(clean).strip()
+            if result and len(result) > 10:
+                return result
+        except subprocess.TimeoutExpired:
+            if attempt_prompt == prompt:
+                return f"(LLM timed out after {attempt_timeout}s — try a shorter prompt)"
+            continue
+        except Exception as e:
+            return f"(LLM error: {e})"
+    return "(No response from LLM)"
 
 
 def _llm_query_ollama(prompt: str, model: str = "deepseek-coder:6.7b", timeout: int = 60) -> str:
@@ -1150,7 +1168,7 @@ def _llm_query_openai(prompt: str, context: str = "") -> str:
             data=data,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             result = json.loads(resp.read())
             return result["choices"][0]["message"]["content"]
     except Exception as e:
@@ -1367,7 +1385,7 @@ except Exception as e:
     print(json.dumps({{"error": str(e)}}))
 '''
     print(f"  {C.M}Querying IBM Quantum backends...{C.E}", flush=True)
-    r = subprocess.run([py, "-c", script], capture_output=True, text=True, timeout=30)
+    r = subprocess.run([py, "-c", script], capture_output=True, text=True, timeout=60)
     
     if r.returncode != 0:
         return f"{C.R}Error querying backends: {r.stderr[:200]}{C.E}"
@@ -1713,13 +1731,7 @@ def dispatch_tool(user_input: str) -> Optional[str]:
         cmd = user_input[2:].strip() if lower.startswith("$ ") else user_input[4:].strip()
         return tool_shell(cmd)
     
-    # LLM catch-all for questions that look like they need reasoning
-    if any(k in lower for k in ["how do i", "how to", "what is", "why does", "can you", "help me", "write a", "create a"]):
-        result = tool_llm(user_input)
-        if result:
-            lines = [f"  {C.H}OSIRIS LLM{C.E}", ""]
-            for line in result.split("\n"):
-                lines.append(f"  {line}")
-            return "\n".join(lines)
-    
+    # Return None — let the caller (process_message / _handle_message)
+    # handle LLM reasoning as fallback. This avoids blocking dispatch
+    # and prevents double-LLM calls on complex multi-sentence prompts.
     return None
