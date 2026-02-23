@@ -106,32 +106,37 @@ CIRCUIT_NAMES = list(CIRCUIT_TEMPLATES.keys()) if CIRCUIT_TEMPLATES else [
 
 def _completer(text: str, state: int) -> Optional[str]:
     """Tab completion for slash commands, file paths, and templates."""
-    line = readline.get_line_buffer().strip()
+    try:
+        line = readline.get_line_buffer().strip()
 
-    if line.startswith("/"):
-        # Slash command completion
-        if " " not in line:
-            matches = [c for c in SLASH_COMMANDS if c.startswith(line)]
-        else:
-            # After the command — complete file paths or template names
-            cmd = line.split()[0]
-            partial = text
-            if cmd in ("/submit", "/design"):
-                matches = [t for t in CIRCUIT_NAMES if t.startswith(partial)]
-            elif cmd in ("/research",):
-                topics = ["constants", "breakthroughs", "ibm_jobs", "quera", "agents", "overview",
-                         "thesis", "alkylrandomization", "theta_scan", "h3k20", "nonlocal",
-                         "motifs", "knowledge_base", "shadow_protocol", "oncology", "validation"]
-                matches = [t for t in topics if t.startswith(partial)]
+        if line.startswith("/"):
+            if " " not in line:
+                matches = [c for c in SLASH_COMMANDS if c.startswith(line)]
             else:
-                # File path completion
-                matches = _complete_path(partial)
-        return matches[state] if state < len(matches) else None
-    else:
-        # Natural language — complete file paths if starts with ~/
-        if text.startswith("~") or text.startswith("/") or text.startswith("."):
-            matches = _complete_path(text)
+                cmd = line.split()[0]
+                partial = text
+                if cmd in ("/submit", "/design"):
+                    matches = [t for t in CIRCUIT_NAMES if t.startswith(partial)]
+                elif cmd in ("/research",):
+                    topics = ["constants", "breakthroughs", "ibm_jobs", "quera", "agents", "overview",
+                             "thesis", "alkylrandomization", "theta_scan", "h3k20", "nonlocal",
+                             "motifs", "knowledge_base", "shadow_protocol", "oncology", "validation"]
+                    matches = [t for t in topics if t.startswith(partial)]
+                elif cmd in ("/github",):
+                    subs = ["repos", "issues", "prs", "actions", "push", "create"]
+                    matches = [s for s in subs if s.startswith(partial)]
+                elif cmd in ("/vercel",):
+                    subs = ["projects", "deployments", "domains", "env", "deploy", "redeploy"]
+                    matches = [s for s in subs if s.startswith(partial)]
+                else:
+                    matches = _complete_path(partial)
             return matches[state] if state < len(matches) else None
+        else:
+            if text.startswith("~") or text.startswith("/") or text.startswith("."):
+                matches = _complete_path(text)
+                return matches[state] if state < len(matches) else None
+    except Exception:
+        pass
     return None
 
 
@@ -375,11 +380,33 @@ class NCLMResponseGenerator:
             ]
 
     def _default_response(self, query: str, intent: str, confidence: float) -> List[str]:
-        return [
-            f"  Intent: {intent} (confidence: {confidence:.0%})",
-            f"  Query mapped to 6D-CRSM manifold with {len(query.split())} tokens",
-            f"  {C.DIM}I'm analyzing through pilot-wave correlation, not statistics.{C.E}",
-        ]
+        # Try to give a useful response based on query content
+        q = query.lower()
+        lines = []
+        if any(w in q for w in ["hello", "hi ", "hey", "howdy", "sup", "what's up"]):
+            lines = [
+                f"  {C.CY}Welcome to OSIRIS.{C.E} I'm your sovereign quantum AI assistant.",
+                f"  I can help with:",
+                f"    • {C.CY}/research{C.E} — query 580+ IBM Quantum experiments",
+                f"    • {C.CY}/design{C.E}   — generate Qiskit circuits",
+                f"    • {C.CY}/analyze{C.E}  — code analysis with AI reasoning",
+                f"    • {C.CY}/webapp{C.E}   — manage quantum-advantage.dev",
+                f"    • {C.CY}/github{C.E}   — GitHub repos, PRs, issues",
+                f"  Or just ask me anything in natural language.",
+            ]
+        elif any(w in q for w in ["who are you", "what are you", "about"]):
+            lines = [
+                f"  I'm {C.CY}OSIRIS{C.E} — Omega System Integrated Runtime Intelligence.",
+                f"  Built with DNA::}}{{::lang v51.843 by Agile Defense Systems (CAGE 9HUP5).",
+                f"  Framework: ΛΦ=2.176435e-8 | θ_lock=51.843° | Φ_threshold=0.7734",
+                f"  I have access to 580+ IBM Quantum hardware-validated experiments.",
+            ]
+        else:
+            lines = [
+                f"  {C.DIM}I understood your intent as: {intent} (confidence: {confidence:.0%}){C.E}",
+                f"  Try: /ask <question> for AI reasoning, or /help for all commands.",
+            ]
+        return lines
 
 
 # ── CHAT SESSION ──────────────────────────────────────────────────────────────
@@ -412,7 +439,10 @@ class NCLMChat:
         readline.set_history_length(2000)
         readline.set_completer(_completer)
         readline.set_completer_delims(" \t\n;")
-        readline.parse_and_bind("tab: complete")
+        try:
+            readline.parse_and_bind("tab: complete")
+        except Exception:
+            pass
 
     def _save_history(self):
         try:
@@ -1395,7 +1425,36 @@ class NCLMChat:
             print()
             return
 
-        # Fall back to NCLM inference for conversational responses
+        # Fall back: try LLM reasoning FIRST, then NCLM templates
+        from .tools import _find_llm_backend
+        llm_backend = _find_llm_backend()
+
+        if llm_backend != "nclm":
+            # Real LLM available — use it for genuine AI responses
+            context_parts = []
+            for msg in self.messages[-6:]:
+                role = "User" if msg["role"] == "user" else "OSIRIS"
+                context_parts.append(f"{role}: {msg['content']}")
+            context = "\n".join(context_parts)
+
+            with Spinner("Reasoning", frames="dna"):
+                llm_result = tool_llm(user_input, context)
+
+            if llm_result and "stub" not in llm_result.lower() and len(llm_result) > 20:
+                print()
+                self._stream_response(f"  {llm_result}")
+                # Update consciousness
+                try:
+                    self.lm.consciousness.update(user_input)
+                except (TypeError, ValueError):
+                    self.lm.consciousness.phi = min(1.0, self.lm.consciousness.phi + 0.02)
+                ccce = self.lm.consciousness.get_ccce()
+                phi_bar = self._phi_bar(ccce["Φ"], 16)
+                print(f"\n  {C.DIM}Φ {phi_bar} {ccce['Φ']:.4f}  Ξ={ccce['Ξ']:.1f}  [{llm_backend}]{C.E}\n")
+                self.messages.append({"role": "assistant", "content": llm_result[:300]})
+                return
+
+        # NCLM inference fallback for conversational responses
         context = ""
         for msg in self.messages[-6:]:
             context += f"{msg['role']}: {msg['content']}\n"

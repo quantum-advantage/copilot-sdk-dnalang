@@ -1041,29 +1041,53 @@ def tool_git(subcmd: str, cwd: str = None) -> str:
 # ██  LLM REASONING BACKBONE — Generative AI via Copilot / Ollama / API     ██
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _find_copilot_binary() -> str:
+    """Find the REAL copilot binary, not stubs or interceptors."""
+    import shutil
+    # Preferred locations for the real binary
+    candidates = [
+        "/root/.npm-global/bin/copilot",
+        shutil.which("copilot"),
+        os.path.expanduser("~/.npm-global/bin/copilot"),
+        "/usr/local/bin/copilot",
+    ]
+    for c in candidates:
+        if not c or not os.path.exists(c):
+            continue
+        # Verify it's not a stub (check if it's a real binary or proper npm script)
+        resolved = os.path.realpath(c)
+        if resolved.endswith(".js") or resolved.endswith(".cjs"):
+            return c  # npm-loader.js — real copilot
+        # Check file content for stubs
+        try:
+            with open(resolved, "rb") as f:
+                head = f.read(200)
+            if b"stub" in head.lower() or b"echo" in head[:50]:
+                continue  # skip stubs
+        except Exception:
+            pass
+        if os.access(c, os.X_OK):
+            return c
+    return ""
+
+
 def _find_llm_backend() -> str:
     """Detect best available LLM backend."""
-    # 1. Check for copilot binary (GitHub Copilot CLI)
-    import shutil
-    copilot = shutil.which("copilot")
-    if copilot:
+    if _find_copilot_binary():
         return "copilot"
-    # 2. Check for ollama
-    ollama = shutil.which("ollama")
-    if ollama:
+    import shutil
+    if shutil.which("ollama"):
         return "ollama"
-    # 3. Check for API keys
     if os.environ.get("OPENAI_API_KEY"):
         return "openai"
     if os.environ.get("ANTHROPIC_API_KEY"):
         return "anthropic"
-    return "nclm"  # fallback to built-in NCLM
+    return "nclm"
 
 
-def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 30) -> str:
+def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 90) -> str:
     """Query via copilot binary (Claude/GPT backend)."""
-    import shutil
-    copilot = shutil.which("copilot")
+    copilot = _find_copilot_binary()
     if not copilot:
         return ""
     
