@@ -878,8 +878,9 @@ class Osiris:
             return Result(False, f"  {red('✗')} {e}")
 
     def _demo(self, text, p):
-        """Investor demo — live CLI walkthrough or web dashboard."""
+        """Investor demo — cinematic, standard, or dashboard."""
         demo_dir = self.oc / "demo"
+        cinematic = demo_dir / "demo_cinematic.py"
         live_script = demo_dir / "demo_live.py"
         dashboard = demo_dir / "dashboard.html"
 
@@ -891,27 +892,23 @@ class Osiris:
                               f"  {dim(str(dashboard))}")
             return Result(False, f"  {red('✗')} Dashboard not found at {dashboard}")
 
-        if live_script.exists():
-            fast = "--fast" if ("fast" in text or "quick" in text) else ""
-            no_cloud = "--no-cloud" if "offline" in text else ""
-            args = [sys.executable, str(live_script)]
-            if fast: args.append("--fast")
-            if no_cloud: args.append("--no-cloud")
+        # Default: cinematic demo
+        script = cinematic if cinematic.exists() else live_script
+        if "simple" in text or "basic" in text or "quick" in text:
+            script = live_script if live_script.exists() else script
+
+        if script and script.exists():
+            args = [sys.executable, str(script)]
+            if "fast" in text:
+                args.append("--fast")
+            if "offline" in text:
+                args.append("--no-cloud")
+            if "interactive" in text or "repl" in text or "live" in text:
+                args.append("--interactive")
             subprocess.run(args)
             return Result(True, f"\n  {green('✓')} Demo complete")
 
-        # Fallback: show talking points
-        try:
-            sys.path.insert(0, str(self.oc))
-            from experiments import DEMO_TALKING_POINTS, hardware_summary
-            lines = [DEMO_TALKING_POINTS]
-            hw = hardware_summary()
-            if hw:
-                lines.append(f"\n  {green('✓')} Hardware results: {bold(hw['backend'])} │ "
-                             f"{hw['n_experiments']} experiments │ {hw['timestamp'][:10]}")
-            return Result(True, "\n".join(lines))
-        except Exception as e:
-            return Result(False, f"  {red('✗')} {e}")
+        return Result(False, f"  {red('✗')} Demo scripts not found")
 
     def _research(self, text, p):
         """Show research data inventory."""
