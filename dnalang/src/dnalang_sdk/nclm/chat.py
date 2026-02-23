@@ -35,6 +35,12 @@ from .tools import (
     tool_vercel_env, tool_vercel_deploy, tool_vercel_redeploy,
     CIRCUIT_TEMPLATES,
     C,
+    # Sovereign systems
+    tool_organism_create, tool_organism_evolve, tool_organism_status,
+    tool_circuit_from_organism,
+    tool_agent_invoke,
+    tool_lab_scan, tool_lab_list, tool_lab_design, tool_lab_run,
+    tool_swarm_evolve, tool_mesh_status,
 )
 
 
@@ -97,6 +103,8 @@ SLASH_COMMANDS = [
     "/exec", "/shell",
     "/github", "/vercel", "/push", "/repos", "/issues", "/prs", "/actions",
     "/domains", "/deployments", "/redeploy",
+    # Sovereign systems
+    "/organism", "/org", "/circuit", "/agent", "/lab", "/mesh", "/constellation",
 ]
 
 CIRCUIT_NAMES = list(CIRCUIT_TEMPLATES.keys()) if CIRCUIT_TEMPLATES else [
@@ -821,6 +829,21 @@ class NCLMChat:
             with Spinner("Triggering redeployment"):
                 result = tool_vercel_redeploy()
             print(f"\n{result}\n")
+        # ── SOVEREIGN SYSTEMS (Generation 6.0) ────────────
+        elif command == "/organism":
+            self._cmd_organism(arg)
+        elif command == "/org":
+            self._cmd_organism(f"status {arg}" if arg else "")
+        elif command == "/circuit":
+            self._cmd_circuit(arg)
+        elif command == "/agent":
+            self._cmd_agent(arg)
+        elif command == "/lab":
+            self._cmd_lab(arg)
+        elif command in ("/mesh", "/constellation"):
+            with Spinner("Loading mesh status", frames="orbital"):
+                result = tool_mesh_status()
+            print(f"\n{result}\n")
         else:
             print(f"  {C.R}Unknown command: {command}{C.E}")
             print(f"  {C.DIM}Type /help for available commands{C.E}")
@@ -869,6 +892,18 @@ class NCLMChat:
   {C.CY}/research <topic>{C.E}   Query data (constants/breakthroughs/ibm_jobs/quera/agents)
   {C.CY}/grok <topic>{C.E}       Deep analysis with swarm evolution
   {C.CY}/swarm [task]{C.E}       Evolve organisms
+
+  {C.H}🧬 Sovereign Systems{C.E}
+  {C.CY}/organism create <name> [domain]{C.E}  Spawn quantum organism
+  {C.CY}/organism evolve <name> [gens]{C.E}    Evolve through mutation
+  {C.CY}/organism status [name]{C.E}           Show genome or list all
+  {C.CY}/circuit <organism> [method]{C.E}      Generate circuit from genome
+  {C.CY}/agent <name> <task>{C.E}    Invoke AURA/AIDEN/SCIMITAR/CHEOPS/CHRONOS
+  {C.CY}/lab scan{C.E}              Discover experiments
+  {C.CY}/lab design <template>{C.E} Design experiment from template
+  {C.CY}/lab run <script>{C.E}      Execute experiment
+  {C.CY}/swarm evolve [n]{C.E}      NCLM swarm evolution
+  {C.CY}/mesh{C.E}                  Mesh constellation status
 
   {C.H}📊 System{C.E}
   {C.CY}/dashboard{C.E}          Full system metrics dashboard
@@ -1019,6 +1054,80 @@ class NCLMChat:
         print(f"    Γ_critical = {NCPhysics.GAMMA_CRITICAL}")
         print(f"    χ_PC       = {NCPhysics.CHI_PC}")
         print(f"    c_ind      = {NCPhysics.C_INDUCTION:.3e} m/s\n")
+
+    # ── SOVEREIGN SYSTEM COMMANDS (Generation 6.0) ────────────────────────
+
+    def _cmd_organism(self, arg: str):
+        """Handle /organism create|evolve|status commands."""
+        parts = arg.strip().split(None, 1)
+        subcmd = parts[0].lower() if parts else ""
+        rest = parts[1] if len(parts) > 1 else ""
+
+        if subcmd in ("create", "new", "spawn"):
+            with Spinner("Creating organism", frames="dna"):
+                result = tool_organism_create(rest or "quantum_entity")
+            print(f"\n{result}\n")
+        elif subcmd in ("evolve", "mutate"):
+            with Spinner("Evolving organism", frames="dna"):
+                result = tool_organism_evolve(rest)
+            print(f"\n{result}\n")
+        elif subcmd in ("status", "show", "info"):
+            result = tool_organism_status(rest)
+            print(f"\n{result}\n")
+        elif subcmd:
+            # Assume it's an organism name → show status
+            result = tool_organism_status(arg.strip())
+            print(f"\n{result}\n")
+        else:
+            # No args → list all
+            result = tool_organism_status("")
+            print(f"\n{result}\n")
+
+    def _cmd_circuit(self, arg: str):
+        """Handle /circuit <organism> [method]."""
+        if not arg.strip():
+            print(f"  {C.Y}Usage: /circuit <organism_name> [method]{C.E}")
+            print(f"  {C.DIM}Methods: gene_encoding (default), aeterna_porta{C.E}")
+            return
+        with Spinner("Generating circuit from genome", frames="quantum"):
+            result = tool_circuit_from_organism(arg)
+        print(f"\n{result}\n")
+
+    def _cmd_agent(self, arg: str):
+        """Handle /agent <name> <task>."""
+        if not arg.strip():
+            result = tool_agent_invoke("")
+            print(f"\n{result}\n")
+            return
+        with Spinner("Invoking agent", frames="orbital"):
+            result = tool_agent_invoke(arg)
+        print(f"\n{result}\n")
+
+    def _cmd_lab(self, arg: str):
+        """Handle /lab scan|list|design|run."""
+        parts = arg.strip().split(None, 1)
+        subcmd = parts[0].lower() if parts else "scan"
+        rest = parts[1] if len(parts) > 1 else ""
+
+        if subcmd == "scan":
+            with Spinner("Scanning for experiments", frames="orbital"):
+                result = tool_lab_scan()
+            print(f"\n{result}\n")
+        elif subcmd in ("list", "search"):
+            result = tool_lab_list(rest)
+            print(f"\n{result}\n")
+        elif subcmd in ("design", "template"):
+            with Spinner("Designing experiment"):
+                result = tool_lab_design(rest)
+            print(f"\n{result}\n")
+        elif subcmd in ("run", "exec"):
+            with Spinner("Executing experiment", frames="quantum"):
+                result = tool_lab_run(rest)
+            print(f"\n{result}\n")
+        else:
+            with Spinner("Scanning for experiments", frames="orbital"):
+                result = tool_lab_scan()
+            print(f"\n{result}\n")
 
     def _cmd_reset(self):
         self.lm.reset()

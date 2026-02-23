@@ -62,6 +62,12 @@ from .tools import (
     _find_llm_backend, _find_copilot_binary,
     CIRCUIT_TEMPLATES,
     C as AnsiC,
+    # Sovereign systems
+    tool_organism_create, tool_organism_evolve, tool_organism_status,
+    tool_circuit_from_organism,
+    tool_agent_invoke,
+    tool_lab_scan, tool_lab_list, tool_lab_design, tool_lab_run,
+    tool_swarm_evolve, tool_mesh_status,
 )
 
 
@@ -333,6 +339,31 @@ HELP_TEXT = """\
   /help                Show this help
   /clear               Clear chat history
   /demo                Live capability showcase
+
+[bold]━━━ Quantum Organisms ━━━[/]
+  /organism create <name> [domain]   Spawn organism (computation|research|defense|quantum)
+  /organism evolve <name> [gens]     Evolve through quantum-informed mutation
+  /organism status [name]            Show organism genome or list all
+  /circuit <organism> [method]       Generate quantum circuit from genome
+
+[bold]━━━ Sovereign Agents ━━━[/]
+  /agent                  Show agent constellation
+  /agent aura shape <org> AURA — Shape 6D CRSM manifold from organism
+  /agent aiden optimize <org> AIDEN — W₂ optimize genome along geodesics
+  /agent scimitar scan <content>  SCIMITAR — Threat detection scan
+  /agent cheops validate  CHEOPS — Adversarial circuit validation
+  /agent chronos lineage  CHRONOS — Temporal lineage tracking
+
+[bold]━━━ Lab Engine ━━━[/]
+  /lab scan              Discover experiments across filesystem
+  /lab list [query]      Browse experiment catalog
+  /lab design [template] Design from template (bell, ghz, theta_sweep...)
+  /lab run <script>      Execute experiment safely
+
+[bold]━━━ Mesh & Swarm ━━━[/]
+  /swarm evolve [cycles] [nodes]  NCLM swarm evolution (7-layer CRSM)
+  /mesh                  Show constellation/mesh status
+  /constellation         Same as /mesh
 
 [bold]━━━ Research & Quantum ━━━[/]
   /research <topic>    Query 580+ IBM Quantum experiments
@@ -890,6 +921,34 @@ class OsirisTUI(App):
             "/webapp": lambda _: tool_webapp_status(),
             "/build": lambda _: tool_webapp_build(),
             "/deploy": lambda _: tool_webapp_deploy(),
+            # ── Sovereign Systems ──
+            "/organism": lambda a: (
+                tool_organism_create(a.split(None, 1)[1] if a.lower().startswith("create") and " " in a else a)
+                if a.lower().startswith("create") or a.lower().startswith("new") else
+                tool_organism_evolve(a.split(None, 1)[1] if " " in a else a)
+                if a.lower().startswith("evolve") or a.lower().startswith("mutate") else
+                tool_organism_status(a.split(None, 1)[1] if a.lower().startswith("status") and " " in a else a)
+            ),
+            "/org": lambda a: tool_organism_status(a),
+            "/circuit": lambda a: tool_circuit_from_organism(a) if a else "Usage: /circuit <organism_name> [method]",
+            "/agent": lambda a: tool_agent_invoke(a) if a else tool_agent_invoke(""),
+            "/lab": lambda a: (
+                tool_lab_scan() if not a or a.lower().startswith("scan") else
+                tool_lab_list(a.split(None, 1)[1] if a.lower().startswith("list") and " " in a else "")
+                if a.lower().startswith("list") or a.lower().startswith("search") else
+                tool_lab_design(a.split(None, 1)[1] if " " in a else "")
+                if a.lower().startswith("design") or a.lower().startswith("template") else
+                tool_lab_run(a.split(None, 1)[1] if " " in a else "")
+                if a.lower().startswith("run") or a.lower().startswith("exec") else
+                tool_lab_scan()
+            ),
+            "/swarm": lambda a: (
+                tool_swarm_evolve(a.split(None, 1)[1] if a.lower().startswith("evolve") and " " in a else "")
+                if a.lower().startswith("evolve") or a.lower().startswith("run") else
+                tool_mesh_status()
+            ),
+            "/mesh": lambda _: tool_mesh_status(),
+            "/constellation": lambda _: tool_mesh_status(),
         }
 
         if command in tool_map:

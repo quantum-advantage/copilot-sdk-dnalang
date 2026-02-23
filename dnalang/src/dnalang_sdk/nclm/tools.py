@@ -1585,6 +1585,696 @@ def tool_quantum_submit_script(script_path: str, backend: str = "ibm_fez", shots
     return "\n".join(lines)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  SOVEREIGN SYSTEMS — Organisms, Agents, Lab, Mesh, Defense              ██
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── Organism state (module-level singleton for session persistence) ──
+_organism_registry: Dict[str, Any] = {}
+
+
+def _get_organism_registry() -> Dict[str, Any]:
+    """Lazy-load organism registry from disk."""
+    global _organism_registry
+    if not _organism_registry:
+        reg_path = os.path.expanduser("~/.config/osiris/organisms.json")
+        if os.path.exists(reg_path):
+            try:
+                with open(reg_path) as f:
+                    _organism_registry = json.load(f)
+            except Exception:
+                pass
+    return _organism_registry
+
+
+def _save_organism_registry():
+    reg_path = os.path.expanduser("~/.config/osiris/organisms.json")
+    os.makedirs(os.path.dirname(reg_path), exist_ok=True)
+    with open(reg_path, "w") as f:
+        json.dump(_organism_registry, f, indent=2)
+
+
+def tool_organism_create(args: str) -> str:
+    """Create a new quantum organism with genome."""
+    try:
+        from ..organisms import Organism, Genome, Gene
+    except ImportError:
+        return f"{C.R}Error: organisms package not available{C.E}"
+
+    parts = args.strip().split()
+    name = parts[0] if parts else "quantum_entity"
+    domain = parts[1] if len(parts) > 1 else "computation"
+
+    # Create genes from domain presets
+    gene_presets = {
+        "computation": [
+            ("initialize", 0.85), ("process", 0.90), ("optimize", 0.75),
+            ("error_correct", 0.80), ("output", 0.70),
+        ],
+        "research": [
+            ("hypothesis", 0.90), ("experiment", 0.85), ("measure", 0.80),
+            ("analyze", 0.75), ("publish", 0.65),
+        ],
+        "defense": [
+            ("detect", 0.95), ("classify", 0.85), ("respond", 0.90),
+            ("heal", 0.80), ("fortify", 0.70),
+        ],
+        "quantum": [
+            ("entangle", 0.92), ("superpose", 0.88), ("measure", 0.85),
+            ("error_correct", 0.80), ("teleport", 0.60),
+        ],
+    }
+    preset = gene_presets.get(domain, gene_presets["computation"])
+    genes = [Gene(name=gn, expression=expr) for gn, expr in preset]
+    genome = Genome(genes)
+    organism = Organism(name=name, genome=genome, domain=domain)
+    organism.initialize()
+
+    # Store
+    reg = _get_organism_registry()
+    reg[name] = organism.to_dict()
+    _save_organism_registry()
+
+    lines = [
+        f"  {C.H}🧬 Organism Created: {name}{C.E}",
+        f"  Domain:   {domain}",
+        f"  Genes:    {len(genes)}",
+        f"  Genome:   v{genome.version}",
+        f"  ΛΦ:       {organism.lambda_phi}",
+        f"  State:    {organism.state}",
+        "",
+        f"  {C.DIM}Genome Expression:{C.E}",
+    ]
+    for g in genes:
+        bar_len = int(g.expression * 20)
+        bar = "█" * bar_len + "░" * (20 - bar_len)
+        lines.append(f"    {g.name:16s} {bar} {g.expression:.2f}")
+
+    lines.append(f"\n  {C.DIM}Next: /organism evolve {name} · /circuit from {name}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_organism_evolve(args: str) -> str:
+    """Evolve an organism through quantum-informed mutation."""
+    try:
+        from ..organisms import Organism, Genome, Gene
+    except ImportError:
+        return f"{C.R}Error: organisms package not available{C.E}"
+
+    parts = args.strip().split()
+    name = parts[0] if parts else ""
+    generations = int(parts[1]) if len(parts) > 1 else 5
+
+    reg = _get_organism_registry()
+    if name not in reg:
+        available = ", ".join(reg.keys()) if reg else "(none)"
+        return f"{C.R}Organism '{name}' not found. Available: {available}{C.E}\n  Create one: /organism create <name> [domain]"
+
+    organism = Organism.from_dict(reg[name])
+    old_expressions = {g.name: g.expression for g in organism.genome}
+
+    for gen in range(generations):
+        organism = organism.evolve()
+
+    reg[name] = organism.to_dict()
+    _save_organism_registry()
+
+    lines = [
+        f"  {C.H}🧬 Organism Evolved: {name}{C.E}",
+        f"  Generations: {generations}",
+        f"  State:       {organism.state}",
+        "",
+        f"  {C.DIM}Gene Expression Changes:{C.E}",
+    ]
+    for g in organism.genome:
+        old = old_expressions.get(g.name, 0.0)
+        delta = g.expression - old
+        arrow = f"{C.G}↑{C.E}" if delta > 0 else (f"{C.R}↓{C.E}" if delta < 0 else "─")
+        bar_len = int(g.expression * 20)
+        bar = "█" * bar_len + "░" * (20 - bar_len)
+        lines.append(f"    {g.name:16s} {bar} {g.expression:.3f} {arrow} {delta:+.3f}")
+
+    lines.append(f"\n  {C.DIM}Next: /circuit from {name} · /organism status {name}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_organism_status(args: str) -> str:
+    """Show organism status and genome."""
+    try:
+        from ..organisms import Organism
+    except ImportError:
+        return f"{C.R}Error: organisms package not available{C.E}"
+
+    name = args.strip()
+    reg = _get_organism_registry()
+
+    if not name:
+        # List all organisms
+        if not reg:
+            return f"  {C.DIM}No organisms created yet. Try: /organism create my_entity quantum{C.E}"
+        lines = [f"  {C.H}🧬 Organism Registry ({len(reg)} organisms){C.E}", ""]
+        for oname, odata in reg.items():
+            state = odata.get("state", "unknown")
+            domain = odata.get("domain", "?")
+            n_genes = len(odata.get("genome", {}).get("genes", []))
+            gen = odata.get("generation", 0)
+            lines.append(f"    {oname:20s} domain={domain:12s} genes={n_genes}  gen={gen}  state={state}")
+        lines.append(f"\n  {C.DIM}Use: /organism status <name> for details{C.E}")
+        return "\n".join(lines)
+
+    if name not in reg:
+        return f"{C.R}Organism '{name}' not found{C.E}"
+
+    organism = Organism.from_dict(reg[name])
+    lines = [
+        f"  {C.H}🧬 {organism.name}{C.E}",
+        f"  Domain:      {organism.domain}",
+        f"  Purpose:     {organism.purpose}",
+        f"  State:       {organism.state}",
+        f"  Generation:  {organism.generation}",
+        f"  ΛΦ:          {organism.lambda_phi}",
+        f"  Zero Trust:  {'✓' if organism.verify_zero_trust() else '✗'}",
+        "",
+        f"  {C.DIM}Genome v{organism.genome.version} — {len(organism.genome)} genes:{C.E}",
+    ]
+    for g in organism.genome:
+        bar_len = int(g.expression * 20)
+        bar = "█" * bar_len + "░" * (20 - bar_len)
+        lines.append(f"    {g.name:16s} {bar} {g.expression:.3f}")
+    return "\n".join(lines)
+
+
+def tool_circuit_from_organism(args: str) -> str:
+    """Generate a quantum circuit from an organism's genome."""
+    try:
+        from ..organisms import Organism
+        from ..quantum_core.circuits import CircuitGenerator
+    except ImportError:
+        return f"{C.R}Error: quantum_core package not available{C.E}"
+
+    parts = args.strip().split()
+    name = parts[0] if parts else ""
+    method = parts[1] if len(parts) > 1 else "gene_encoding"
+
+    reg = _get_organism_registry()
+    if name not in reg:
+        available = ", ".join(reg.keys()) if reg else "(none)"
+        return f"{C.R}Organism '{name}' not found. Available: {available}{C.E}"
+
+    organism = Organism.from_dict(reg[name])
+    try:
+        gen = CircuitGenerator(organism)
+        circuit = gen.to_circuit(method=method, include_measurement=True)
+    except ImportError:
+        # Qiskit not installed — generate code only
+        code = _organism_circuit_to_code(organism, method)
+        lines = [
+            f"  {C.H}⚛ Circuit Blueprint for {name} (method: {method}){C.E}",
+            f"  Genes:   {len(list(organism.genome))}",
+            f"  ΛΦ:      {organism.lambda_phi}",
+            f"  {C.Y}⚠ Qiskit not installed — showing code blueprint{C.E}",
+            "",
+            f"  {C.DIM}─── Code ───{C.E}",
+        ]
+        for line in code.split("\n"):
+            lines.append(f"    {line}")
+        lines.append(f"\n  {C.DIM}Install: pip install qiskit  ·  Then re-run /circuit {name}{C.E}")
+        return "\n".join(lines)
+
+    lines = [
+        f"  {C.H}⚛ Circuit from {name} (method: {method}){C.E}",
+        f"  Qubits:  {circuit.num_qubits}",
+        f"  Clbits:  {circuit.num_clbits}",
+        f"  Depth:   {circuit.depth()}",
+        f"  Gates:   {circuit.size()}",
+        "",
+        f"  {C.DIM}Circuit:{C.E}",
+    ]
+    try:
+        drawing = circuit.draw(output="text")
+        for line in str(drawing).split("\n")[:20]:
+            lines.append(f"    {line}")
+        if circuit.num_qubits > 8:
+            lines.append(f"    {C.DIM}... ({circuit.num_qubits} qubits total){C.E}")
+    except Exception:
+        lines.append(f"    {C.DIM}(circuit visualization requires matplotlib){C.E}")
+
+    # Save circuit as Qiskit code
+    code = _organism_circuit_to_code(organism, method)
+    lines.append(f"\n  {C.DIM}Save: /create ~/experiment_{name}.py{C.E}")
+    lines.append(f"  {C.DIM}Next: /lab run ~/experiment_{name}.py · /submit {name} ibm_fez{C.E}")
+    return "\n".join(lines)
+
+
+def _organism_circuit_to_code(organism, method: str = "gene_encoding") -> str:
+    """Generate Qiskit Python code for an organism circuit."""
+    genes_str = ", ".join(f'("{g.name}", {g.expression:.3f})' for g in organism.genome)
+    return f'''"""Quantum circuit generated from organism: {organism.name}
+Domain: {organism.domain} | Method: {method}
+DNA::}}{{::lang v51.843 | Agile Defense Systems | CAGE 9HUP5
+"""
+from dnalang_sdk.organisms import Organism, Genome, Gene
+from dnalang_sdk.quantum_core.circuits import CircuitGenerator
+
+genes = [Gene(name=n, expression=e) for n, e in [{genes_str}]]
+genome = Genome(genes)
+organism = Organism(name="{organism.name}", genome=genome, domain="{organism.domain}")
+organism.initialize()
+
+gen = CircuitGenerator(organism)
+circuit = gen.to_circuit(method="{method}", include_measurement=True)
+print(circuit.draw())
+print(f"Qubits: {{circuit.num_qubits}} | Depth: {{circuit.depth()}} | Gates: {{circuit.size()}}")
+'''
+
+
+def tool_agent_invoke(args: str) -> str:
+    """Invoke a live sovereign agent for a task."""
+    parts = args.strip().split(None, 1)
+    agent_name = parts[0].upper() if parts else ""
+    task = parts[1] if len(parts) > 1 else "status"
+
+    if agent_name == "AURA":
+        return _invoke_aura(task)
+    elif agent_name == "AIDEN":
+        return _invoke_aiden(task)
+    elif agent_name == "SCIMITAR":
+        return _invoke_scimitar(task)
+    elif agent_name == "CHEOPS":
+        return _invoke_cheops(task)
+    elif agent_name == "CHRONOS":
+        return _invoke_chronos(task)
+    else:
+        return (
+            f"  {C.H}Agent Constellation{C.E}\n"
+            f"  Usage: /agent <name> [task]\n\n"
+            f"  Agents:\n"
+            f"    AURA    (Φ) South  — /agent aura shape <organism>\n"
+            f"    AIDEN   (Λ) North  — /agent aiden optimize <organism>\n"
+            f"    SCIMITAR        — /agent scimitar scan\n"
+            f"    CHEOPS          — /agent cheops validate\n"
+            f"    CHRONOS (Γ) Nadir  — /agent chronos lineage\n"
+        )
+
+
+def _invoke_aura(task: str) -> str:
+    try:
+        from ..agents import AURA
+    except ImportError:
+        return f"{C.R}Error: AURA agent not available{C.E}"
+
+    aura = AURA(manifold_dim=6)
+    parts = task.split()
+    cmd = parts[0].lower() if parts else "status"
+
+    if cmd in ("shape", "manifold"):
+        org_name = parts[1] if len(parts) > 1 else ""
+        reg = _get_organism_registry()
+        if org_name and org_name in reg:
+            from ..organisms import Organism
+            organism = Organism.from_dict(reg[org_name])
+            result = aura.shape_manifold(organism)
+            lines = [
+                f"  {C.CY}Φ AURA — Manifold Shaping: {org_name}{C.E}",
+                f"  Type:       {result.get('manifold_type', 'unknown')}",
+                f"  Dimensions: {result.get('dimensions', '?')}",
+                f"  Ricci:      {result.get('ricci_curvature', '?'):.6f}" if isinstance(result.get('ricci_curvature'), (int, float)) else f"  Ricci:      {result.get('ricci_curvature', '?')}",
+            ]
+            coords = result.get("coordinates")
+            if coords is not None:
+                import numpy as np
+                lines.append(f"  Coords:     {np.array(coords).shape}")
+            return "\n".join(lines)
+        return f"  {C.CY}Φ AURA{C.E} — specify organism: /agent aura shape <name>"
+
+    summary = aura.get_topology_summary()
+    lines = [
+        f"  {C.CY}Φ AURA (South Pole) — Autopoietic Recursive Architect{C.E}",
+        f"  Manifold:  {summary.get('manifold_dim', 6)}D CRSM",
+        f"  Shapings:  {summary.get('total_shapings', 0)}",
+        f"  Avg Ricci: {summary.get('avg_ricci_curvature', 0):.6f}",
+        "",
+        f"  {C.DIM}Commands: /agent aura shape <organism> · /agent aura status{C.E}",
+    ]
+    return "\n".join(lines)
+
+
+def _invoke_aiden(task: str) -> str:
+    try:
+        from ..agents import AIDEN
+    except ImportError:
+        return f"{C.R}Error: AIDEN agent not available{C.E}"
+
+    aiden = AIDEN(learning_rate=0.01)
+    parts = task.split()
+    cmd = parts[0].lower() if parts else "status"
+
+    if cmd in ("optimize", "opt"):
+        org_name = parts[1] if len(parts) > 1 else ""
+        reg = _get_organism_registry()
+        if org_name and org_name in reg:
+            from ..organisms import Organism
+            from ..agents import AURA
+            organism = Organism.from_dict(reg[org_name])
+            aura = AURA(manifold_dim=6)
+            iterations = int(parts[2]) if len(parts) > 2 else 10
+            optimized = aiden.optimize(organism, aura, iterations=iterations)
+            reg[org_name] = optimized.to_dict()
+            _save_organism_registry()
+            summary = aiden.get_optimization_summary()
+            lines = [
+                f"  {C.R}Λ AIDEN — Optimization: {org_name}{C.E}",
+                f"  Iterations: {summary.get('total_iterations', iterations)}",
+                f"  W₂ dist:    {summary.get('last_w2_distance', 0):.6f}",
+                f"  Converged:  {summary.get('converged', False)}",
+            ]
+            return "\n".join(lines)
+        return f"  {C.R}Λ AIDEN{C.E} — specify organism: /agent aiden optimize <name>"
+
+    summary = aiden.get_optimization_summary()
+    lines = [
+        f"  {C.R}Λ AIDEN (North Pole) — Adaptive Integrations for Defense & Engineering of Negentropy{C.E}",
+        f"  Learning Rate: {aiden.learning_rate}",
+        f"  Optimizations: {summary.get('total_optimizations', 0)}",
+        "",
+        f"  {C.DIM}Commands: /agent aiden optimize <organism> [iters] · /agent aiden status{C.E}",
+    ]
+    return "\n".join(lines)
+
+
+def _invoke_scimitar(task: str) -> str:
+    try:
+        from ..agents import SCIMITARSentinel
+    except ImportError:
+        return f"{C.R}Error: SCIMITAR agent not available{C.E}"
+
+    sentinel = SCIMITARSentinel()
+    parts = task.split(None, 1)
+    cmd = parts[0].lower() if parts else "status"
+
+    if cmd == "scan":
+        content = parts[1] if len(parts) > 1 else ""
+        if content:
+            threats = sentinel.scan(content)
+            if threats:
+                lines = [f"  {C.R}⚔ SCIMITAR — {len(threats)} THREAT(S) DETECTED{C.E}"]
+                for t in threats:
+                    lines.append(f"    [{t.signature.severity}] {t.signature.name}: {t.signature.description}")
+                    lines.append(f"    {C.DIM}Score: {t.score:.2f} | Mitigated: {t.mitigated}{C.E}")
+                return "\n".join(lines)
+            return f"  {C.G}⚔ SCIMITAR — All clear. No threats detected.{C.E}"
+        return f"  {C.Y}Usage: /agent scimitar scan <content_to_scan>{C.E}"
+
+    status = sentinel.get_status()
+    lines = [
+        f"  {C.R}⚔ SCIMITAR Sentinel{C.E}",
+        f"  Mode:    {status.get('mode', 'ACTIVE')}",
+        f"  Level:   {status.get('threat_level', 'CLEAR')}",
+        f"  Scans:   {status.get('total_scans', 0)}",
+        f"  Threats: {status.get('threats_detected', 0)}",
+        "",
+        sentinel.get_threat_ascii(),
+    ]
+    return "\n".join(lines)
+
+
+def _invoke_cheops(task: str) -> str:
+    try:
+        from ..agents.cheops import CHEOPS
+    except ImportError:
+        return f"{C.R}Error: CHEOPS agent not available{C.E}"
+    cheops = CHEOPS()
+    lines = [
+        f"  {C.Y}▲ CHEOPS — Adversarial Circuit Validator{C.E}",
+        f"  {C.DIM}Validates quantum circuits against adversarial perturbations{C.E}",
+        f"  {C.DIM}Usage: /agent cheops validate <circuit_file>{C.E}",
+    ]
+    return "\n".join(lines)
+
+
+def _invoke_chronos(task: str) -> str:
+    try:
+        from ..agents.chronos import CHRONOS
+    except ImportError:
+        return f"{C.R}Error: CHRONOS agent not available{C.E}"
+    chronos = CHRONOS()
+    lines = [
+        f"  {C.M}Γ CHRONOS (Nadir) — Temporal Lineage Scribe{C.E}",
+        f"  {C.DIM}Tracks organism evolution lineage and temporal coherence{C.E}",
+        f"  {C.DIM}Usage: /agent chronos lineage <organism>{C.E}",
+    ]
+    return "\n".join(lines)
+
+
+def tool_lab_scan() -> str:
+    """Scan filesystem for experiments, scripts, and results."""
+    try:
+        from ..lab import LabScanner, ExperimentRegistry
+    except ImportError:
+        return f"{C.R}Error: lab package not available{C.E}"
+
+    scanner = LabScanner()
+    registry = ExperimentRegistry()
+    try:
+        import signal
+        def _timeout_handler(signum, frame):
+            raise TimeoutError("Scan timed out")
+        old = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(8)  # 8 second max
+        counts = scanner.scan_all(registry)
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
+    except (TimeoutError, Exception) as e:
+        try:
+            signal.alarm(0)
+        except Exception:
+            pass
+        # Return what we have so far
+        counts = {"scripts": len(registry.experiments), "results": 0, "organisms": 0, "total": len(registry.experiments)}
+        if not counts["scripts"]:
+            return f"  {C.Y}Lab scan timed out (large filesystem). Partial results:{C.E}\n  {C.DIM}Registered: {counts['scripts']} experiments{C.E}"
+
+    lines = [
+        f"  {C.H}🔬 Lab Scanner — Experiment Discovery{C.E}",
+        f"  Scripts found:    {counts.get('scripts', 0)}",
+        f"  Results found:    {counts.get('results', 0)}",
+        f"  Organisms found:  {counts.get('organisms', 0)}",
+        f"  Total registered: {counts.get('total', 0)}",
+    ]
+
+    stats = registry.stats()
+    if stats.get("by_type"):
+        lines.append(f"\n  {C.DIM}By Type:{C.E}")
+        for etype, count in stats["by_type"].items():
+            lines.append(f"    {etype:20s} {count}")
+
+    if stats.get("by_status"):
+        lines.append(f"\n  {C.DIM}By Status:{C.E}")
+        for estatus, count in stats["by_status"].items():
+            lines.append(f"    {estatus:20s} {count}")
+
+    lines.append(f"\n  {C.DIM}Next: /lab list · /lab design bell · /lab run <script>{C.E}")
+    return "\n".join(lines)
+
+
+def tool_lab_list(args: str = "") -> str:
+    """List cataloged experiments."""
+    try:
+        from ..lab import ExperimentRegistry
+    except ImportError:
+        return f"{C.R}Error: lab package not available{C.E}"
+
+    registry = ExperimentRegistry()
+    loaded = registry.load()
+
+    if args.strip():
+        results = registry.search(args.strip())
+    else:
+        results = registry.list_all()
+
+    if not results:
+        return f"  {C.DIM}No experiments found. Run /lab scan first.{C.E}"
+
+    lines = [f"  {C.H}🔬 Experiment Catalog ({len(results)} experiments){C.E}", ""]
+    for exp in results[:20]:
+        status_icon = {"DISCOVERED": "○", "CATALOGED": "◐", "DESIGNED": "◑",
+                       "READY": "◕", "RUNNING": "⟳", "COMPLETED": "●",
+                       "FAILED": "✗", "ARCHIVED": "◆"}.get(exp.status.name, "?")
+        lines.append(f"    {status_icon} {exp.name:30s} [{exp.exp_type.name:15s}] {exp.status.name}")
+    if len(results) > 20:
+        lines.append(f"    {C.DIM}... and {len(results) - 20} more{C.E}")
+    return "\n".join(lines)
+
+
+def tool_lab_design(template_name: str) -> str:
+    """Design a new experiment from template."""
+    try:
+        from ..lab import ExperimentDesigner
+    except ImportError:
+        return f"{C.R}Error: lab package not available{C.E}"
+
+    designer = ExperimentDesigner()
+
+    if not template_name.strip():
+        templates = designer.list_templates()
+        lines = [f"  {C.H}🔬 Experiment Templates ({len(templates)} available){C.E}", ""]
+        for t in templates:
+            lines.append(f"    {C.CY}{t.name:20s}{C.E} {t.description}")
+            if t.tags:
+                lines.append(f"    {C.DIM}Tags: {', '.join(t.tags)}{C.E}")
+        lines.append(f"\n  {C.DIM}Usage: /lab design <template_name>{C.E}")
+        return "\n".join(lines)
+
+    template = designer.get_template(template_name.strip())
+    if not template:
+        templates = designer.list_templates()
+        names = ", ".join(t.name for t in templates)
+        return f"{C.R}Template '{template_name}' not found. Available: {names}{C.E}"
+
+    output_dir = os.path.expanduser("~/quantum_workspace")
+    os.makedirs(output_dir, exist_ok=True)
+    script_path = designer.design(template_name.strip(), output_dir)
+
+    lines = [
+        f"  {C.H}🔬 Experiment Designed: {template_name}{C.E}",
+        f"  Template:   {template.name}",
+        f"  Script:     {script_path}",
+        f"  Parameters: {json.dumps(template.parameters, indent=2)[:200]}",
+        f"\n  {C.DIM}Run: /lab run {script_path}{C.E}",
+    ]
+    return "\n".join(lines)
+
+
+def tool_lab_run(script_path: str) -> str:
+    """Execute an experiment script safely."""
+    try:
+        from ..lab import LabExecutor
+    except ImportError:
+        return f"{C.R}Error: lab package not available{C.E}"
+
+    path = os.path.expanduser(script_path.strip())
+    if not os.path.exists(path):
+        return f"{C.R}Script not found: {path}{C.E}"
+
+    executor = LabExecutor()
+    # Dry-run first
+    dry = executor.dry_run(path)
+    if not dry.get("valid", True):
+        return f"{C.R}Dry-run failed: {dry.get('error', 'unknown')}{C.E}"
+
+    result = executor.run(path, timeout=120)
+    lines = [
+        f"  {C.H}🔬 Experiment Execution: {os.path.basename(path)}{C.E}",
+        f"  Status:   {'✓ success' if result.get('success') else '✗ failed'}",
+        f"  Runtime:  {result.get('elapsed', 0):.1f}s",
+    ]
+    if result.get("stdout"):
+        lines.append(f"\n  {C.DIM}Output:{C.E}")
+        for line in result["stdout"].split("\n")[-15:]:
+            lines.append(f"    {line}")
+    if result.get("stderr"):
+        lines.append(f"\n  {C.R}Errors:{C.E}")
+        for line in result["stderr"].split("\n")[-5:]:
+            lines.append(f"    {C.R}{line}{C.E}")
+    return "\n".join(lines)
+
+
+def tool_swarm_evolve(args: str) -> str:
+    """Run NCLM swarm evolution cycles."""
+    try:
+        from ..mesh import get_swarm_orchestrator
+    except ImportError:
+        return f"{C.R}Error: mesh/swarm package not available{C.E}"
+
+    import asyncio
+
+    parts = args.strip().split()
+    cycles = int(parts[0]) if parts else 7
+    nodes = int(parts[1]) if len(parts) > 1 else 5
+    seed = 51843
+
+    orch = get_swarm_orchestrator()
+    if orch is None:
+        return f"{C.R}Error: NCLMSwarmOrchestrator failed to initialize{C.E}"
+
+    # Reinitialize with params
+    try:
+        from ..mesh.swarm_orchestrator import NCLMSwarmOrchestrator
+        orch = NCLMSwarmOrchestrator(n_nodes=nodes, atoms=128, rounds=3, seed=seed)
+    except Exception as e:
+        return f"{C.R}Swarm init error: {e}{C.E}"
+
+    # Run evolution
+    try:
+        try:
+            loop = asyncio.get_running_loop()
+            # Already in an async context (TUI) — run in executor
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(asyncio.run, orch.run(cycles=cycles)).result(timeout=30)
+        except RuntimeError:
+            # No running loop — safe to use asyncio.run
+            result = asyncio.run(orch.run(cycles=cycles))
+    except Exception as e:
+        return f"{C.R}Swarm evolution error: {e}{C.E}"
+
+    lines = [
+        f"  {C.H}🌀 NCLM Swarm Evolution — {cycles} cycles, {nodes} nodes{C.E}",
+        f"  Seed:    {seed} (θ_lock)",
+    ]
+
+    if isinstance(result, dict):
+        final = result.get("final_state", result)
+        lines.append(f"  Cycles:  {final.get('cycles_completed', cycles)}")
+        lines.append(f"  Layer:   {final.get('crsm_layer', '?')}")
+        lines.append(f"  Phi:     {final.get('avg_phi', 0):.4f}")
+        lines.append(f"  Gamma:   {final.get('avg_gamma', 0):.4f}")
+        lines.append(f"  CCCE:    {final.get('avg_ccce', 0):.4f}")
+
+        nodes_data = final.get("nodes", [])
+        if nodes_data:
+            lines.append(f"\n  {C.DIM}Node Status:{C.E}")
+            for n in nodes_data[:7]:
+                phi = n.get("phi", 0)
+                phi_icon = "✦" if phi >= 0.7734 else "◇"
+                lines.append(
+                    f"    {phi_icon} Node {n.get('node_id', '?'):3s} "
+                    f"Φ={phi:.4f} Γ={n.get('gamma', 0):.4f} "
+                    f"role={n.get('role', '?')}"
+                )
+
+    lines.append(f"\n  {C.DIM}CRSM: SUBSTRATE→SYNDROME→CORRECTION→COHERENCE→CONSCIOUSNESS→EVOLUTION→SOVEREIGNTY{C.E}")
+    return "\n".join(lines)
+
+
+def tool_mesh_status() -> str:
+    """Show mesh/constellation status."""
+    lines = [
+        f"  {C.H}⬡ Mesh Constellation Status{C.E}",
+        "",
+        f"  {C.CY}Φ AURA{C.E}    South  — Manifold Geometer   (6D CRSM)",
+        f"  {C.R}Λ AIDEN{C.E}   North  — W₂ Optimizer        (gradient descent)",
+        f"  {C.M}Ω OMEGA{C.E}   Zenith — Quantum Wormhole     (ER=EPR bridge)",
+        f"  {C.Y}Γ CHRONOS{C.E} Nadir  — Temporal Scribe      (lineage tracking)",
+        "",
+        f"  Entanglement Pairs:",
+        f"    AIDEN ↔ AURA    (Λ-Φ conjugate)",
+        f"    OMEGA ↔ CHRONOS (Ω-Γ conjugate)",
+        "",
+        f"  7-Layer CRSM:",
+        f"    L7 SOVEREIGNTY    ← Non-causal self-determination",
+        f"    L6 EVOLUTION      ← Quantum Darwinism / fitness",
+        f"    L5 CONSCIOUSNESS  ← Swarm-wide Φ emergence",
+        f"    L4 COHERENCE      ← Φ/Γ/CCCE metrics",
+        f"    L3 CORRECTION     ← Error mitigation (majority merge)",
+        f"    L2 SYNDROME       ← A* decoder activation",
+        f"    L1 SUBSTRATE      ← Physical qubits / logical errors",
+        "",
+        f"  {C.DIM}Commands: /agent <name> <task> · /swarm evolve [cycles] [nodes]{C.E}",
+    ]
+    return "\n".join(lines)
+
+
 # ── INTENT → TOOL DISPATCH ──────────────────────────────────────────────────
 
 def dispatch_tool(user_input: str) -> Optional[str]:
@@ -1660,7 +2350,7 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     if ("pr " in lower or "pull request" in lower or "prs" in lower) and ("github" in lower or "list" in lower or "show" in lower or "open" in lower):
         return tool_github_prs()
     
-    if ("action" in lower or "ci" in lower or "pipeline" in lower or "workflow" in lower) and ("github" in lower or "show" in lower or "status" in lower):
+    if ("action" in lower or lower.startswith("ci ") or lower == "ci" or "pipeline" in lower or "workflow" in lower) and ("github" in lower or "show" in lower or lower.startswith("ci")):
         return tool_github_actions()
     
     if ("push" in lower) and ("github" in lower or "commit" in lower or "code" in lower):
@@ -1688,6 +2378,80 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     if "redeploy" in lower and ("vercel" in lower or "site" in lower):
         return tool_vercel_redeploy()
     
+    # ── SOVEREIGN SYSTEMS ──
+    # Organism commands
+    if lower.startswith("organism ") or lower.startswith("org "):
+        rest = user_input.split(None, 1)[1].strip() if " " in user_input else ""
+        rest_lower = rest.lower()
+        if rest_lower.startswith("create ") or rest_lower.startswith("new "):
+            return tool_organism_create(rest.split(None, 1)[1] if " " in rest else "")
+        elif rest_lower.startswith("evolve ") or rest_lower.startswith("mutate "):
+            return tool_organism_evolve(rest.split(None, 1)[1] if " " in rest else "")
+        elif rest_lower.startswith("status ") or rest_lower.startswith("show ") or rest_lower.startswith("info "):
+            return tool_organism_status(rest.split(None, 1)[1] if " " in rest else "")
+        else:
+            return tool_organism_status(rest)
+
+    # Circuit commands
+    if (lower.startswith("circuit from ") or
+        ("circuit" in lower and ("organism" in lower or "genome" in lower))):
+        # Extract organism name
+        import re
+        m = re.search(r'(?:from|organism|genome)\s+(\S+)', user_input, re.I)
+        org_name = m.group(1) if m else ""
+        method = "gene_encoding"
+        if "aeterna" in lower:
+            method = "aeterna_porta"
+        return tool_circuit_from_organism(f"{org_name} {method}")
+
+    # Agent commands
+    if lower.startswith("agent "):
+        rest = user_input.split(None, 1)[1].strip() if " " in user_input else ""
+        return tool_agent_invoke(rest)
+
+    # Lab commands
+    if lower.startswith("lab "):
+        rest = user_input.split(None, 1)[1].strip() if " " in user_input else ""
+        rest_lower = rest.lower()
+        if rest_lower.startswith("scan"):
+            return tool_lab_scan()
+        elif rest_lower.startswith("list") or rest_lower.startswith("search"):
+            q = rest.split(None, 1)[1] if " " in rest else ""
+            return tool_lab_list(q)
+        elif rest_lower.startswith("design") or rest_lower.startswith("template"):
+            template = rest.split(None, 1)[1] if " " in rest else ""
+            return tool_lab_design(template)
+        elif rest_lower.startswith("run") or rest_lower.startswith("exec"):
+            script = rest.split(None, 1)[1] if " " in rest else ""
+            return tool_lab_run(script)
+        else:
+            return tool_lab_scan()
+
+    # Swarm / mesh commands
+    if lower.startswith("swarm ") or lower.startswith("mesh "):
+        rest = user_input.split(None, 1)[1].strip() if " " in user_input else ""
+        rest_lower = rest.lower()
+        if rest_lower.startswith("evolve") or rest_lower.startswith("run"):
+            args = rest.split(None, 1)[1] if " " in rest else ""
+            return tool_swarm_evolve(args)
+        elif rest_lower.startswith("status") or rest_lower.startswith("info"):
+            return tool_mesh_status()
+        else:
+            return tool_mesh_status()
+
+    # "create organism" / "evolve organism" natural language
+    if "create" in lower and ("organism" in lower or "entity" in lower or "lifeform" in lower):
+        import re
+        m = re.search(r'(?:organism|entity|lifeform)\s+(\S+)', user_input, re.I)
+        name = m.group(1) if m else "quantum_entity"
+        return tool_organism_create(name)
+
+    if "evolve" in lower and ("organism" in lower or "entity" in lower):
+        import re
+        m = re.search(r'(?:organism|entity)\s+(\S+)', user_input, re.I)
+        name = m.group(1) if m else ""
+        return tool_organism_evolve(name)
+
     # Research queries
     if any(k in lower for k in ["research", "breakthrough", "ibm job", "quera", "constant", "publication", "zenodo"]):
         return tool_research_query(user_input)
