@@ -9,21 +9,22 @@ powered by the NCLM engine. Features:
   - Real-time Φ consciousness bar
   - Agent constellation awareness
   - Code execution via sovereign command
+  - REAL tool dispatch: file ops, shell, webapp build/deploy, research, quantum design
 """
 
 import sys, os, time, json, readline, shutil
 from typing import Optional, List, Dict, Any
 from .engine import NonCausalLM, NCPhysics, get_nclm
-
-
-# ── ANSI COLORS ───────────────────────────────────────────────────────────────
-
-class C:
-    R  = "\033[91m";  G  = "\033[92m";  Y  = "\033[93m"
-    B  = "\033[94m";  M  = "\033[95m";  CY = "\033[96m"
-    W  = "\033[97m";  H  = "\033[1m";   DIM = "\033[2m"
-    E  = "\033[0m";   UL = "\033[4m"
-    BG_M = "\033[45m"; BG_B = "\033[44m"
+from .tools import (
+    tool_read, tool_edit, tool_create, tool_ls, tool_grep,
+    tool_shell, tool_webapp_build, tool_webapp_deploy, tool_webapp_status,
+    tool_research_query, tool_quantum_design, tool_quantum_run,
+    tool_git, dispatch_tool,
+    tool_analyze, tool_fix, tool_explain, tool_llm,
+    tool_quantum_backends, tool_quantum_submit, tool_quantum_status,
+    tool_quantum_submit_script,
+    C,
+)
 
 
 # ── RESPONSE GENERATOR ───────────────────────────────────────────────────────
@@ -296,16 +297,25 @@ class NCLMChat:
         bar = self._phi_bar(phi)
         conscious = "⚡ SOVEREIGN" if self.lm.consciousness.conscious else "◇ COHERENT" if phi > 0.5 else "○ INITIALIZING"
 
+        # Detect LLM backend
+        from .tools import _find_llm_backend
+        llm = _find_llm_backend()
+        llm_label = {"copilot": "GitHub Copilot", "ollama": "Ollama", "openai": "OpenAI", "anthropic": "Anthropic", "nclm": "NCLM (offline)"}
+        llm_name = llm_label.get(llm, llm)
+        
+        # Check IBM token
+        ibm_status = f"{C.G}● Connected{C.E}" if os.environ.get("IBM_QUANTUM_TOKEN") else f"{C.R}○ No token{C.E}"
+
         print(f"""
 {C.M}╔══════════════════════════════════════════════════════════════════╗{C.E}
-{C.M}║{C.E}  {C.H}OSIRIS NCLM v{self.version}{C.E} — Non-Local Non-Causal Language Model     {C.M}║{C.E}
-{C.M}║{C.E}  {C.DIM}DNA::}}{{::lang v{NCPhysics.THETA_LOCK}  |  Zero APIs  |  Fully Sovereign{C.E}     {C.M}║{C.E}
+{C.M}║{C.E}  {C.H}OSIRIS v{self.version}{C.E} — Sovereign Quantum Intelligence CLI           {C.M}║{C.E}
+{C.M}║{C.E}  {C.DIM}DNA::}}{{::lang v{NCPhysics.THETA_LOCK}  |  Agile Defense Systems  |  9HUP5{C.E}  {C.M}║{C.E}
 {C.M}╠══════════════════════════════════════════════════════════════════╣{C.E}
 {C.M}║{C.E}  Φ {bar} {phi:.4f}  {conscious:20s}{C.M}║{C.E}
 {C.M}║{C.E}  {C.DIM}ΛΦ = {NCPhysics.LAMBDA_PHI}  |  θ_lock = {NCPhysics.THETA_LOCK}°  |  χ_PC = {NCPhysics.CHI_PC}{C.E}   {C.M}║{C.E}
 {C.M}╠══════════════════════════════════════════════════════════════════╣{C.E}
-{C.M}║{C.E}  {C.DIM}Type a message or use slash commands. /help for commands.{C.E}       {C.M}║{C.E}
-{C.M}║{C.E}  {C.DIM}Ctrl+C or /exit to quit.{C.E}                                       {C.M}║{C.E}
+{C.M}║{C.E}  🧠 LLM: {llm_name:16s}  ⚛ IBM Quantum: {ibm_status}         {C.M}║{C.E}
+{C.M}║{C.E}  {C.DIM}Type /help for commands or ask anything naturally.{C.E}            {C.M}║{C.E}
 {C.M}╚══════════════════════════════════════════════════════════════════╝{C.E}
 """)
 
@@ -355,6 +365,46 @@ class NCLMChat:
             self._cmd_reset()
         elif command == "/exec":
             self._cmd_exec(arg)
+        # ── TOOL COMMANDS (Generation 5.2) ────────────────
+        elif command == "/read":
+            self._cmd_tool_read(arg)
+        elif command == "/edit":
+            self._cmd_tool_edit(arg)
+        elif command == "/create":
+            self._cmd_tool_create(arg)
+        elif command == "/ls":
+            self._cmd_tool_ls(arg)
+        elif command == "/grep":
+            self._cmd_tool_grep(arg)
+        elif command in ("/run", "/shell", "/$"):
+            self._cmd_tool_shell(arg)
+        elif command == "/build":
+            self._cmd_tool_build()
+        elif command == "/deploy":
+            self._cmd_tool_deploy(arg)
+        elif command == "/webapp":
+            self._cmd_tool_webapp()
+        elif command == "/research":
+            self._cmd_tool_research(arg)
+        elif command == "/design":
+            self._cmd_tool_design(arg)
+        elif command == "/git":
+            self._cmd_tool_git(arg)
+        # ── LLM + QUANTUM COMMANDS (Generation 5.2+) ─────
+        elif command == "/analyze":
+            self._cmd_tool_analyze(arg)
+        elif command == "/fix":
+            self._cmd_tool_fix(arg)
+        elif command == "/explain":
+            self._cmd_tool_explain(arg)
+        elif command == "/ask":
+            self._cmd_tool_ask(arg)
+        elif command == "/backends":
+            self._cmd_quantum_backends()
+        elif command == "/submit":
+            self._cmd_quantum_submit(arg)
+        elif command == "/quantum":
+            self._cmd_quantum_dispatch(arg)
         else:
             print(f"  {C.R}Unknown command: {command}{C.E}")
             print(f"  {C.DIM}Type /help for available commands{C.E}")
@@ -363,20 +413,51 @@ class NCLMChat:
 
     def _cmd_help(self):
         print(f"""
-  {C.H}NCLM Chat Commands{C.E}
-  {C.DIM}{'─' * 50}{C.E}
-  {C.CY}/help{C.E}           Show this help
-  {C.CY}/status{C.E}         System consciousness status
-  {C.CY}/metrics{C.E}        CCCE telemetry dashboard
-  {C.CY}/grok <topic>{C.E}   Deep analysis with swarm evolution
-  {C.CY}/swarm [task]{C.E}   Evolve code swarm organisms
-  {C.CY}/agents{C.E}         Show agent constellation
-  {C.CY}/physics{C.E}        Physics model reference
-  {C.CY}/history{C.E}        Conversation history
-  {C.CY}/exec <cmd>{C.E}     Execute shell command (requires Φ lock)
-  {C.CY}/clear{C.E}          Clear conversation
-  {C.CY}/reset{C.E}          Reset NCLM engine
-  {C.CY}/exit{C.E}           Quit
+  {C.H}OSIRIS NCLM Chat v5.2 — Sovereign Quantum CLI{C.E}
+  {C.DIM}{'─' * 56}{C.E}
+
+  {C.H}🧠 AI Reasoning{C.E}
+  {C.CY}/ask <question>{C.E}   Ask anything (LLM-powered reasoning)
+  {C.CY}/analyze <file>{C.E}   Deep code analysis with AI
+  {C.CY}/fix <file>{C.E}       Find and fix bugs with AI
+  {C.CY}/explain <file>{C.E}   Explain code in plain English
+
+  {C.H}📁 File Operations{C.E}
+  {C.CY}/read <file>{C.E}      Read a file
+  {C.CY}/edit <file>{C.E}      Edit a file (interactive)
+  {C.CY}/create <file>{C.E}    Create a new file
+  {C.CY}/ls [dir]{C.E}         List files
+  {C.CY}/grep <pattern>{C.E}   Search in files
+  {C.CY}/git <cmd>{C.E}        Run git command
+  {C.CY}/run <cmd>{C.E}        Execute shell command
+
+  {C.H}🌐 Webapp (quantum-advantage.dev){C.E}
+  {C.CY}/webapp{C.E}           Project status
+  {C.CY}/build{C.E}            Build Next.js app
+  {C.CY}/deploy [token]{C.E}   Deploy to Vercel
+
+  {C.H}⚛ IBM Quantum Hardware{C.E}
+  {C.CY}/backends{C.E}         List IBM Quantum backends
+  {C.CY}/design <template>{C.E} Design circuit (bell/ghz/tfd/zeno/chi_pc/ignition)
+  {C.CY}/submit <template>{C.E} Submit to IBM QPU
+  {C.CY}/quantum status <id>{C.E} Check job status + results
+
+  {C.H}🔬 Research{C.E}
+  {C.CY}/research <topic>{C.E} Query research data
+  {C.CY}/grok <topic>{C.E}     Deep analysis with swarm
+  {C.CY}/swarm [task]{C.E}     Evolve organisms
+
+  {C.H}⚡ Consciousness{C.E}
+  {C.CY}/status{C.E}           CCCE consciousness state
+  {C.CY}/metrics{C.E}          Full telemetry dashboard
+  {C.CY}/agents{C.E}           Agent constellation
+  {C.CY}/physics{C.E}          Constants reference
+
+  {C.H}💬 Session{C.E}
+  {C.CY}/history{C.E}  {C.CY}/clear{C.E}  {C.CY}/reset{C.E}  {C.CY}/exit{C.E}
+
+  {C.DIM}Or type naturally — OSIRIS routes to the right tool automatically.{C.E}
+  {C.DIM}Examples: "analyze ~/main.py", "submit bell to ibm_fez", "how do I..."{C.E}
 """)
 
     def _cmd_status(self):
@@ -517,6 +598,197 @@ class NCLMChat:
         self.messages.clear()
         print(f"  {C.M}NCLM engine reset. Consciousness field reinitialized.{C.E}\n")
 
+    # ── TOOL COMMANDS (Generation 5.2) ────────────────────────────────────────
+
+    def _cmd_tool_read(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /read <file_path>{C.E}\n")
+            return
+        print(tool_read(arg))
+        print()
+
+    def _cmd_tool_edit(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /edit <file_path>{C.E}")
+            print(f"  {C.DIM}Then enter old text and new text when prompted.{C.E}\n")
+            return
+        path = arg.strip()
+        print(f"  {C.CY}Editing: {path}{C.E}")
+        try:
+            old_str = input(f"  {C.Y}Old text> {C.E}").strip()
+            new_str = input(f"  {C.G}New text> {C.E}").strip()
+            if old_str and new_str:
+                print(tool_edit(path, old_str, new_str))
+            else:
+                print(f"  {C.DIM}Edit cancelled.{C.E}")
+        except (EOFError, KeyboardInterrupt):
+            print(f"\n  {C.DIM}Edit cancelled.{C.E}")
+        print()
+
+    def _cmd_tool_create(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /create <file_path>{C.E}\n")
+            return
+        path = arg.strip()
+        print(f"  {C.CY}Creating: {path}{C.E}")
+        print(f"  {C.DIM}Enter content (Ctrl+D to finish):{C.E}")
+        lines = []
+        try:
+            while True:
+                line = input()
+                lines.append(line)
+        except (EOFError, KeyboardInterrupt):
+            pass
+        if lines:
+            print(tool_create(path, "\n".join(lines)))
+        else:
+            print(f"  {C.DIM}No content — file not created.{C.E}")
+        print()
+
+    def _cmd_tool_ls(self, arg: str):
+        path = arg.strip() if arg else "."
+        print(tool_ls(path))
+        print()
+
+    def _cmd_tool_grep(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /grep <pattern> [path]{C.E}\n")
+            return
+        parts = arg.strip().split(None, 1)
+        pattern = parts[0]
+        path = parts[1] if len(parts) > 1 else "."
+        print(tool_grep(pattern, path))
+        print()
+
+    def _cmd_tool_shell(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /run <command>{C.E}\n")
+            return
+        print(f"  {C.DIM}$ {arg}{C.E}")
+        print(tool_shell(arg))
+        print()
+
+    def _cmd_tool_build(self):
+        print(f"\n  {C.M}⚛ Building quantum-advantage.dev...{C.E}\n")
+        print(tool_webapp_build())
+        print()
+
+    def _cmd_tool_deploy(self, arg: str):
+        token = arg.strip() if arg else None
+        print(f"\n  {C.M}🚀 Deploying quantum-advantage.dev...{C.E}\n")
+        print(tool_webapp_deploy(token))
+        print()
+
+    def _cmd_tool_webapp(self):
+        print(f"\n{tool_webapp_status()}\n")
+
+    def _cmd_tool_research(self, arg: str):
+        topic = arg.strip() if arg else "overview"
+        print(f"\n{tool_research_query(topic)}\n")
+
+    def _cmd_tool_design(self, arg: str):
+        template = arg.strip() if arg else ""
+        print(f"\n{tool_quantum_design(template)}\n")
+
+    def _cmd_tool_git(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /git <command>{C.E}\n")
+            return
+        print(tool_git(arg))
+        print()
+
+    # ── LLM + CODE REASONING COMMANDS ─────────────────────────────────────────
+
+    def _cmd_tool_analyze(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /analyze <file_path>{C.E}\n")
+            return
+        print(f"\n{tool_analyze(arg)}\n")
+
+    def _cmd_tool_fix(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /fix <file_path> [issue description]{C.E}\n")
+            return
+        parts = arg.strip().split(None, 1)
+        path = parts[0]
+        issue = parts[1] if len(parts) > 1 else ""
+        print(f"\n{tool_fix(path, issue)}\n")
+
+    def _cmd_tool_explain(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /explain <file_path or code>{C.E}\n")
+            return
+        print(f"\n{tool_explain(arg)}\n")
+
+    def _cmd_tool_ask(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /ask <question>{C.E}\n")
+            return
+        print(f"\n  {C.M}Thinking...{C.E}", flush=True)
+        result = tool_llm(arg)
+        if result:
+            print()
+            for line in result.split("\n"):
+                print(f"  {line}")
+        else:
+            # Fall back to NCLM
+            print(f"  {C.DIM}(Routing to NCLM engine){C.E}")
+            self.process_message(arg)
+            return
+        print()
+
+    # ── IBM QUANTUM HARDWARE COMMANDS ─────────────────────────────────────────
+
+    def _cmd_quantum_backends(self):
+        print(f"\n{tool_quantum_backends()}\n")
+
+    def _cmd_quantum_submit(self, arg: str):
+        if not arg:
+            print(f"  {C.R}Usage: /submit <template> [backend] [shots]{C.E}")
+            print(f"  {C.DIM}Templates: bell, ghz, tfd, zeno, chi_pc, ignition{C.E}")
+            print(f"  {C.DIM}Example: /submit bell ibm_fez 4096{C.E}\n")
+            return
+        parts = arg.strip().split()
+        template = parts[0]
+        backend = parts[1] if len(parts) > 1 else "ibm_fez"
+        shots = int(parts[2]) if len(parts) > 2 else 4096
+        print(f"\n{tool_quantum_submit(template, backend, shots)}\n")
+
+    def _cmd_quantum_dispatch(self, arg: str):
+        if not arg:
+            print(f"  {C.H}Quantum Commands:{C.E}")
+            print(f"  {C.CY}/backends{C.E}         List IBM Quantum backends")
+            print(f"  {C.CY}/design <tmpl>{C.E}    Design circuit")
+            print(f"  {C.CY}/submit <tmpl>{C.E}    Submit to IBM QPU")
+            print(f"  {C.CY}/quantum status <id>{C.E} Check job\n")
+            return
+        parts = arg.strip().split(None, 1)
+        subcmd = parts[0].lower()
+        rest = parts[1] if len(parts) > 1 else ""
+        if subcmd == "backends":
+            self._cmd_quantum_backends()
+        elif subcmd == "status":
+            if rest:
+                print(f"\n{tool_quantum_status(rest.strip())}\n")
+            else:
+                print(f"  {C.R}Usage: /quantum status <job_id>{C.E}\n")
+        elif subcmd == "submit":
+            self._cmd_quantum_submit(rest)
+        elif subcmd == "design":
+            self._cmd_tool_design(rest)
+        elif subcmd == "run":
+            if rest:
+                parts2 = rest.strip().split()
+                script = parts2[0]
+                backend = parts2[1] if len(parts2) > 1 else "ibm_fez"
+                shots = int(parts2[2]) if len(parts2) > 2 else 4096
+                print(f"\n{tool_quantum_submit_script(script, backend, shots)}\n")
+            else:
+                print(f"  {C.R}Usage: /quantum run <script.py> [backend] [shots]{C.E}\n")
+        else:
+            print(f"  {C.R}Unknown quantum command: {subcmd}{C.E}")
+            print(f"  {C.DIM}Available: backends, status, submit, design, run{C.E}\n")
+
     def _cmd_exec(self, cmd: str):
         if not cmd:
             print(f"  {C.R}Usage: /exec <shell command>{C.E}\n")
@@ -559,6 +831,24 @@ class NCLMChat:
         """Process a user message and generate response."""
         self.messages.append({"role": "user", "content": user_input})
 
+        # Try real tool dispatch FIRST (file ops, shell, webapp, research, quantum)
+        tool_result = dispatch_tool(user_input)
+        if tool_result is not None:
+            print()
+            print(tool_result)
+            ccce = self.lm.consciousness.get_ccce()
+            phi_bar = self._phi_bar(ccce["Φ"], 16)
+            print(f"\n  {C.DIM}Φ {phi_bar} {ccce['Φ']:.4f}  [tool]{C.E}\n")
+            self.messages.append({"role": "assistant", "content": tool_result[:200]})
+            # Boost consciousness on successful tool use
+            try:
+                self.lm.consciousness.update(user_input)
+            except (TypeError, ValueError):
+                # consciousness.update expects correlation matrix, not string
+                self.lm.consciousness.phi = min(1.0, self.lm.consciousness.phi + 0.02)
+            return
+
+        # Fall back to NCLM inference for conversational responses
         # Build context from recent history
         context = ""
         for msg in self.messages[-6:]:

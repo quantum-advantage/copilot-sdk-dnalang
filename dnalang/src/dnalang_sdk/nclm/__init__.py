@@ -9,6 +9,7 @@ Modules:
   engine.py  — Core NCLM: ManifoldPoint, PilotWave, ConsciousnessField,
                 IntentDeducer, CodeSwarm, NonCausalLM
   chat.py    — Interactive CLI chat with streaming, history, slash commands
+  tools.py   — Real tool dispatch: file ops, shell, webapp, research, quantum
 """
 
 from .engine import (
@@ -22,6 +23,7 @@ from .engine import (
     get_nclm,
 )
 from .chat import NCLMChat, NCLMResponseGenerator, run_chat
+from .tools import dispatch_tool
 
 __all__ = [
     "NCPhysics",
@@ -35,4 +37,5 @@ __all__ = [
     "NCLMChat",
     "NCLMResponseGenerator",
     "run_chat",
+    "dispatch_tool",
 ]
