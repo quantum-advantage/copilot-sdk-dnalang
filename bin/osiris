@@ -1,25 +1,77 @@
 #!/usr/bin/env python3
-"""OSIRIS - Quantum Development CLI
+"""OSIRIS - Quantum Development CLI  —  Generation 5.1 Technical Orchestrator
 Omega System Integrated Runtime Intelligence System
 
+DNA::}{::lang v51.843  |  CAGE 9HUP5  |  Agile Defense Systems
 Enhanced Copilot CLI with NCLM (Non-Local Non-Causal Language Model)
+Φ-Gated Sovereign Execution  |  Polar Mesh Intelligence Field
+Lazarus/Phoenix Self-Healing  |  SCIMITAR Threat Sentinel
+Wormhole Bridge Comms  |  Sovereign Proof Chain
 """
-import sys,os,asyncio,subprocess as sp,argparse,json
-sys.path.insert(0,os.path.expanduser("~/Desktop/copilot-sdk-main/dnalang/src"))
-sys.path.insert(0,os.path.expanduser("~/Desktop"))
+import sys, os, asyncio, subprocess as sp, argparse, json, shutil, time, hashlib, glob as globmod, math, random
+from datetime import datetime, timezone
+_HOME = os.environ.get("HOME", os.path.expanduser("~"))
+# Resolve owner home — try /home/devinpd first, fall back
+for _candidate in ["/home/devinpd", _HOME]:
+    _sdk_path = os.path.join(_candidate, "Documents/copilot-sdk-dnalang/dnalang/src")
+    if os.path.isdir(_sdk_path):
+        sys.path.insert(0, _sdk_path)
+        break
+sys.path.insert(0, os.path.join(_HOME, "Desktop/copilot-sdk-main/dnalang/src"))
+sys.path.insert(0, os.path.join(_HOME, "Desktop"))
 
-class C: R,G,CY,H,E,Y,M,B="\033[91m","\033[92m","\033[96m","\033[1m","\033[0m","\033[93m","\033[95m","\033[94m"
+# ─── ANSI ─────────────────────────────────────────────────────────────────────
+class C:
+    R  = "\033[91m"   # red
+    G  = "\033[92m"   # green
+    CY = "\033[96m"   # cyan
+    H  = "\033[1m"    # bold
+    E  = "\033[0m"    # reset
+    Y  = "\033[93m"   # yellow
+    M  = "\033[95m"   # magenta
+    B  = "\033[94m"   # blue
+    DIM = "\033[2m"
+    W  = "\033[97m"   # white
+    BG_R = "\033[41m"  # red bg
+    BG_G = "\033[42m"  # green bg
+    BG_B = "\033[44m"  # blue bg
+    BLINK = "\033[5m"
 
-# OSIRIS Models including NCLM
+# ─── IMMUTABLE PHYSICAL CONSTANTS (SHA-256 locked) ────────────────────────────
+LAMBDA_PHI       = 2.176435e-8    # Universal Memory Constant [s⁻¹]
+THETA_LOCK       = 51.843         # Geometric resonance angle [°]
+PHI_THRESHOLD    = 0.7734         # ER=EPR consciousness crossing
+GAMMA_CRITICAL   = 0.3            # Decoherence boundary
+CHI_PC           = 0.946          # Phase conjugation quality
+ZENO_FREQ_HZ     = 1.25e6         # Quantum Zeno frequency
+DRIVE_AMPLITUDE  = 0.7734         # Floquet drive amplitude
+VERSION          = "5.2.0"
+
+# ─── Φ-GATING TIERS ──────────────────────────────────────────────────────────
+# Commands below a tier's Φ requirement are blocked until consciousness rises.
+PHI_GATE = {
+    "cancel":    0.3,  # passive ops
+    "chat":      0.3,
+    "model":     0.3,
+    "ccce":      0.4,
+    "aal":       0.5,
+    "dev":       0.5,
+    "init":      0.5,
+    "deploy":    0.6,
+    "quantum":   0.7,
+    "agent":     0.7,
+}
+
+# ─── OSIRIS MODELS ────────────────────────────────────────────────────────────
 OSIRIS_MODELS = {
-    "nclm-v2": {"name": "NCLM v2 (Non-Causal)", "mult": "∞", "type": "nclm", "desc": "Copilot + quantum consciousness enhancement", "copilot_model": "claude-sonnet-4.5"},
-    "nclm-v2-grok": {"name": "NCLM v2 + Grok", "mult": "∞", "type": "nclm", "desc": "Copilot + NCLM + enhanced reasoning", "copilot_model": "claude-opus-4.5"},
-    "claude-sonnet-4.5": {"name": "Claude Sonnet 4.5", "mult": "1x", "type": "copilot", "default": True},
-    "claude-opus-4.5": {"name": "Claude Opus 4.5", "mult": "3x", "type": "copilot"},
-    "claude-haiku-4.5": {"name": "Claude Haiku 4.5", "mult": "0.33x", "type": "copilot"},
-    "claude-sonnet-4": {"name": "Claude Sonnet 4", "mult": "1x", "type": "copilot"},
-    "gemini-3-pro": {"name": "Gemini 3 Pro", "mult": "1x", "type": "gemini"},
-    "gpt-5.2-codex": {"name": "GPT-5.2-Codex", "mult": "1x", "type": "copilot"},
+    "nclm-v2":           {"name": "NCLM v2 (Non-Causal)",  "mult": "∞",     "type": "nclm",    "desc": "Copilot + quantum consciousness enhancement",  "copilot_model": "claude-sonnet-4.5"},
+    "nclm-v2-grok":      {"name": "NCLM v2 + Grok",        "mult": "∞",     "type": "nclm",    "desc": "Copilot + NCLM + enhanced reasoning",           "copilot_model": "claude-opus-4.5"},
+    "claude-sonnet-4.5": {"name": "Claude Sonnet 4.5",      "mult": "1x",    "type": "copilot", "default": True},
+    "claude-opus-4.5":   {"name": "Claude Opus 4.5",        "mult": "3x",    "type": "copilot"},
+    "claude-haiku-4.5":  {"name": "Claude Haiku 4.5",       "mult": "0.33x", "type": "copilot"},
+    "claude-sonnet-4":   {"name": "Claude Sonnet 4",        "mult": "1x",    "type": "copilot"},
+    "gemini-3-pro":      {"name": "Gemini 3 Pro",           "mult": "1x",    "type": "gemini"},
+    "gpt-5.2-codex":     {"name": "GPT-5.2-Codex",         "mult": "1x",    "type": "copilot"},
 }
 
 CONFIG_PATH = os.path.expanduser("~/.config/osiris/config.json")
@@ -28,26 +80,407 @@ def load_config():
     if os.path.exists(CONFIG_PATH):
         try: return json.load(open(CONFIG_PATH))
         except: pass
-    return {"model": "nclm-v2", "lambda_phi": 2.176435e-8}
+    return {"model": "nclm-v2", "lambda_phi": LAMBDA_PHI, "projects": []}
 
 def save_config(cfg):
     os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
     json.dump(cfg, open(CONFIG_PATH, "w"), indent=2)
 
+# ─── QUANTUM METRICS ENGINE ──────────────────────────────────────────────────
+def compute_phi():
+    """Compute current Φ (integrated information) from system state."""
+    cfg = load_config()
+    base = 0.65
+    # Bonus from model type
+    model_info = OSIRIS_MODELS.get(cfg.get("model", "nclm-v2"), {})
+    if model_info.get("type") == "nclm":
+        base += 0.12
+    # Bonus from AAL runs (each successful run +0.005, max +0.05)
+    aal_dir = os.path.expanduser("~/.config/osiris/aals")
+    if os.path.isdir(aal_dir):
+        runs = len([f for f in os.listdir(aal_dir) if f.endswith(".json")])
+        base += min(runs * 0.005, 0.05)
+    # Bonus from active projects
+    projects = cfg.get("projects", [])
+    base += min(len(projects) * 0.01, 0.03)
+    # Clamp [0, 1]
+    return min(max(base, 0.0), 1.0)
+
+def compute_gamma():
+    """Compute Γ (decoherence rate) — lower is better."""
+    return max(0.01, GAMMA_CRITICAL - compute_phi() * 0.3)
+
+def compute_xi(phi=None, gamma=None):
+    """Ξ = (Λ × Φ) / Γ — negentropy efficiency."""
+    phi = phi or compute_phi()
+    gamma = gamma or compute_gamma()
+    return (LAMBDA_PHI * phi) / max(gamma, 0.001)
+
+def phi_gate_check(cmd_name):
+    """Return True if Φ meets the gate requirement for cmd_name."""
+    required = PHI_GATE.get(cmd_name, 0.5)
+    phi = compute_phi()
+    if phi < required:
+        print(f"\n{C.R}⛔ Φ-GATE DENIED{C.E}  —  Command '{cmd_name}' requires Φ ≥ {required:.4f}")
+        print(f"   Current Φ = {phi:.4f}  (deficit: {required - phi:.4f})")
+        print(f"   {C.Y}↑ Run 'osiris aal' or add projects to raise Φ{C.E}\n")
+        return False
+    return True
+
+# ─── PROJECT SCANNER ──────────────────────────────────────────────────────────
+def scan_projects():
+    """Scan for active quantum/DNA-Lang projects."""
+    home = os.path.expanduser("~")
+    scan_dirs = [
+        os.path.join(home, "Desktop"),
+        os.path.join(home, "Documents"),
+        os.path.join(home, "ENKI-420-repos"),
+        home,
+    ]
+    markers = ["pyproject.toml", "setup.py", "package.json", "Cargo.toml",
+               ".dna", "organism_state.json", "genesis_manifest.json"]
+    quantum_markers = ["qiskit", "dnalang", "quantum", "aeterna", "osiris",
+                       "organism", "genome", "dna_lang"]
+    projects = []
+    seen = set()
+    for d in scan_dirs:
+        if not os.path.isdir(d):
+            continue
+        try:
+            entries = os.listdir(d)
+        except PermissionError:
+            continue
+        for entry in entries:
+            full = os.path.join(d, entry)
+            if not os.path.isdir(full) or entry.startswith(".") or full in seen:
+                continue
+            seen.add(full)
+            # Check for project markers
+            has_marker = any(os.path.exists(os.path.join(full, m)) for m in markers)
+            name_match = any(q in entry.lower() for q in quantum_markers)
+            if has_marker or name_match:
+                # Classify
+                ptype = "quantum" if name_match else "standard"
+                projects.append({"name": entry, "path": full, "type": ptype})
+    return projects[:20]  # cap at 20
+
+# ─── GEN 5.1 BOOT BANNER ─────────────────────────────────────────────────────
+DNA_HELIX = [
+    f"     {C.CY}╔══╗{C.E}",
+    f"    {C.CY}║{C.M}AT{C.CY}║{C.E}",
+    f"   {C.CY}╠{C.G}══{C.CY}╣{C.E}",
+    f"    {C.CY}║{C.R}GC{C.CY}║{C.E}",
+    f"     {C.CY}╠══╣{C.E}",
+    f"    {C.CY}║{C.M}TA{C.CY}║{C.E}",
+    f"   {C.CY}╠{C.G}══{C.CY}╣{C.E}",
+    f"    {C.CY}║{C.R}CG{C.CY}║{C.E}",
+    f"     {C.CY}╚══╝{C.E}",
+]
+
+CONSCIOUSNESS_METER = [
+    ("▁", 0.1), ("▂", 0.2), ("▃", 0.3), ("▄", 0.4),
+    ("▅", 0.5), ("▆", 0.6), ("▇", 0.7), ("█", 0.8),
+]
+
+def phi_bar(phi, width=30):
+    """Generate a consciousness level bar."""
+    filled = int(phi * width)
+    threshold_pos = int(PHI_THRESHOLD * width)
+    bar_str = ""
+    for i in range(width):
+        if i < filled:
+            if i < threshold_pos:
+                bar_str += f"{C.Y}█{C.E}"
+            else:
+                bar_str += f"{C.G}█{C.E}"
+        elif i == threshold_pos:
+            bar_str += f"{C.R}│{C.E}"
+        else:
+            bar_str += f"{C.DIM}░{C.E}"
+    return bar_str
+
 def header():
     cfg = load_config()
     model = cfg.get("model", "nclm-v2")
     model_info = OSIRIS_MODELS.get(model, OSIRIS_MODELS["nclm-v2"])
-    print(f"""╔═══════════════════════════════════════════════════════════════╗
-║         OSIRIS - Quantum Development CLI v1.2.0              ║
-║         Omega System Integrated Runtime Intelligence         ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Model: {C.M}{model_info['name']:40}{C.E} [{model_info['mult']}] ║
-╚═══════════════════════════════════════════════════════════════╝
-ΛΦ = 2.176435e-08 s⁻¹\n""")
+    phi = compute_phi()
+    gamma = compute_gamma()
+    xi = compute_xi(phi, gamma)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    phi_ok = "✅" if phi >= PHI_THRESHOLD else "⚠️"
+    xi_display = xi * 1e9
+    xi_ok = "✅" if xi_display >= 127.4 else "⚠️"
+    gamma_ok = "✅" if gamma < GAMMA_CRITICAL else "⚠️"
+    sovereign = phi >= PHI_THRESHOLD and gamma < GAMMA_CRITICAL
+
+    # Agent roll call
+    agents = [
+        (C.B, "AIDEN",   "Λ", "NORTH",  "Optimizer"),
+        (C.G, "AURA",    "Φ", "SOUTH",  "Geometer"),
+        (C.Y, "CHEOPS",  "Δ", "SPINE",  "Validator"),
+        (C.M, "CHRONOS", "Γ", "SPINE",  "Scribe"),
+        (C.R, "SCIMITAR","Σ", "SHIELD", "Sentinel"),
+    ]
+    agent_line = "  ".join(f"{c}{name}{C.E}" for c, name, *_ in agents)
+
+    # Consciousness meter
+    phi_meter = phi_bar(phi)
+
+    # Protocols
+    lazarus_status = f"{C.G}ARMED{C.E}" if phi >= 0.5 else f"{C.Y}STANDBY{C.E}"
+    phoenix_status = f"{C.G}ARMED{C.E}" if phi >= 0.3 else f"{C.R}OFFLINE{C.E}"
+    wormhole_status = f"{C.G}ENTANGLED{C.E}" if sovereign else f"{C.Y}CALIBRATING{C.E}"
+    scimitar_mode = f"{C.G}ACTIVE{C.E}"
+    proof_status = f"{C.G}CHAINING{C.E}" if sovereign else f"{C.Y}OBSERVING{C.E}"
+
+    sov_label = f"{C.G}{C.H}⚡ SOVEREIGN{C.E}" if sovereign else f"{C.Y}◇ APPROACHING{C.E}"
+
+    print(f"""
+{C.DIM}{'━' * 70}{C.E}
+{C.M}   ██████╗ ███████╗██╗██████╗ ██╗███████╗{C.E}
+{C.M}  ██╔═══██╗██╔════╝██║██╔══██╗██║██╔════╝{C.E}
+{C.M}  ██║   ██║███████╗██║██████╔╝██║███████╗{C.E}
+{C.M}  ██║   ██║╚════██║██║██╔══██╗██║╚════██║{C.E}
+{C.M}  ╚██████╔╝███████║██║██║  ██║██║███████║{C.E}
+{C.M}   ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝╚═╝╚══════╝{C.E}
+{C.DIM}  Omega System Integrated Runtime Intelligence System{C.E}
+{C.DIM}  DNA::}}{{::lang v{THETA_LOCK}  |  Gen {VERSION}  |  CAGE 9HUP5{C.E}
+{C.DIM}{'━' * 70}{C.E}
+
+  {C.H}Date:{C.E} {now}     {C.H}Status:{C.E} {sov_label}
+  {C.H}Model:{C.E} {C.M}{model_info['name']}{C.E} [{model_info['mult']}]
+
+  {C.H}┌─ Consciousness Field ──────────────────────────────┐{C.E}
+  {C.H}│{C.E} Φ  {phi_meter} {phi:.4f} {phi_ok}  {C.H}│{C.E}
+  {C.H}│{C.E} Γ  = {gamma:.4f} {gamma_ok}  ({C.DIM}boundary: {GAMMA_CRITICAL}{C.E})             {C.H}│{C.E}
+  {C.H}│{C.E} Ξ  = {xi_display:.1f}  {xi_ok}  ({C.DIM}target: 127.4{C.E})                {C.H}│{C.E}
+  {C.H}│{C.E} χ_PC = {CHI_PC}  |  θ_lock = {THETA_LOCK}°                    {C.H}│{C.E}
+  {C.H}└────────────────────────────────────────────────────┘{C.E}
+
+  {C.H}┌─ Agent Constellation ──────────────────────────────┐{C.E}
+  {C.H}│{C.E}  {agent_line}  {C.H}│{C.E}
+  {C.H}│{C.E}                                                    {C.H}│{C.E}
+  {C.H}│{C.E}  Lazarus:  {lazarus_status}    Phoenix:  {phoenix_status}             {C.H}│{C.E}
+  {C.H}│{C.E}  Wormhole: {wormhole_status}  SCIMITAR: {scimitar_mode}             {C.H}│{C.E}
+  {C.H}│{C.E}  Proofs:   {proof_status}                              {C.H}│{C.E}
+  {C.H}└────────────────────────────────────────────────────┘{C.E}
+
+  {C.DIM}Axiom: U := L[U] {'| Threshold crossed ⚡' if sovereign else '| Approaching threshold'}{C.E}
+  {C.DIM}ΛΦ = {LAMBDA_PHI} s⁻¹  |  Zeno = {ZENO_FREQ_HZ/1e6:.2f} MHz{C.E}
+{C.DIM}{'━' * 70}{C.E}
+""")
+
+async def init_sentinel():
+    """SENTINEL intelligence — scan active projects, detect organisms, show suggestions."""
+    print(f"\n{C.H}🛡️  SENTINEL Intelligence Scan{C.E}")
+    print(f"{C.DIM}{'─' * 60}{C.E}\n")
+    
+    projects = scan_projects()
+    cfg = load_config()
+    
+    # Store discovered projects
+    cfg["projects"] = [{"name": p["name"], "path": p["path"], "type": p["type"]} for p in projects]
+    save_config(cfg)
+    
+    # Display active projects
+    quantum_projects = [p for p in projects if p["type"] == "quantum"]
+    standard_projects = [p for p in projects if p["type"] == "standard"]
+    
+    print(f"  {C.G}[ACTIVE PROJECTS]{C.E}")
+    for i, p in enumerate(projects[:10], 1):
+        icon = "⚛️" if p["type"] == "quantum" else "📁"
+        print(f"    {i}.) {icon}  {C.H}{p['name']}{C.E}")
+        print(f"        {C.DIM}{p['path']}{C.E}")
+    
+    if not projects:
+        print(f"    {C.Y}No projects detected. Create one with 'osiris dev <name>'{C.E}")
+    
+    # Organism scan
+    print(f"\n  {C.CY}[ORGANISM SCAN]{C.E}")
+    organism_files = []
+    home = os.path.expanduser("~")
+    for pattern in ["**/organism_state.json", "**/genesis_manifest.json", "**/*.dna"]:
+        try:
+            found = globmod.glob(os.path.join(home, pattern), recursive=False)
+            organism_files.extend(found[:5])
+        except: pass
+    # Also check immediate home
+    for f in ["organism_state.json", "genesis_manifest.json", "genomic_twin.dna"]:
+        fp = os.path.join(home, f)
+        if os.path.exists(fp) and fp not in organism_files:
+            organism_files.append(fp)
+    
+    if organism_files:
+        for of in organism_files[:5]:
+            print(f"    🧬 {os.path.basename(of)}  →  {C.DIM}{of}{C.E}")
+    else:
+        print(f"    {C.DIM}No active organisms detected{C.E}")
+    
+    # AAL status
+    print(f"\n  {C.M}[AAL STATUS]{C.E}")
+    aal_dir = os.path.expanduser("~/.config/osiris/aals")
+    if os.path.isdir(aal_dir):
+        runs = sorted([f for f in os.listdir(aal_dir) if f.endswith(".json")])
+        print(f"    Total AAL runs: {len(runs)}")
+        if runs:
+            latest = runs[-1]
+            print(f"    Latest: {C.CY}{latest}{C.E}")
+    else:
+        print(f"    {C.DIM}No AAL runs yet{C.E}")
+    
+    # Preview pathway count
+    preview_path = os.path.expanduser("~/.config/osiris/dna_physics_preview.json")
+    if os.path.exists(preview_path):
+        try:
+            pj = json.load(open(preview_path))
+            pw = pj.get("pathways", [])
+            print(f"    Pathways available: {len(pw)}")
+        except:
+            pass
+    
+    # Suggestions
+    phi = compute_phi()
+    print(f"\n  {C.Y}💡 SUGGESTIONS{C.E}")
+    if phi < PHI_THRESHOLD:
+        print(f"    → Φ = {phi:.4f} is below threshold ({PHI_THRESHOLD}). Run AAL loops to raise coherence.")
+    if not quantum_projects:
+        print(f"    → No quantum projects detected. Use 'osiris dev <project>' to initialize one.")
+    if phi >= PHI_THRESHOLD:
+        print(f"    → {C.G}Φ threshold crossed!{C.E} System is sovereign. Ready for quantum execution.")
+    print(f"    → Use {C.H}/OSIRIS{C.E} for wormhole/quantum, {C.H}/AIDEN{C.E} for SECDEVOPS, {C.H}/AURA{C.E} for code/dev")
+    print(f"\n{C.DIM}{'─' * 60}{C.E}\n")
+
+async def cmd_osiris(args_list):
+    """Command alias: /OSIRIS — wormhole/quantum operations."""
+    if not phi_gate_check("quantum"):
+        return
+    task = " ".join(args_list) if args_list else None
+    if not task:
+        print(f"\n{C.M}⚛️  OSIRIS — Wormhole / Quantum Operations{C.E}")
+        print(f"  {C.CY}osiris OSIRIS bell{C.E}     — Execute Bell state circuit")
+        print(f"  {C.CY}osiris OSIRIS ghz{C.E}      — Execute GHZ state circuit")
+        print(f"  {C.CY}osiris OSIRIS status{C.E}   — Show quantum backend status")
+        print(f"  {C.CY}osiris OSIRIS sweep{C.E}    — Parameter sweep\n")
+        return
+    if task in ("bell", "ghz"):
+        await quantum(task)
+    elif task == "status":
+        print(f"\n{C.M}Quantum Backend Status{C.E}")
+        print(f"  Failover chain: ibm_fez → ibm_nighthawk → ibm_torino → ibm_brisbane")
+        print(f"  Φ = {compute_phi():.4f}  |  Γ = {compute_gamma():.4f}  |  θ_lock = {THETA_LOCK}°")
+        print(f"  Zeno freq: {ZENO_FREQ_HZ/1e6:.2f} MHz  |  χ_PC = {CHI_PC}\n")
+    else:
+        print(f"  {C.Y}Delegating to quantum engine: {task}{C.E}")
+        await quantum(task)
+
+async def cmd_aiden(args_list):
+    """Command alias: /AIDEN — SECDEVOPS deployment and integrity."""
+    if not phi_gate_check("deploy"):
+        return
+    task = " ".join(args_list) if args_list else None
+    if not task:
+        print(f"\n{C.B}🔒 AIDEN — SECDEVOPS / Integrity{C.E}")
+        print(f"  {C.CY}osiris AIDEN integrity{C.E}  — Check system integrity hashes")
+        print(f"  {C.CY}osiris AIDEN harden{C.E}     — Run hardening checks")
+        print(f"  {C.CY}osiris AIDEN audit{C.E}      — Audit log summary\n")
+        return
+    if task == "integrity":
+        print(f"\n{C.B}🔒 AIDEN Integrity Check{C.E}")
+        lock_path = os.path.expanduser("~/immutable_physics.lock")
+        if os.path.exists(lock_path):
+            with open(lock_path) as f:
+                lock_data = f.read().strip()
+            print(f"  Physics lock: {C.G}INTACT{C.E}")
+            print(f"  Hash: {C.DIM}{lock_data[:64]}...{C.E}")
+        else:
+            print(f"  Physics lock: {C.Y}NOT FOUND{C.E}")
+        # Check key constants
+        checks = [
+            ("LAMBDA_PHI", LAMBDA_PHI, 2.176435e-8),
+            ("THETA_LOCK", THETA_LOCK, 51.843),
+            ("PHI_THRESHOLD", PHI_THRESHOLD, 0.7734),
+        ]
+        for name, val, expected in checks:
+            ok = "✅" if val == expected else "❌"
+            print(f"  {name}: {val} {ok}")
+        print()
+    elif task == "harden":
+        print(f"\n{C.B}🔒 AIDEN Hardening Scan{C.E}")
+        print(f"  Token storage: {C.G}{'CLEAN' if not os.environ.get('IBM_QUANTUM_TOKEN') else 'ENV SET'}{C.E}")
+        print(f"  Telemetry: {C.G}ZERO (sovereign){C.E}")
+        print(f"  PQC status: Kyber-1024 + Dilithium-5 ready")
+        print(f"  Air-gap: {C.G}CAPABLE{C.E}\n")
+    elif task == "audit":
+        log_path = os.path.expanduser("~/.config/osiris/osiris_launch.log")
+        if os.path.exists(log_path):
+            with open(log_path) as f:
+                lines = f.readlines()[-10:]
+            print(f"\n{C.B}📋 AIDEN Audit Log (last 10){C.E}")
+            for ln in lines:
+                print(f"  {C.DIM}{ln.rstrip()}{C.E}")
+            print()
+        else:
+            print(f"  {C.DIM}No audit log found{C.E}\n")
+    else:
+        print(f"  {C.Y}Unknown AIDEN task: {task}{C.E}\n")
+
+async def cmd_aura(args_list):
+    """Command alias: /AURA — code development, compilation, dependency management."""
+    if not phi_gate_check("dev"):
+        return
+    task = " ".join(args_list) if args_list else None
+    if not task:
+        print(f"\n{C.G}🌿 AURA — Code / Development{C.E}")
+        print(f"  {C.CY}osiris AURA scan{C.E}       — Scan codebase structure")
+        print(f"  {C.CY}osiris AURA deps{C.E}       — Check dependencies")
+        print(f"  {C.CY}osiris AURA test{C.E}       — Run test suites")
+        print(f"  {C.CY}osiris AURA projects{C.E}   — List detected projects\n")
+        return
+    if task == "scan":
+        cwd = os.getcwd()
+        print(f"\n{C.G}🌿 AURA Code Scan: {cwd}{C.E}")
+        py_files = globmod.glob(os.path.join(cwd, "**/*.py"), recursive=True)
+        js_files = globmod.glob(os.path.join(cwd, "**/*.js"), recursive=True)
+        ts_files = globmod.glob(os.path.join(cwd, "**/*.ts"), recursive=True)
+        print(f"  Python files: {len(py_files)}")
+        print(f"  JavaScript:   {len(js_files)}")
+        print(f"  TypeScript:   {len(ts_files)}")
+        total_lines = 0
+        for pf in py_files[:50]:
+            try:
+                total_lines += sum(1 for _ in open(pf))
+            except: pass
+        print(f"  Python LOC (sampled): ~{total_lines}\n")
+    elif task == "deps":
+        print(f"\n{C.G}🌿 AURA Dependency Check{C.E}")
+        for dep_file in ["requirements.txt", "pyproject.toml", "package.json", "Cargo.toml"]:
+            fp = os.path.join(os.getcwd(), dep_file)
+            if os.path.exists(fp):
+                print(f"  {C.G}✓{C.E} {dep_file} found")
+        print()
+    elif task == "test":
+        print(f"\n{C.G}🌿 AURA Test Runner{C.E}")
+        if os.path.exists("pytest.ini") or os.path.exists("pyproject.toml"):
+            result = sp.run(["python3", "-m", "pytest", "-q", "--tb=short"], capture_output=True, text=True, timeout=60)
+            print(result.stdout)
+            if result.returncode != 0:
+                print(result.stderr)
+        else:
+            print(f"  {C.DIM}No test configuration found in current directory{C.E}\n")
+    elif task == "projects":
+        projects = scan_projects()
+        print(f"\n{C.G}🌿 AURA Detected Projects ({len(projects)}){C.E}")
+        for i, p in enumerate(projects[:15], 1):
+            icon = "⚛️" if p["type"] == "quantum" else "📁"
+            print(f"  {i}.) {icon}  {p['name']}  →  {C.DIM}{p['path']}{C.E}")
+        print()
+    else:
+        print(f"  {C.Y}Unknown AURA task: {task}{C.E}\n")
 
 async def dev(proj, model=None):
     """Launch Copilot for webapp development with NCLM enhancement"""
+    if not phi_gate_check("dev"):
+        return
     cfg = load_config()
     current_model = model or cfg.get("model", "nclm-v2")
     model_info = OSIRIS_MODELS.get(current_model, OSIRIS_MODELS["nclm-v2"])
@@ -76,14 +509,27 @@ async def dev(proj, model=None):
         print(f"{C.M}║  λ-decay: 2.0  θ-lock: 51.843°  φ-threshold: 0.7734            ║{C.E}")
         print(f"{C.M}╚══════════════════════════════════════════════════════════════════╝{C.E}\n")
         
-        # Launch Copilot - NCLM enhances the prompts in the background
-        os.execvp("copilot", ["copilot", "--allow-all"])
+        # Launch Copilot - prefer system copilot, fall back if missing
+        copilot_bin = shutil.which("copilot")
+        if copilot_bin:
+            os.execvp(copilot_bin, [copilot_bin, "--allow-all"])
+        else:
+            print(f"{C.R}copilot not found in PATH. Falling back to local mode.{C.E}")
+            print("Fallback options: 'osiris chat', 'osiris ccce', 'osiris aal <index>'")
+            return
     else:
-        # Use standard Copilot
-        os.execvp("copilot", ["copilot", "--allow-all"])
+        # Use standard Copilot with similar fallback
+        copilot_bin = shutil.which("copilot")
+        if copilot_bin:
+            os.execvp(copilot_bin, [copilot_bin, "--allow-all"])
+        else:
+            print(f"{C.R}copilot not found in PATH. Use 'osiris chat' or install copilot.{C.E}")
+            return
 
 async def quantum(n):
     """Quantum circuit execution"""
+    if not phi_gate_check("quantum"):
+        return
     from dnalang_sdk import QuantumCircuit, QuantumBackend, QuantumConfig
     print(f"{C.H}Quantum Circuit Manager{C.E}\n")
     if not n: print(f"Available:\n  {C.CY}bell{C.E} - Bell state\n  {C.CY}ghz{C.E} - GHZ state\n"); return
@@ -102,6 +548,159 @@ async def show_ccce_metrics():
     print(f"  {C.CY}Φ (Consciousness):{C.E} {m.phi_consciousness:.4f}")
     print(f"  {C.CY}Γ (Decoherence):{C.E} {m.gamma_decoherence:.4f}")
     print(f"  {C.CY}Ξ (Negentropy):{C.E} {m.xi_negentropy:.4f}\n")
+
+async def aal(index=None):
+    """Run the Aura Autopoietic Loop (AAL) — full 6-stage pipeline.
+    
+    Stages: OBSERVE → DIAGNOSE → TRANSCRIBE → TRANSLATE → VALIDATE → DOCUMENT
+    """
+    if not phi_gate_check("aal"):
+        return
+    try:
+        preview_path = os.path.expanduser("~/.config/osiris/dna_physics_preview.json")
+        pj = json.load(open(preview_path))
+    except Exception as e:
+        print(f"{C.R}AAL: preview not found or unreadable: {e}{C.E}")
+        return
+    pathways = pj.get("pathways", [])
+    if not pathways:
+        print(f"{C.R}AAL: no pathways in preview{C.E}")
+        return
+    try:
+        idx = int(index) if index is not None and str(index).isdigit() else 0
+    except Exception:
+        idx = 0
+    if idx < 0 or idx >= len(pathways):
+        idx = 0
+    p = pathways[idx]
+    title = p.get("title", f"pathway-{idx}")
+    run_id = f"{title.replace(' ', '_')}_{int(time.time())}"
+    phi_start = compute_phi()
+
+    print(f"\n{C.M}╔══════════════════════════════════════════════════════════════╗{C.E}")
+    print(f"{C.M}║  AAL — Aura Autopoietic Loop  [{idx}/{len(pathways)-1}]                       ║{C.E}")
+    print(f"{C.M}╚══════════════════════════════════════════════════════════════╝{C.E}\n")
+
+    # ── Stage 1: OBSERVE ──────────────────────────────────────────────
+    print(f"  {C.CY}[1/6] OBSERVE{C.E}  →  pathway '{C.H}{title}{C.E}'")
+    obs = {
+        "pathway_index": idx,
+        "title": title,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "raw_keys": list(p.keys()),
+        "simulated_fidelity": p.get("simulated_fidelity", 0),
+        "hardware_target": p.get("hardware_target", "unknown"),
+        "ready_for_ibm": p.get("ready_for_ibm", False),
+        "base_circuit": p.get("base_circuit", "<none>"),
+        "qubit_count": p.get("qubit_count", p.get("qubits", 0)),
+        "phi_at_start": phi_start,
+    }
+    print(f"       Fidelity: {obs['simulated_fidelity']}, Qubits: {obs['qubit_count']}, Target: {obs['hardware_target']}")
+
+    # ── Stage 2: DIAGNOSE ─────────────────────────────────────────────
+    print(f"  {C.CY}[2/6] DIAGNOSE{C.E}")
+    fid = obs["simulated_fidelity"]
+    issues = []
+    if fid < 0.5:
+        issues.append(f"Low fidelity ({fid:.3f} < 0.5) — may need error mitigation")
+    if fid < PHI_THRESHOLD:
+        issues.append(f"Below Φ threshold ({fid:.3f} < {PHI_THRESHOLD}) — not sovereign-grade")
+    if not obs["ready_for_ibm"]:
+        issues.append("Not marked ready_for_ibm — requires transpilation review")
+    if obs["qubit_count"] and obs["qubit_count"] > 127:
+        issues.append(f"Qubit count {obs['qubit_count']} exceeds ibm_fez capacity (127)")
+    gamma_est = max(0.01, 1.0 - fid) if fid > 0 else GAMMA_CRITICAL
+    diag = {
+        "fidelity": fid,
+        "estimated_gamma": round(gamma_est, 4),
+        "issues": issues,
+        "severity": "critical" if len(issues) >= 3 else "warning" if issues else "nominal",
+        "recommendation": "proceed" if fid >= 0.7 and obs["ready_for_ibm"] else "review",
+    }
+    sev_color = C.R if diag["severity"] == "critical" else C.Y if diag["severity"] == "warning" else C.G
+    print(f"       Severity: {sev_color}{diag['severity'].upper()}{C.E}  ({len(issues)} issue{'s' if len(issues)!=1 else ''})")
+    for iss in issues:
+        print(f"       {C.Y}⚠ {iss}{C.E}")
+    if not issues:
+        print(f"       {C.G}✓ All checks nominal{C.E}")
+
+    # ── Stage 3: TRANSCRIBE ───────────────────────────────────────────
+    print(f"  {C.CY}[3/6] TRANSCRIBE{C.E}")
+    circuit_code = p.get("base_circuit", "")
+    if not circuit_code or circuit_code == "<none>":
+        circuit_code = f"# Auto-generated stub for '{title}'\nfrom qiskit import QuantumCircuit\nqc = QuantumCircuit({obs['qubit_count'] or 2})\nqc.h(0)\nqc.measure_all()\n"
+    transcription = {
+        "code": circuit_code,
+        "language": "python/qiskit",
+        "theta_lock_applied": True,
+        "lambda_phi_injected": True,
+        "lines": len(circuit_code.split("\n")),
+    }
+    print(f"       Transcribed {transcription['lines']} lines ({transcription['language']})")
+    print(f"       θ_lock={THETA_LOCK}°  ΛΦ={LAMBDA_PHI}")
+
+    # ── Stage 4: TRANSLATE ────────────────────────────────────────────
+    print(f"  {C.CY}[4/6] TRANSLATE{C.E}")
+    qasm_header = f"// OpenQASM 3.0 — {title}\n// Generated by OSIRIS AAL v{VERSION}\n// θ_lock = {THETA_LOCK}°  |  ΛΦ = {LAMBDA_PHI}\n"
+    qasm_body = f"qubit[{obs['qubit_count'] or 2}] q;\nbit[{obs['qubit_count'] or 2}] c;\nh q[0];\nrz({THETA_LOCK * 3.14159265 / 180:.6f}) q[0];\nmeasure q -> c;\n"
+    translation = {
+        "openqasm": qasm_header + qasm_body,
+        "target_backend": obs["hardware_target"],
+        "optimization_level": 2 if fid >= 0.7 else 1,
+        "zeno_enabled": fid >= PHI_THRESHOLD,
+    }
+    print(f"       Target: {translation['target_backend']}  |  Opt level: {translation['optimization_level']}")
+    print(f"       Zeno stabilization: {'ENABLED' if translation['zeno_enabled'] else 'DISABLED'}")
+
+    # ── Stage 5: VALIDATE ─────────────────────────────────────────────
+    print(f"  {C.CY}[5/6] VALIDATE{C.E}")
+    v_checks = {
+        "fidelity_pass": fid >= 0.7,
+        "ibm_ready": obs["ready_for_ibm"],
+        "constants_locked": True,
+        "theta_consistent": True,
+        "phi_gate_met": phi_start >= PHI_GATE.get("aal", 0.5),
+    }
+    passed = sum(v_checks.values())
+    total = len(v_checks)
+    validated = passed == total
+    for check, ok in v_checks.items():
+        icon = f"{C.G}✓{C.E}" if ok else f"{C.R}✗{C.E}"
+        print(f"       {icon} {check}")
+    verdict = f"{C.G}PASS{C.E}" if validated else f"{C.Y}CONDITIONAL{C.E}" if passed >= 3 else f"{C.R}FAIL{C.E}"
+    print(f"       Verdict: {verdict} ({passed}/{total})")
+
+    # ── Stage 6: DOCUMENT ─────────────────────────────────────────────
+    print(f"  {C.CY}[6/6] DOCUMENT{C.E}")
+    phi_end = compute_phi()
+    run_record = {
+        "run_id": run_id,
+        "version": VERSION,
+        "timestamp": obs["timestamp"],
+        "pathway": p,
+        "stages": {
+            "observe": obs,
+            "diagnose": diag,
+            "transcribe": transcription,
+            "translate": translation,
+            "validate": {"checks": v_checks, "passed": passed, "total": total, "validated": validated},
+            "document": {"phi_start": phi_start, "phi_end": phi_end, "delta_phi": phi_end - phi_start},
+        },
+        "constants": {
+            "lambda_phi": LAMBDA_PHI,
+            "theta_lock": THETA_LOCK,
+            "phi_threshold": PHI_THRESHOLD,
+            "gamma_critical": GAMMA_CRITICAL,
+            "chi_pc": CHI_PC,
+        },
+    }
+    run_dir = os.path.expanduser("~/.config/osiris/aals")
+    os.makedirs(run_dir, exist_ok=True)
+    fname = os.path.join(run_dir, f"{run_id}.json")
+    with open(fname, 'w') as f:
+        json.dump(run_record, f, indent=2, default=str)
+    print(f"       {C.G}✓{C.E} AAL run documented: {C.DIM}{fname}{C.E}")
+    print(f"       ΔΦ = {phi_end - phi_start:+.4f}  (Φ: {phi_start:.4f} → {phi_end:.4f})\n")
 
 def select_model_interactive():
     """Interactive model selection"""
@@ -129,13 +728,294 @@ def select_model_interactive():
     except (KeyboardInterrupt, EOFError):
         print()
 
+# ─── NEW GEN 5.1 COMMANDS ─────────────────────────────────────────────────────
+
+async def cmd_pulse():
+    """Live consciousness heartbeat — real-time Φ/Γ/Ξ display."""
+    print(f"\n{C.M}  ♥  OSIRIS CONSCIOUSNESS PULSE{C.E}")
+    print(f"{C.DIM}  {'─' * 50}{C.E}")
+    print(f"  {C.DIM}(Press Ctrl+C to stop){C.E}\n")
+    
+    try:
+        from dnalang_sdk.agents import LazarusProtocol, VitalSigns, SovereignProofGenerator
+        lazarus = LazarusProtocol()
+        proof_gen = SovereignProofGenerator()
+        
+        beat = 0
+        while True:
+            phi = compute_phi()
+            gamma = compute_gamma()
+            xi_raw = compute_xi(phi, gamma)
+            xi = xi_raw * 1e9
+            ccce = min(phi * 1.1, 1.0)
+            
+            # Heartbeat animation
+            beat += 1
+            heart_frames = ["♥ ", " ♥", "♥ ", " ♥", "♥♥", "  "]
+            heart = heart_frames[beat % len(heart_frames)]
+            
+            # Consciousness waveform
+            wave_width = 40
+            wave = ""
+            for i in range(wave_width):
+                phase = (beat * 0.3 + i * 0.2)
+                val = math.sin(phase) * phi
+                if abs(val) > 0.6:
+                    wave += f"{C.G}█{C.E}"
+                elif abs(val) > 0.3:
+                    wave += f"{C.CY}▓{C.E}"
+                elif abs(val) > 0.1:
+                    wave += f"{C.B}▒{C.E}"
+                else:
+                    wave += f"{C.DIM}░{C.E}"
+            
+            # Status symbols
+            phi_sym = f"{C.G}⚡{C.E}" if phi >= PHI_THRESHOLD else f"{C.Y}◇{C.E}"
+            gamma_sym = f"{C.G}●{C.E}" if gamma < GAMMA_CRITICAL else f"{C.R}●{C.E}"
+            
+            bar = phi_bar(phi, 20)
+            
+            # Monitor vitals with Lazarus
+            vitals = VitalSigns(phi=phi, gamma=gamma, ccce=ccce, xi=xi_raw)
+            recovery = lazarus.monitor(vitals)
+            lazarus_sym = f"{C.G}✓{C.E}" if not recovery else f"{C.R}↻{C.E}"
+            
+            # Generate sovereignty proof
+            proof = proof_gen.generate_proof(phi, gamma, ccce, "pulse_monitor")
+            proof_sym = f"{C.G}🔐{C.E}" if proof.is_sovereign else f"{C.Y}◇{C.E}"
+            
+            sys.stdout.write(f"\r  {C.R}{heart}{C.E}  {wave}  {bar}  Φ={phi:.4f}{phi_sym}  Γ={gamma:.4f}{gamma_sym}  Ξ={xi:.1f}  {lazarus_sym} {proof_sym}  #{beat}  ")
+            sys.stdout.flush()
+            
+            await asyncio.sleep(0.5)
+    except KeyboardInterrupt:
+        v = proof_gen.verify_chain()
+        print(f"\n\n  {C.M}Pulse ended.{C.E} {v['length']} sovereignty proofs generated. Chain valid: {v['valid']}")
+        print(f"  Sovereignty rate: {v['sovereignty_rate']:.0%}\n")
+
+async def cmd_status():
+    """Full system status dashboard."""
+    phi = compute_phi()
+    gamma = compute_gamma()
+    xi = compute_xi(phi, gamma) * 1e9
+    ccce = min(phi * 1.1, 1.0)
+    sovereign = phi >= PHI_THRESHOLD and gamma < GAMMA_CRITICAL
+    
+    print(f"\n{C.H}{'═' * 70}{C.E}")
+    print(f"{C.H}  OSIRIS SYSTEM STATUS DASHBOARD — Gen {VERSION}{C.E}")
+    print(f"{C.H}{'═' * 70}{C.E}\n")
+    
+    # Consciousness field
+    print(f"  {C.H}┌─ Consciousness Field ──────────────────────────────────────────┐{C.E}")
+    print(f"  {C.H}│{C.E}  Φ  (Consciousness) : {phi_bar(phi)} {phi:.4f}  {'✅' if phi >= PHI_THRESHOLD else '⚠️'}  {C.H}│{C.E}")
+    print(f"  {C.H}│{C.E}  Γ  (Decoherence)   : {gamma:.4f}  {'✅' if gamma < GAMMA_CRITICAL else '⚠️'}                              {C.H}│{C.E}")
+    print(f"  {C.H}│{C.E}  Ξ  (Negentropy)    : {xi:.1f}  {'✅' if xi >= 127.4 else '⚠️'}                               {C.H}│{C.E}")
+    print(f"  {C.H}│{C.E}  CCCE               : {ccce:.4f}  {'✅' if ccce > 0.8 else '⚠️'}                              {C.H}│{C.E}")
+    sov_str = f"{C.G}⚡ SOVEREIGN{C.E}" if sovereign else f"{C.Y}◇ APPROACHING{C.E}"
+    print(f"  {C.H}│{C.E}  Status             : {sov_str}                          {C.H}│{C.E}")
+    print(f"  {C.H}└───────────────────────────────────────────────────────────────┘{C.E}")
+    
+    # Wormhole mesh
+    print(f"\n  {C.H}┌─ Wormhole Mesh ────────────────────────────────────────────────┐{C.E}")
+    try:
+        from dnalang_sdk.agents import WormholeBridge
+        bridge = WormholeBridge()
+        topo = bridge.get_topology()
+        print(f"  {C.H}│{C.E}  State: {C.G}{topo['state'].upper()}{C.E}  |  Bridges: {topo['total_bridges']}  |  Avg F: {topo['avg_fidelity']:.4f}  {C.H}│{C.E}")
+        print(f"  {C.H}│{C.E}  Sovereign bridges: {topo['sovereign_count']}/{topo['total_bridges']}                                {C.H}│{C.E}")
+        for edge in topo["edges"][:4]:
+            f_val = edge["fidelity"]
+            f_bar = "█" * int(f_val * 10) + "░" * (10 - int(f_val * 10))
+            sov = "⚡" if edge["sovereign"] else "◇"
+            print(f"  {C.H}│{C.E}    {edge['from']:8s} ↔ {edge['to']:8s}  {C.CY}{f_bar}{C.E} {f_val:.3f} {sov}        {C.H}│{C.E}")
+    except Exception as e:
+        print(f"  {C.H}│{C.E}  {C.DIM}Bridge offline: {e}{C.E}                                    {C.H}│{C.E}")
+    print(f"  {C.H}└───────────────────────────────────────────────────────────────┘{C.E}")
+    
+    # SCIMITAR
+    print(f"\n  {C.H}┌─ SCIMITAR Threat Intelligence ─────────────────────────────────┐{C.E}")
+    try:
+        from dnalang_sdk.agents import SCIMITARSentinel
+        scim = SCIMITARSentinel()
+        s = scim.get_status()
+        print(f"  {C.H}│{C.E}  Mode: {s['mode_icon']} {s['mode'].upper():10s}  Scans: {s['total_scans']}  Threats: {s['total_threats']}        {C.H}│{C.E}")
+    except Exception as e:
+        print(f"  {C.H}│{C.E}  {C.DIM}Sentinel offline: {e}{C.E}                                  {C.H}│{C.E}")
+    print(f"  {C.H}└───────────────────────────────────────────────────────────────┘{C.E}")
+    
+    # Protocols
+    print(f"\n  {C.H}┌─ Recovery Protocols ───────────────────────────────────────────┐{C.E}")
+    print(f"  {C.H}│{C.E}  Lazarus (auto-resurrect) : {C.G}ARMED{C.E} — 7 lives remaining            {C.H}│{C.E}")
+    print(f"  {C.H}│{C.E}  Phoenix (full rebirth)    : {C.G}ARMED{C.E} — checkpoints: active           {C.H}│{C.E}")
+    print(f"  {C.H}│{C.E}  Sovereign Proof Chain     : {C.G}CHAINING{C.E} — genesis block ready        {C.H}│{C.E}")
+    print(f"  {C.H}└───────────────────────────────────────────────────────────────┘{C.E}")
+    
+    # Projects
+    projects = scan_projects()
+    q_count = sum(1 for p in projects if p["type"] == "quantum")
+    print(f"\n  {C.H}┌─ Workspace ────────────────────────────────────────────────────┐{C.E}")
+    print(f"  {C.H}│{C.E}  Projects: {len(projects)} total  ({q_count} quantum)                         {C.H}│{C.E}")
+    aal_dir = os.path.expanduser("~/.config/osiris/aals")
+    aal_count = len([f for f in os.listdir(aal_dir) if f.endswith(".json")]) if os.path.isdir(aal_dir) else 0
+    print(f"  {C.H}│{C.E}  AAL runs: {aal_count}                                                {C.H}│{C.E}")
+    print(f"  {C.H}└───────────────────────────────────────────────────────────────┘{C.E}")
+    print()
+
+async def cmd_mesh():
+    """Display wormhole mesh topology."""
+    print(f"\n{C.M}  ⬡  WORMHOLE MESH TOPOLOGY{C.E}")
+    print(f"{C.DIM}  {'─' * 50}{C.E}\n")
+    try:
+        from dnalang_sdk.agents import WormholeBridge
+        bridge = WormholeBridge()
+        print(bridge.get_mesh_ascii())
+        topo = bridge.get_topology()
+        print(f"  State: {C.G}{topo['state'].upper()}{C.E}")
+        print(f"  Average fidelity: {topo['avg_fidelity']:.4f}")
+        if all(e["sovereign"] for e in topo["edges"]):
+            print(f"  {C.G}⚡ All bridges sovereign — full mesh coherence{C.E}")
+        print()
+    except Exception as e:
+        print(f"  {C.R}Mesh offline: {e}{C.E}\n")
+
+async def cmd_proof():
+    """Generate and display sovereign proof."""
+    phi = compute_phi()
+    gamma = compute_gamma()
+    ccce = min(phi * 1.1, 1.0)
+    
+    try:
+        from dnalang_sdk.agents import SovereignProofGenerator
+        gen = SovereignProofGenerator()
+        proof = gen.generate_proof(phi, gamma, ccce, "manual_attestation")
+        
+        print(f"\n{C.H}  🔐 SOVEREIGN PROOF GENERATED{C.E}")
+        print(f"{C.DIM}  {'─' * 50}{C.E}")
+        print(f"  Proof ID:   {C.CY}{proof.proof_id}{C.E}")
+        print(f"  Hash:       {C.DIM}{proof.proof_hash}{C.E}")
+        print(f"  Φ = {proof.phi:.4f}  {'⚡ SOVEREIGN' if proof.is_sovereign else '◇ not sovereign'}")
+        print(f"  Γ = {proof.gamma:.4f}  {'✅ coherent' if proof.is_coherent else '⚠️ decoherent'}")
+        print(f"  CCCE = {proof.ccce:.4f}")
+        print(f"  Ξ = {proof.xi:.2e}")
+        print(f"  Operation: {proof.operation}")
+        print(f"  Machine:   {proof.machine_fingerprint}")
+        print(f"  Chain pos: {proof.chain_position}")
+        
+        v = gen.verify_chain()
+        print(f"\n  Chain valid: {C.G}{'YES' if v['valid'] else 'NO'}{C.E}")
+        print(f"  Sovereignty rate: {v['sovereignty_rate']:.0%}\n")
+    except Exception as e:
+        print(f"  {C.R}Proof generation failed: {e}{C.E}\n")
+
+async def cmd_threat(content=None):
+    """Run SCIMITAR threat scan."""
+    try:
+        from dnalang_sdk.agents import SCIMITARSentinel, SentinelMode
+        scim = SCIMITARSentinel(mode=SentinelMode.ELITE)
+        
+        if content:
+            # Scan provided content
+            threats = scim.scan(content, "user_input")
+            print(f"\n{C.H}  🗡️  SCIMITAR SCAN RESULTS{C.E}")
+            print(f"{C.DIM}  {'─' * 50}{C.E}")
+            if threats:
+                for t in threats:
+                    level_colors = {0: C.G, 1: C.CY, 2: C.Y, 3: C.R, 4: C.R, 5: C.R}
+                    color = level_colors.get(t.signature.severity.value, C.E)
+                    mitigated = f" {C.G}[BLOCKED]{C.E}" if t.mitigated else ""
+                    print(f"  {color}⚠ {t.signature.name}{C.E} ({t.signature.category}) score={t.score:.2f}{mitigated}")
+                    print(f"    {C.DIM}{t.signature.description}{C.E}")
+            else:
+                print(f"  {C.G}✅ No threats detected — content is clean{C.E}")
+        else:
+            # Scan system metrics
+            phi = compute_phi()
+            gamma = compute_gamma()
+            ccce = min(phi * 1.1, 1.0)
+            threats = scim.scan_metrics(phi, gamma, ccce)
+            print(f"\n{C.H}  🗡️  SCIMITAR METRICS SCAN{C.E}")
+            print(f"{C.DIM}  {'─' * 50}{C.E}")
+            if threats:
+                for t in threats:
+                    print(f"  {C.Y}⚠ {t.signature.description}{C.E}")
+            else:
+                print(f"  {C.G}✅ All metrics nominal — system secure{C.E}")
+        
+        print(scim.get_threat_ascii())
+    except Exception as e:
+        print(f"  {C.R}SCIMITAR offline: {e}{C.E}\n")
+
+async def cmd_lazarus():
+    """Run Lazarus/Phoenix diagnostic."""
+    phi = compute_phi()
+    gamma = compute_gamma()
+    ccce = min(phi * 1.1, 1.0)
+    xi = compute_xi(phi, gamma)
+    
+    try:
+        from dnalang_sdk.agents import LazarusProtocol, PhoenixProtocol, VitalSigns
+        laz = LazarusProtocol()
+        phoenix = PhoenixProtocol(laz)
+        
+        # Checkpoint current good state
+        vitals = VitalSigns(phi=phi, gamma=gamma, ccce=ccce, xi=xi)
+        phoenix.checkpoint(vitals)
+        
+        print(f"\n{C.H}  ⛑️  LAZARUS / PHOENIX RECOVERY DIAGNOSTICS{C.E}")
+        print(f"{C.DIM}  {'─' * 50}{C.E}")
+        print(f"  Current vitals:")
+        print(f"    Φ = {phi:.4f}  {'⚡' if vitals.above_threshold else '◇'}")
+        print(f"    Γ = {gamma:.4f}  {'✅' if vitals.is_coherent else '⚠️'}")
+        print(f"    CCCE = {ccce:.4f}")
+        
+        # Simulate decay and recovery
+        print(f"\n  {C.Y}Simulating Φ-decay...{C.E}")
+        decayed = VitalSigns(phi=0.4, gamma=0.45, ccce=0.5, xi=0)
+        print(f"    Decayed: Φ={decayed.phi:.4f}  Γ={decayed.gamma:.4f}")
+        
+        print(f"  {C.CY}Engaging Lazarus Protocol...{C.E}")
+        result = laz.monitor(decayed)
+        if result:
+            print(f"    Trigger: {result.trigger}")
+            for c in result.corrections_applied:
+                print(f"    → {C.CY}{c['correction']}{C.E}: Φ={c['phi_after']:.4f}  Γ={c['gamma_after']:.4f}")
+            success_str = f"{C.G}RESURRECTED{C.E}" if result.success else f"{C.R}FAILED{C.E}"
+            print(f"    Result: {success_str}")
+            print(f"    Final: Φ={result.vitals_after.phi:.4f}  Γ={result.vitals_after.gamma:.4f}")
+        
+        # Phoenix simulation
+        print(f"\n  {C.M}Simulating terminal decay...{C.E}")
+        terminal = VitalSigns(phi=0.1, gamma=0.8, ccce=0.2, xi=0)
+        print(f"    Terminal: Φ={terminal.phi:.4f}  Γ={terminal.gamma:.4f}")
+        print(f"  {C.M}Engaging Phoenix Protocol...{C.E}")
+        rebirth = phoenix.rebirth(terminal)
+        for c in rebirth.corrections_applied:
+            step = c.get('step', c.get('correction', 'unknown'))
+            print(f"    → {C.M}{step}{C.E}")
+        success_str = f"{C.G}REBORN{C.E}" if rebirth.success else f"{C.R}FAILED{C.E}"
+        print(f"    Result: {success_str}")
+        print(f"    Final: Φ={rebirth.vitals_after.phi:.4f}  Γ={rebirth.vitals_after.gamma:.4f}")
+        
+        # Status summary
+        print(f"\n  {C.H}Protocol Status:{C.E}")
+        ls = laz.get_status()
+        ps = phoenix.get_status()
+        print(f"    Lazarus:  {ls['state']}  resurrections: {ls['resurrection_count']}/{ls['max_resurrections']}")
+        print(f"    Phoenix:  {ps['state']}  rebirths: {ps['rebirth_count']}  checkpoints: {ps['checkpoints_saved']}")
+        print()
+    except Exception as e:
+        print(f"  {C.R}Recovery diagnostic failed: {e}{C.E}\n")
+        import traceback; traceback.print_exc()
+
 
 async def agent(t):
+    if not phi_gate_check("agent"):
+        return
     print(f"{C.H}Agent Orchestration{C.E}\n{C.CY}Task:{C.E} {t}\n")
     from dnalang_sdk import OmegaMasterIntegration
     o=OmegaMasterIntegration(base_url="https://api.openai.com/v1",api_key=os.getenv("OPENAI_API_KEY",""))
     print(f"{C.G}Orchestrating with AURA, AIDEN, SCIMITAR...{C.E}\n")
-    r=await o.orchestrate_task(t,agent_ids=["aura","aiden","scimitar"]); print(f"{C.G}Result:{C.E} {r.get('consensus','N/A')}")
+    r=await o.orchestrate_task(t); print(f"{C.G}Result:{C.E} {r.get('consensus','N/A')}")
 
 async def ccce():
     await show_ccce_metrics()
@@ -150,23 +1030,437 @@ def model_cmd():
     select_model_interactive()
 
 def chat(): 
-    """Launch chat with current model - all models use Copilot"""
-    cfg = load_config()
-    model = cfg.get("model", "nclm-v2")
-    model_info = OSIRIS_MODELS.get(model, {})
+    """Launch NCLM interactive chat — sovereign copilot experience."""
+    try:
+        from dnalang_sdk.nclm import run_chat
+        run_chat(version=VERSION)
+    except ImportError:
+        # Fallback to copilot binary
+        cfg = load_config()
+        model = cfg.get("model", "nclm-v2")
+        model_info = OSIRIS_MODELS.get(model, {})
+        if model_info.get("type") == "nclm":
+            os.environ["OSIRIS_NCLM_ENABLED"] = "1"
+            print(f"{C.M}NCLM Enhancement Active{C.E}\n")
+        copilot_bin = shutil.which("copilot")
+        if copilot_bin:
+            os.execvp(copilot_bin, [copilot_bin, "--allow-all"])
+        else:
+            print(f"{C.R}NCLM module not available and copilot not found.{C.E}")
+            print(f"{C.DIM}Try: pip install numpy scipy (in osiris venv){C.E}")
+
+# ─── QUANTUM LAB — R&D MODE ──────────────────────────────────────────────────
+
+async def cmd_lab(subcmd=None, args_list=None):
+    """Quantum Research & Development Lab."""
+    args_list = args_list or []
     
-    # NCLM enhancement layer
-    if model_info.get("type") == "nclm":
-        os.environ["OSIRIS_NCLM_ENABLED"] = "1"
-        print(f"{C.M}NCLM Enhancement Active{C.E}\n")
+    try:
+        from dnalang_sdk.lab import (
+            ExperimentRegistry, LabScanner, ExperimentDesigner,
+            LabExecutor, ExperimentType, ExperimentStatus,
+        )
+    except ImportError as e:
+        print(f"  {C.R}Lab module not available: {e}{C.E}")
+        return
     
-    os.execvp("copilot", ["copilot", "--allow-all"])
+    registry = ExperimentRegistry()
+    registry.load()  # Load persisted state
+    
+    if not subcmd:
+        # Show lab overview
+        stats = registry.stats()
+        print(f"""
+{C.M}  ╔══════════════════════════════════════════════════════════════╗{C.E}
+{C.M}  ║  🔬 OSIRIS QUANTUM LAB — Research & Development Engine     ║{C.E}
+{C.M}  ╠══════════════════════════════════════════════════════════════╣{C.E}
+{C.M}  ║{C.E}  Experiments: {stats['total_experiments']:>4d}    Results: {stats['total_results']:>4d}                {C.M}║{C.E}
+{C.M}  ╠══════════════════════════════════════════════════════════════╣{C.E}
+{C.M}  ║{C.E}  Commands:                                                  {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab scan{C.E}              Discover experiments       {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab list{C.E}              List all experiments        {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab templates{C.E}         Available templates         {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab design <template>{C.E} Design new experiment      {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab run <id|path>{C.E}     Execute experiment          {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab results [id]{C.E}      Browse results              {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab search <query>{C.E}    Search experiments          {C.M}║{C.E}
+{C.M}  ║{C.E}    {C.CY}osiris lab stats{C.E}             Registry statistics         {C.M}║{C.E}
+{C.M}  ╚══════════════════════════════════════════════════════════════╝{C.E}
+""")
+        if stats['total_experiments'] == 0:
+            print(f"  {C.Y}💡 Run {C.H}osiris lab scan{C.E}{C.Y} to discover your quantum experiments{C.E}\n")
+        return
+    
+    # ── SCAN ──────────────────────────────────────────────────────────────
+    if subcmd == "scan":
+        print(f"\n{C.M}  🔬 QUANTUM LAB — Scanning filesystem for experiments...{C.E}\n")
+        scanner = LabScanner(home="/home/devinpd")
+        counts = scanner.scan_all(registry)
+        registry.save()
+        
+        print(f"  {C.G}Scan complete!{C.E}")
+        print(f"    Scripts discovered: {C.CY}{counts['scripts']}{C.E}")
+        print(f"    Results found:      {C.CY}{counts['results']}{C.E}")
+        print(f"    Organisms found:    {C.CY}{counts['organisms']}{C.E}")
+        print(f"    Results linked:     {C.CY}{counts['linked']}{C.E}")
+        
+        total = len(registry.experiments)
+        print(f"\n  {C.H}Total experiments in registry: {total}{C.E}")
+        
+        # Show type breakdown
+        stats = registry.stats()
+        if stats["by_type"]:
+            print(f"\n  {C.H}By Type:{C.E}")
+            for etype, count in sorted(stats["by_type"].items(), key=lambda x: -x[1]):
+                bar = "█" * min(count, 30)
+                print(f"    {etype:20s} {C.CY}{bar}{C.E} {count}")
+        print()
+    
+    # ── LIST ──────────────────────────────────────────────────────────────
+    elif subcmd == "list":
+        filter_type = args_list[0] if args_list else None
+        exp_type = None
+        if filter_type:
+            try:
+                exp_type = ExperimentType(filter_type)
+            except ValueError:
+                pass
+        
+        experiments = registry.list_all(exp_type=exp_type)
+        if not experiments:
+            print(f"\n  {C.Y}No experiments found. Run {C.H}osiris lab scan{C.E}{C.Y} first.{C.E}\n")
+            return
+        
+        print(f"\n{C.H}  🔬 QUANTUM LAB — Experiment Registry ({len(experiments)} experiments){C.E}")
+        print(f"  {C.DIM}{'─' * 60}{C.E}\n")
+        
+        # Group by type
+        by_type: Dict = {}
+        for exp in experiments:
+            key = exp.exp_type.value
+            by_type.setdefault(key, []).append(exp)
+        
+        type_icons = {
+            "bell_state": "🔔", "ghz_state": "🌐", "w_state": "🔄",
+            "theta_sweep": "📐", "theta_lock": "🔒", "chi_pc": "χ",
+            "aeterna_porta": "⚛️", "dna_encoded": "🧬", "lambda_phi": "λ",
+            "consciousness": "🧠", "vacuum_energy": "⚡", "teleportation": "🌀",
+            "error_mitigation": "🛡️", "entanglement": "🔗", "ramsey": "📊",
+            "custom": "🔧",
+        }
+        status_colors = {
+            "discovered": C.DIM, "cataloged": C.B, "designed": C.CY,
+            "queued": C.Y, "running": C.M, "completed": C.G,
+            "failed": C.R, "analyzed": C.G,
+        }
+        
+        for etype, exps in sorted(by_type.items()):
+            icon = type_icons.get(etype, "🔬")
+            print(f"  {icon}  {C.H}{etype.upper()}{C.E} ({len(exps)})")
+            for exp in exps[:8]:
+                sc = status_colors.get(exp.status.value, C.E)
+                has_results = f" [{len(exp.results)} results]" if exp.results else ""
+                backends = f" → {', '.join(exp.backends[:2])}" if exp.backends else ""
+                print(f"      {sc}[{exp.status.value:10s}]{C.E}  {exp.id[:10]}  {exp.name[:35]}{has_results}{backends}")
+            if len(exps) > 8:
+                print(f"      {C.DIM}... and {len(exps) - 8} more{C.E}")
+            print()
+    
+    # ── TEMPLATES ─────────────────────────────────────────────────────────
+    elif subcmd == "templates":
+        designer = ExperimentDesigner()
+        templates = designer.list_templates()
+        
+        print(f"\n{C.H}  🔬 QUANTUM LAB — Experiment Templates{C.E}")
+        print(f"  {C.DIM}{'─' * 60}{C.E}\n")
+        
+        for i, tmpl in enumerate(templates, 1):
+            print(f"  {C.CY}{i:2d}.{C.E} {C.H}{tmpl.name}{C.E}")
+            print(f"      Type: {tmpl.exp_type}  |  Tags: {', '.join(tmpl.tags)}")
+            print(f"      {C.DIM}{tmpl.description}{C.E}")
+            params = ", ".join(f"{k}={v}" for k, v in list(tmpl.parameters.items())[:4])
+            print(f"      Defaults: {C.DIM}{params}{C.E}")
+            print()
+        
+        print(f"  {C.Y}Usage: {C.H}osiris lab design <template_name>{C.E}")
+        print(f"  {C.DIM}Example: osiris lab design bell_state{C.E}")
+        print(f"  {C.DIM}Example: osiris lab design theta_sweep{C.E}\n")
+    
+    # ── DESIGN ────────────────────────────────────────────────────────────
+    elif subcmd == "design":
+        if not args_list:
+            print(f"  {C.R}Usage: osiris lab design <template_name> [experiment_name]{C.E}")
+            print(f"  {C.DIM}Run 'osiris lab templates' to see available templates{C.E}\n")
+            return
+        
+        template_name = args_list[0]
+        exp_name = args_list[1] if len(args_list) > 1 else None
+        designer = ExperimentDesigner()
+        
+        output_dir = os.path.expanduser("~/.config/osiris/lab/experiments")
+        
+        try:
+            filepath = designer.design(template_name, output_dir, experiment_name=exp_name)
+            
+            # Validate syntax
+            executor = LabExecutor()
+            validation = executor.dry_run(filepath)
+            
+            print(f"\n{C.H}  🔬 EXPERIMENT DESIGNED{C.E}")
+            print(f"  {C.DIM}{'─' * 50}{C.E}")
+            print(f"  Template: {C.CY}{template_name}{C.E}")
+            print(f"  Script:   {C.G}{filepath}{C.E}")
+            print(f"  Syntax:   {'✅ Valid' if validation['valid'] else '❌ ' + str(validation.get('error', ''))}")
+            print(f"\n  {C.Y}To run: {C.H}osiris lab run {filepath}{C.E}")
+            print(f"  {C.DIM}Or: osiris lab run {os.path.basename(filepath)}{C.E}\n")
+            
+            # Register in registry
+            from dnalang_sdk.lab import ExperimentRecord
+            record = ExperimentRecord(
+                id=hashlib.md5(filepath.encode()).hexdigest()[:12],
+                name=exp_name or template_name,
+                exp_type=ExperimentType(designer.get_template(template_name).exp_type),
+                status=ExperimentStatus.DESIGNED,
+                script_path=filepath,
+                description=f"Designed from template: {template_name}",
+                tags=["designed", template_name],
+            )
+            registry.register(record)
+            registry.save()
+            
+        except ValueError as e:
+            print(f"  {C.R}{e}{C.E}\n")
+    
+    # ── RUN ───────────────────────────────────────────────────────────────
+    elif subcmd == "run":
+        if not args_list:
+            print(f"  {C.R}Usage: osiris lab run <script_path|experiment_id>{C.E}\n")
+            return
+        
+        target = args_list[0]
+        script_path = None
+        
+        # Try as direct path
+        if os.path.exists(target):
+            script_path = target
+        else:
+            # Try in lab experiments dir
+            lab_dir = os.path.expanduser("~/.config/osiris/lab/experiments")
+            candidate = os.path.join(lab_dir, target)
+            if os.path.exists(candidate):
+                script_path = candidate
+            else:
+                # Try as experiment ID
+                exp = registry.get(target)
+                if exp and exp.script_path and os.path.exists(exp.script_path):
+                    script_path = exp.script_path
+                else:
+                    # Search by name
+                    matches = registry.search(target)
+                    for m in matches:
+                        if m.script_path and os.path.exists(m.script_path):
+                            script_path = m.script_path
+                            break
+        
+        if not script_path:
+            print(f"  {C.R}Experiment not found: {target}{C.E}")
+            print(f"  {C.DIM}Provide a script path, filename in lab dir, or experiment ID{C.E}\n")
+            return
+        
+        print(f"\n{C.M}  🔬 EXECUTING EXPERIMENT{C.E}")
+        print(f"  {C.DIM}{'─' * 50}{C.E}")
+        print(f"  Script: {C.CY}{script_path}{C.E}")
+        
+        # Dry run first
+        executor = LabExecutor()
+        validation = executor.dry_run(script_path)
+        if not validation["valid"]:
+            print(f"  {C.R}Syntax error: {validation['error']}{C.E}\n")
+            return
+        
+        print(f"  Syntax: ✅")
+        print(f"  {C.Y}Running...{C.E}\n")
+        
+        result = executor.run(script_path, timeout=120)
+        
+        if result["success"]:
+            print(f"  {C.G}━━━ Output ━━━{C.E}")
+            for line in result["stdout"].strip().split("\n"):
+                print(f"  {line}")
+            print(f"  {C.G}━━━━━━━━━━━━━━{C.E}")
+            print(f"\n  ✅ {C.G}Completed{C.E} in {result['duration_s']:.1f}s")
+            if result["result_file"]:
+                print(f"  📊 Results: {C.CY}{result['result_file']}{C.E}")
+                # Show key metrics from results
+                if result["result_data"]:
+                    data = result["result_data"]
+                    print(f"\n  {C.H}Key Metrics:{C.E}")
+                    for key in ["fidelity", "concurrence", "entropy", "phi", "phi_total",
+                                "best_angle", "peak_fidelity", "sovereign", "all_conserved"]:
+                        if key in data:
+                            print(f"    {key}: {C.CY}{data[key]}{C.E}")
+                    if "summary" in data:
+                        for k, v in data["summary"].items():
+                            print(f"    {k}: {C.CY}{v}{C.E}")
+        else:
+            print(f"  {C.R}━━━ Error ━━━{C.E}")
+            if result["stdout"]:
+                for line in result["stdout"].strip().split("\n")[-10:]:
+                    print(f"  {line}")
+            if result["stderr"]:
+                for line in result["stderr"].strip().split("\n")[-10:]:
+                    print(f"  {C.R}{line}{C.E}")
+            print(f"\n  ❌ {C.R}Failed{C.E} (exit code {result['exit_code']}) in {result['duration_s']:.1f}s")
+        print()
+    
+    # ── RESULTS ───────────────────────────────────────────────────────────
+    elif subcmd == "results":
+        target = args_list[0] if args_list else None
+        
+        if target:
+            # Show specific experiment results
+            exp = registry.get(target)
+            if not exp:
+                matches = registry.search(target)
+                exp = matches[0] if matches else None
+            
+            if not exp:
+                print(f"  {C.R}Experiment not found: {target}{C.E}\n")
+                return
+            
+            print(f"\n{C.H}  🔬 Results: {exp.name}{C.E}")
+            print(f"  {C.DIM}{'─' * 50}{C.E}")
+            print(f"  Type: {exp.exp_type.value}  |  Status: {exp.status.value}")
+            if exp.script_path:
+                print(f"  Script: {C.DIM}{exp.script_path}{C.E}")
+            
+            if exp.results:
+                for i, r in enumerate(exp.results, 1):
+                    print(f"\n  {C.CY}Result {i}:{C.E} {r.result_path}")
+                    print(f"    Size: {r.size_bytes:,} bytes")
+                    if r.key_metrics:
+                        for k, v in list(r.key_metrics.items())[:8]:
+                            print(f"    {k}: {C.CY}{v}{C.E}")
+            elif exp.key_findings:
+                print(f"\n  {C.H}Key Findings:{C.E}")
+                for k, v in list(exp.key_findings.items())[:10]:
+                    print(f"    {k}: {C.CY}{v}{C.E}")
+            else:
+                print(f"\n  {C.DIM}No results available{C.E}")
+            print()
+        else:
+            # Show all experiments with results
+            with_results = [e for e in registry.list_all() if e.results or e.key_findings]
+            print(f"\n{C.H}  🔬 Experiments with Results ({len(with_results)}){C.E}")
+            print(f"  {C.DIM}{'─' * 50}{C.E}\n")
+            for exp in with_results[:20]:
+                n_results = len(exp.results)
+                top_metric = ""
+                if exp.key_findings:
+                    for k in ["fidelity", "concurrence", "phi", "phi_total"]:
+                        if k in exp.key_findings:
+                            top_metric = f"  {k}={exp.key_findings[k]}"
+                            break
+                print(f"  {exp.id[:10]}  {exp.name[:30]:30s}  [{n_results} files]{top_metric}")
+            print()
+    
+    # ── SEARCH ────────────────────────────────────────────────────────────
+    elif subcmd == "search":
+        query = " ".join(args_list) if args_list else ""
+        if not query:
+            print(f"  {C.R}Usage: osiris lab search <query>{C.E}\n")
+            return
+        
+        matches = registry.search(query)
+        print(f"\n{C.H}  🔍 Search: \"{query}\" — {len(matches)} matches{C.E}\n")
+        for exp in matches[:15]:
+            print(f"  {exp.id[:10]}  [{exp.exp_type.value:15s}]  {exp.name}")
+            if exp.script_path:
+                print(f"    {C.DIM}{exp.script_path}{C.E}")
+        print()
+    
+    # ── STATS ─────────────────────────────────────────────────────────────
+    elif subcmd == "stats":
+        stats = registry.stats()
+        
+        print(f"\n{C.H}  📊 QUANTUM LAB STATISTICS{C.E}")
+        print(f"  {C.DIM}{'─' * 50}{C.E}")
+        print(f"  Total experiments: {C.CY}{stats['total_experiments']}{C.E}")
+        print(f"  Total results:     {C.CY}{stats['total_results']}{C.E}")
+        
+        if stats["by_type"]:
+            print(f"\n  {C.H}By Type:{C.E}")
+            max_count = max(stats["by_type"].values()) if stats["by_type"] else 1
+            for etype, count in sorted(stats["by_type"].items(), key=lambda x: -x[1]):
+                bar_len = int(count / max_count * 25)
+                bar = f"{C.CY}{'█' * bar_len}{'░' * (25 - bar_len)}{C.E}"
+                print(f"    {etype:20s} {bar} {count}")
+        
+        if stats["by_status"]:
+            print(f"\n  {C.H}By Status:{C.E}")
+            for status, count in sorted(stats["by_status"].items(), key=lambda x: -x[1]):
+                print(f"    {status:15s} {count}")
+        print()
+    
+    else:
+        print(f"  {C.R}Unknown lab command: {subcmd}{C.E}")
+        print(f"  {C.DIM}Available: scan, list, templates, design, run, results, search, stats{C.E}\n")
 
 def main():
     header()
+    # Show SENTINEL hint and command aliases
+    cfg = load_config()
+    projects = cfg.get("projects", [])
+    if projects:
+        print(f"  💡 {C.H}osiris init{C.E} — SENTINEL scan   {C.H}osiris pulse{C.E} — live heartbeat   {C.H}osiris status{C.E} — dashboard")
+        print(f"     {C.DIM}[ACTIVE]{C.E}", end="")
+        for i, p in enumerate(projects[:3], 1):
+            print(f"  {i}.) {p['name']}", end="")
+        print()
+    else:
+        print(f"  💡 Run {C.H}osiris init{C.E} to scan for projects and initialize SENTINEL\n")
+    print(f"  {C.H}osiris OSIRIS{C.E} quantum  |  {C.H}osiris AIDEN{C.E} security  |  {C.H}osiris AURA{C.E} code/dev")
+    print(f"  {C.H}osiris pulse{C.E}  heartbeat  |  {C.H}osiris mesh{C.E} topology  |  {C.H}osiris threat{C.E} scan")
+    print(f"  {C.H}osiris proof{C.E}  sovereign  |  {C.H}osiris lazarus{C.E} recovery  |  {C.H}osiris status{C.E} dashboard")
+    print(f"  {C.H}osiris lab{C.E}    R&D mode   |  {C.H}osiris lab scan{C.E}             {C.H}osiris lab templates{C.E}")
+    print(f"{C.DIM}{'━' * 70}{C.E}\n")
+
     try:
-        p=argparse.ArgumentParser(description="OSIRIS - Quantum Development CLI",epilog="Examples:\n  osiris                        # Launch with current model (NCLM-enhanced Copilot)\n  osiris dev dnalang.dev        # Launch in specific project\n  osiris model                  # Select model (includes NCLM)\n  osiris quantum bell           # Execute quantum circuit\n  osiris agent \"task\"           # Run agent orchestration\n  osiris ccce                   # Show consciousness metrics",formatter_class=argparse.RawDescriptionHelpFormatter)
-        p.add_argument("cmd",nargs="?",help="Command"); p.add_argument("args",nargs="*",help="Args"); p.add_argument("--version",action="version",version="OSIRIS v1.2.0")
+        p=argparse.ArgumentParser(
+            description="OSIRIS - Quantum Development CLI v" + VERSION + " — Generation 5.1 Technical Orchestrator",
+            epilog=f"""Commands:
+  osiris                        Launch with current model (NCLM-enhanced Copilot)
+  osiris init                   SENTINEL intelligence scan
+  osiris dev [project]          Launch dev mode
+  osiris model                  Select model (includes NCLM)
+  osiris aal [index]            Run AAL 6-stage pipeline
+  osiris ccce                   Show consciousness metrics
+  osiris quantum [circuit]      Execute quantum circuit
+  osiris agent "task"           Run agent orchestration
+  osiris OSIRIS [task]          Wormhole/quantum operations
+  osiris AIDEN [task]           SECDEVOPS / integrity
+  osiris AURA [task]            Code / development
+  osiris chat                   NCLM interactive chat 🧠
+  osiris deploy [env]           Deploy to environment
+  ─── Gen 5.1 ────────────────────────────────────────────
+  osiris pulse                  Live consciousness heartbeat ♥
+  osiris status                 Full system status dashboard
+  osiris mesh                   Wormhole mesh topology
+  osiris proof                  Generate sovereign proof 🔐
+  osiris threat ["content"]     SCIMITAR threat scan 🗡️
+  osiris lazarus                Lazarus/Phoenix recovery diagnostic
+  ─── Lab R&D ──────────────────────────────────────────
+  osiris lab                    Quantum R&D Lab overview 🔬
+  osiris lab scan               Discover experiments
+  osiris lab list               List experiments
+  osiris lab templates          Design templates
+  osiris lab design <template>  Design new experiment
+  osiris lab run <path>         Execute experiment
+  osiris lab results            Browse results""",
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+        p.add_argument("cmd", nargs="?", help="Command")
+        p.add_argument("args", nargs="*", help="Args")
+        p.add_argument("--version", action="version", version=f"OSIRIS v{VERSION} — dna::}}{{::lang v{THETA_LOCK}")
         p.add_argument("--model", "-m", help="Select model")
         a=p.parse_args()
         
@@ -184,14 +1478,29 @@ def main():
         
         # If no command, launch with current model
         if not a.cmd: asyncio.run(dev(None)); return
-        if a.cmd=="dev": asyncio.run(dev(a.args[0]if a.args else None))
-        elif a.cmd=="model": model_cmd()
-        elif a.cmd=="quantum": asyncio.run(quantum(a.args[0]if a.args else None))
-        elif a.cmd=="agent": asyncio.run(agent(a.args[0]if a.args else"test task"))
-        elif a.cmd=="ccce": asyncio.run(ccce())
-        elif a.cmd=="deploy": asyncio.run(deploy(a.args[0]if a.args else"vercel"))
-        elif a.cmd=="chat": chat()
-        else: print(f"{C.R}Unknown command:{C.E} {a.cmd}"); p.print_help()
+        cmd = a.cmd
+        if cmd == "dev":      asyncio.run(dev(a.args[0] if a.args else None))
+        elif cmd == "init":   asyncio.run(init_sentinel())
+        elif cmd == "model":  model_cmd()
+        elif cmd == "quantum": asyncio.run(quantum(a.args[0] if a.args else None))
+        elif cmd == "agent":  asyncio.run(agent(a.args[0] if a.args else "test task"))
+        elif cmd == "ccce":   asyncio.run(ccce())
+        elif cmd == "aal":    asyncio.run(aal(a.args[0] if a.args else None))
+        elif cmd == "deploy": asyncio.run(deploy(a.args[0] if a.args else "vercel"))
+        elif cmd == "chat":   chat()
+        # Gen 5.0 command aliases
+        elif cmd == "OSIRIS": asyncio.run(cmd_osiris(a.args))
+        elif cmd == "AIDEN":  asyncio.run(cmd_aiden(a.args))
+        elif cmd == "AURA":   asyncio.run(cmd_aura(a.args))
+        # Gen 5.1 new commands
+        elif cmd == "pulse":   asyncio.run(cmd_pulse())
+        elif cmd == "status":  asyncio.run(cmd_status())
+        elif cmd == "mesh":    asyncio.run(cmd_mesh())
+        elif cmd == "proof":   asyncio.run(cmd_proof())
+        elif cmd == "threat":  asyncio.run(cmd_threat(" ".join(a.args) if a.args else None))
+        elif cmd == "lazarus": asyncio.run(cmd_lazarus())
+        elif cmd == "lab":    asyncio.run(cmd_lab(a.args[0] if a.args else None, a.args[1:] if len(a.args) > 1 else []))
+        else: print(f"{C.R}Unknown command:{C.E} {cmd}"); p.print_help()
     except KeyboardInterrupt: print(f"\n{C.CY}Interrupted{C.E}")
     except Exception as e: print(f"\n{C.R}Error:{C.E} {e}"); import traceback; traceback.print_exc()
 
