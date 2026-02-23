@@ -41,6 +41,9 @@
   "license": "MIT",
   "dependencies": {
     "@github/copilot": "^0.0.400",
+    "@types/diff": "^7.0.2",
+    "chokidar": "^5.0.0",
+    "diff": "^8.0.3",
     "vscode-jsonrpc": "^8.2.1",
     "zod": "^4.3.5"
   },

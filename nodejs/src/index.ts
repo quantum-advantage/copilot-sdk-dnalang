@@ -11,6 +11,18 @@
 export { CopilotClient } from "./client.js";
 export { CopilotSession, type AssistantMessageEvent } from "./session.js";
 export { defineTool } from "./types.js";
+export {
+    computeLineDiff,
+    formatDiffForPrompt,
+    type DiffHunk,
+    type LineDiffResult,
+} from "./core/diff-engine.js";
+export {
+    FileWatcher,
+    type FileChangeEvent,
+    type FileWatcherOptions,
+    type PatchTelemetry,
+} from "./core/file-watcher.js";
 export type {
     ConnectionState,
     CopilotClientOptions,
