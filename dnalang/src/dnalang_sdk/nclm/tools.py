@@ -3429,6 +3429,7 @@ def tool_aws_api(args: str = "") -> str:
         "status": "/api/osiris/status",
         "metrics": "/api/ccce/metrics",
         "experiments": "/api/experiments",
+        "workloads": "/api/workloads",
     }
 
     if args in endpoints:
@@ -3446,6 +3447,7 @@ def tool_aws_api(args: str = "") -> str:
             f"  {C.G}GET {C.E} /api/osiris/status    Platform health + capabilities",
             f"  {C.G}GET {C.E} /api/ccce/metrics      Real-time CCCE telemetry",
             f"  {C.G}GET {C.E} /api/experiments        All indexed experiments",
+            f"  {C.G}GET {C.E} /api/workloads          Hardware workload analysis",
             f"  {C.M}POST{C.E} /api/nclm/infer        NC-LM inference",
             f"  {C.M}POST{C.E} /api/attestation        SHA-256 attestation",
             f"",
