@@ -1437,10 +1437,11 @@ async def cmd_lab(subcmd=None, args_list=None):
 def main():
     try:
         p=argparse.ArgumentParser(
-            description="OSIRIS - Quantum Development CLI v" + VERSION + " — Generation 5.3 Technical Orchestrator",
+            description="OSIRIS - Quantum Development CLI v" + VERSION + " — Generation 6.0 Cognitive Shell",
             epilog=f"""Commands:
-  osiris                        Launch NCLM interactive chat 🧠
-  osiris chat                   Launch NCLM interactive chat 🧠
+  osiris                        Launch cognitive orchestration TUI 🧠
+  osiris tui                    Launch cognitive orchestration TUI 🧠
+  osiris chat                   Launch classic readline chat
   osiris dev [project]          Launch copilot dev mode
   osiris init                   SENTINEL intelligence scan
   osiris model                  Select model (includes NCLM)
@@ -1486,8 +1487,21 @@ def main():
                 print(f"Available: {', '.join(OSIRIS_MODELS.keys())}")
                 return
         
-        # If no command or "chat", launch NCLM chat directly (has its own boot sequence)
-        if not a.cmd or a.cmd == "chat":
+        # If no command, launch TUI (full-screen cognitive shell)
+        # "chat" launches classic readline mode, "tui" also launches TUI
+        if not a.cmd or a.cmd == "tui":
+            try:
+                from dnalang_sdk.nclm.tui import run_tui
+                run_tui()
+            except ImportError:
+                # Fallback to readline chat if textual not available
+                chat()
+            except Exception as e:
+                print(f"  TUI failed ({e}), falling back to chat mode...")
+                chat()
+            return
+        
+        if a.cmd == "chat":
             chat()
             return
 

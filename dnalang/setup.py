@@ -32,6 +32,10 @@ setup(
         "scipy>=1.10.0",
     ],
     extras_require={
+        "tui": [
+            "textual>=1.0.0",
+            "rich>=13.0.0",
+        ],
         "quantum": [
             "qiskit>=1.0.0",
             "qiskit-aer>=0.13.0",
@@ -44,6 +48,13 @@ setup(
             "pylint>=2.17.0",
             "black>=23.0.0",
             "mypy>=1.0.0",
+        ],
+        "full": [
+            "textual>=1.0.0",
+            "rich>=13.0.0",
+            "qiskit>=1.0.0",
+            "qiskit-aer>=0.13.0",
+            "qiskit-ibm-runtime>=0.18.0",
         ],
     },
     entry_points={
