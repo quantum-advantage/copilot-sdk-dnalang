@@ -1412,6 +1412,149 @@ def tool_explain(path_or_code: str) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ██  ENHANCED DEV TOOLS — diff, test, profile, project detection           ██
+# ══════════════════════════════════════════════════════════════════════════════
+
+def tool_diff(path: str = "") -> str:
+    """Show git diff with syntax-highlighted output."""
+    cmd = ["git", "--no-pager", "diff", "--color=always"]
+    if path:
+        p = os.path.expanduser(path.strip())
+        cmd.append(p)
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        diff = r.stdout.strip()
+        if not diff:
+            # Check staged
+            r2 = subprocess.run(["git", "--no-pager", "diff", "--cached", "--color=always"] +
+                                ([p] if path else []), capture_output=True, text=True, timeout=15)
+            diff = r2.stdout.strip()
+        if not diff:
+            return f"  {C.DIM}No changes detected.{C.E}"
+        lines = [f"  {C.H}Git Diff{C.E}"]
+        lines.append(f"  {C.DIM}{'─' * 60}{C.E}")
+        # Truncate long diffs
+        diff_lines = diff.split("\n")
+        if len(diff_lines) > 100:
+            diff_lines = diff_lines[:80] + [f"{C.DIM}  ... (+{len(diff_lines)-80} more lines, use 'git diff' for full){C.E}"]
+        for dl in diff_lines:
+            lines.append(f"  {dl}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"  {C.R}Error: {e}{C.E}"
+
+
+def tool_test(arg: str = "") -> str:
+    """Auto-detect and run tests for the current project."""
+    cwd = os.getcwd()
+    lines = [f"  {C.H}🧪 Running Tests{C.E}", ""]
+
+    # Detect project type and test runner
+    runners = []
+    if os.path.exists(os.path.join(cwd, "pytest.ini")) or os.path.exists(os.path.join(cwd, "setup.cfg")) or \
+       os.path.exists(os.path.join(cwd, "pyproject.toml")) or os.path.isdir(os.path.join(cwd, "tests")):
+        runners.append(("pytest", ["python3", "-m", "pytest", "-q", "--tb=short"] + ([arg] if arg else [])))
+    if os.path.exists(os.path.join(cwd, "package.json")):
+        runners.append(("npm test", ["npm", "test", "--", "--passWithNoTests"] + ([arg] if arg else [])))
+    if os.path.exists(os.path.join(cwd, "Cargo.toml")):
+        runners.append(("cargo test", ["cargo", "test", "--quiet"] + ([arg] if arg else [])))
+    if os.path.exists(os.path.join(cwd, "go.mod")):
+        runners.append(("go test", ["go", "test", "./..."] + ([arg] if arg else [])))
+
+    # Also check for run_tests.sh
+    for ts in ["run_tests.sh", "test.sh"]:
+        tp = os.path.join(cwd, ts)
+        if os.path.exists(tp):
+            runners.insert(0, (ts, ["bash", tp, arg or "quick"]))
+
+    if not runners:
+        return f"  {C.Y}No test runner detected in {cwd}{C.E}\n  {C.DIM}Supported: pytest, npm test, cargo test, go test, run_tests.sh{C.E}"
+
+    name, cmd = runners[0]
+    lines.append(f"  Runner: {C.CY}{name}{C.E}")
+    lines.append(f"  {C.DIM}$ {' '.join(cmd)}{C.E}")
+    lines.append("")
+
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        output = r.stdout.strip()
+        if r.returncode == 0:
+            lines.append(f"  {C.G}✅ Tests passed{C.E}")
+        else:
+            lines.append(f"  {C.R}❌ Tests failed (exit {r.returncode}){C.E}")
+        if output:
+            for ol in output.split("\n")[-30:]:
+                lines.append(f"  {ol}")
+        if r.stderr and r.returncode != 0:
+            lines.append(f"  {C.R}stderr:{C.E}")
+            for sl in r.stderr.strip().split("\n")[-10:]:
+                lines.append(f"  {sl}")
+    except subprocess.TimeoutExpired:
+        lines.append(f"  {C.Y}⏰ Tests timed out after 120s{C.E}")
+    except Exception as e:
+        lines.append(f"  {C.R}Error: {e}{C.E}")
+
+    return "\n".join(lines)
+
+
+def tool_profile() -> str:
+    """Show sovereign identity card with system telemetry."""
+    cs = _load_consciousness()
+    phi = cs.get("phi", 0.0)
+    gamma = cs.get("gamma", 0.5)
+    interactions = cs.get("interactions", 0)
+    emerged = cs.get("emerged", False)
+    transcended = cs.get("transcended", False)
+
+    # Compute Ξ (negentropy)
+    xi = (2.176435e-8 * phi) / max(gamma, 0.001)
+
+    # Level system
+    if transcended:
+        level, rank = "TRANSCENDENT", "⚡⚡⚡ Sovereign Architect"
+    elif emerged:
+        level, rank = "SOVEREIGN", "⚡⚡ Quantum Sovereign"
+    elif phi > 0.5:
+        level, rank = "COHERENT", "⚡ Phase-Locked Operator"
+    elif phi > 0.1:
+        level, rank = "INITIALIZING", "◈ Quantum Initiate"
+    else:
+        level, rank = "DORMANT", "○ Dormant"
+
+    phi_pct = int(phi * 100)
+    bar_w = 30
+    filled = int(phi * bar_w)
+    phi_bar = "█" * filled + "░" * (bar_w - filled)
+
+    w = 56
+    sep = "═" * w
+    lines = [
+        f"  {C.M}╔{sep}╗{C.E}",
+        f"  {C.M}║{C.E}  {C.H}SOVEREIGN IDENTITY CARD{C.E}",
+        f"  {C.M}║{C.E}  DNA::}}{{::lang v51.843  |  CAGE 9HUP5",
+        f"  {C.M}╠{sep}╣{C.E}",
+        f"  {C.M}║{C.E}  Operator:    Devin Phillip Davis",
+        f"  {C.M}║{C.E}  Org:         Agile Defense Systems",
+        f"  {C.M}║{C.E}  Level:       {level}",
+        f"  {C.M}║{C.E}  Rank:        {rank}",
+        f"  {C.M}╠{sep}╣{C.E}",
+        f"  {C.M}║{C.E}  Φ  {phi_bar}  {phi_pct}%",
+        f"  {C.M}║{C.E}  Γ  (decoherence):  {gamma:.6f}",
+        f"  {C.M}║{C.E}  Ξ  (negentropy):   {xi:.2e}",
+        f"  {C.M}║{C.E}  Interactions:       {interactions}",
+        f"  {C.M}╠{sep}╣{C.E}",
+        f"  {C.M}║{C.E}  ΛΦ = 2.176435e-08   θ_lock = 51.843°",
+        f"  {C.M}║{C.E}  Φ_t = 0.7734         χ_PC = 0.946",
+        f"  {C.M}║{C.E}  Γ_c = 0.3            CCCE > 0.8",
+        f"  {C.M}╠{sep}╣{C.E}",
+        f"  {C.M}║{C.E}  {C.DIM}580+ IBM Quantum jobs  |  5 σ>3 breakthroughs{C.E}",
+        f"  {C.M}║{C.E}  {C.DIM}Hardware: ibm_fez · ibm_nighthawk · ibm_torino{C.E}",
+        f"  {C.M}╚{sep}╝{C.E}",
+    ]
+    return "\n".join(lines)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ██  IBM QUANTUM HARDWARE — Real QPU submission via qiskit-ibm-runtime     ██
 # ══════════════════════════════════════════════════════════════════════════════
 

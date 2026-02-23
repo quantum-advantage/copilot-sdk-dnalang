@@ -72,6 +72,7 @@ from .tools import (
     tool_wardenclyffe, tool_health_dashboard,
     tool_wormhole, tool_lazarus, tool_sovereign_proof,
     tool_matrix, tool_consciousness, tool_full_constellation,
+    tool_diff, tool_test, tool_profile,
 )
 
 
@@ -996,6 +997,10 @@ class OsirisTUI(App):
             "/consciousness": lambda _: tool_consciousness(),
             "/phi": lambda _: tool_consciousness(),
             "/awaken": lambda _: tool_consciousness(),
+            # Enhanced dev tools
+            "/diff": lambda a: tool_diff(a),
+            "/test": lambda a: tool_test(a),
+            "/profile": lambda _: tool_profile(),
         }
 
         if command in tool_map:

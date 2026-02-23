@@ -48,6 +48,8 @@ from .tools import (
     tool_wormhole, tool_lazarus, tool_sovereign_proof,
     tool_matrix, tool_consciousness, tool_full_constellation,
     _grow_consciousness,
+    # Enhanced dev tools
+    tool_diff, tool_test, tool_profile,
 )
 
 
@@ -118,6 +120,8 @@ SLASH_COMMANDS = [
     # Wormhole, Lazarus, Sovereign, Matrix, Consciousness
     "/wormhole", "/lazarus", "/resurrect", "/sovereign", "/prove",
     "/matrix", "/rain", "/consciousness", "/phi", "/awaken",
+    # Enhanced dev tools
+    "/diff", "/test", "/profile",
 ]
 
 CIRCUIT_NAMES = list(CIRCUIT_TEMPLATES.keys()) if CIRCUIT_TEMPLATES else [
@@ -819,6 +823,14 @@ class NCLMChat:
             self._cmd_timeout(arg)
         elif command == "/chat":
             self._cmd_chat_mode(arg)
+        elif command == "/diff":
+            print(f"\n{tool_diff(arg)}\n")
+        elif command == "/test":
+            with Spinner("Running tests", frames="dna"):
+                result = tool_test(arg)
+            print(f"\n{result}\n")
+        elif command == "/profile":
+            print(f"\n{tool_profile()}\n")
         # ── GITHUB + VERCEL (Generation 5.4) ──────────────
         elif command == "/github":
             self._cmd_github(arg)
@@ -941,6 +953,9 @@ class NCLMChat:
   {C.CY}/create <file>{C.E}      Create new file     {C.CY}/ls [dir]{C.E}     List files
   {C.CY}/grep <pattern>{C.E}     Search in files     {C.CY}/git <cmd>{C.E}    Git command
   {C.CY}/run <cmd>{C.E}          Execute shell command
+  {C.CY}/diff [file]{C.E}        Git diff with syntax highlighting
+  {C.CY}/test [args]{C.E}        Auto-detect & run tests (pytest/npm/cargo/go)
+  {C.CY}/profile{C.E}            Sovereign identity card
 
   {C.H}🌐 Webapp & Vercel{C.E}
   {C.CY}/webapp{C.E}             Project status
