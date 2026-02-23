@@ -1435,31 +1435,14 @@ async def cmd_lab(subcmd=None, args_list=None):
         print(f"  {C.DIM}Available: scan, list, templates, design, run, results, search, stats{C.E}\n")
 
 def main():
-    header()
-    # Show SENTINEL hint and command aliases
-    cfg = load_config()
-    projects = cfg.get("projects", [])
-    if projects:
-        print(f"  💡 {C.H}osiris init{C.E} — SENTINEL scan   {C.H}osiris pulse{C.E} — live heartbeat   {C.H}osiris status{C.E} — dashboard")
-        print(f"     {C.DIM}[ACTIVE]{C.E}", end="")
-        for i, p in enumerate(projects[:3], 1):
-            print(f"  {i}.) {p['name']}", end="")
-        print()
-    else:
-        print(f"  💡 Run {C.H}osiris init{C.E} to scan for projects and initialize SENTINEL\n")
-    print(f"  {C.H}osiris OSIRIS{C.E} quantum  |  {C.H}osiris AIDEN{C.E} security  |  {C.H}osiris AURA{C.E} code/dev")
-    print(f"  {C.H}osiris pulse{C.E}  heartbeat  |  {C.H}osiris mesh{C.E} topology  |  {C.H}osiris threat{C.E} scan")
-    print(f"  {C.H}osiris proof{C.E}  sovereign  |  {C.H}osiris lazarus{C.E} recovery  |  {C.H}osiris status{C.E} dashboard")
-    print(f"  {C.H}osiris lab{C.E}    R&D mode   |  {C.H}osiris lab scan{C.E}             {C.H}osiris lab templates{C.E}")
-    print(f"{C.DIM}{'━' * 70}{C.E}\n")
-
     try:
         p=argparse.ArgumentParser(
-            description="OSIRIS - Quantum Development CLI v" + VERSION + " — Generation 5.1 Technical Orchestrator",
+            description="OSIRIS - Quantum Development CLI v" + VERSION + " — Generation 5.3 Technical Orchestrator",
             epilog=f"""Commands:
-  osiris                        Launch with current model (NCLM-enhanced Copilot)
+  osiris                        Launch NCLM interactive chat 🧠
+  osiris chat                   Launch NCLM interactive chat 🧠
+  osiris dev [project]          Launch copilot dev mode
   osiris init                   SENTINEL intelligence scan
-  osiris dev [project]          Launch dev mode
   osiris model                  Select model (includes NCLM)
   osiris aal [index]            Run AAL 6-stage pipeline
   osiris ccce                   Show consciousness metrics
@@ -1468,7 +1451,6 @@ def main():
   osiris OSIRIS [task]          Wormhole/quantum operations
   osiris AIDEN [task]           SECDEVOPS / integrity
   osiris AURA [task]            Code / development
-  osiris chat                   NCLM interactive chat 🧠
   osiris deploy [env]           Deploy to environment
   ─── Gen 5.1 ────────────────────────────────────────────
   osiris pulse                  Live consciousness heartbeat ♥
@@ -1504,8 +1486,29 @@ def main():
                 print(f"Available: {', '.join(OSIRIS_MODELS.keys())}")
                 return
         
-        # If no command, launch with current model
-        if not a.cmd: asyncio.run(dev(None)); return
+        # If no command or "chat", launch NCLM chat directly (has its own boot sequence)
+        if not a.cmd or a.cmd == "chat":
+            chat()
+            return
+
+        # For all other commands, show the header + hints first
+        header()
+        cfg = load_config()
+        projects = cfg.get("projects", [])
+        if projects:
+            print(f"  💡 {C.H}osiris init{C.E} — SENTINEL scan   {C.H}osiris pulse{C.E} — live heartbeat   {C.H}osiris status{C.E} — dashboard")
+            print(f"     {C.DIM}[ACTIVE]{C.E}", end="")
+            for i, pr in enumerate(projects[:3], 1):
+                print(f"  {i}.) {pr['name']}", end="")
+            print()
+        else:
+            print(f"  💡 Run {C.H}osiris init{C.E} to scan for projects and initialize SENTINEL\n")
+        print(f"  {C.H}osiris OSIRIS{C.E} quantum  |  {C.H}osiris AIDEN{C.E} security  |  {C.H}osiris AURA{C.E} code/dev")
+        print(f"  {C.H}osiris pulse{C.E}  heartbeat  |  {C.H}osiris mesh{C.E} topology  |  {C.H}osiris threat{C.E} scan")
+        print(f"  {C.H}osiris proof{C.E}  sovereign  |  {C.H}osiris lazarus{C.E} recovery  |  {C.H}osiris status{C.E} dashboard")
+        print(f"  {C.H}osiris lab{C.E}    R&D mode   |  {C.H}osiris lab scan{C.E}             {C.H}osiris lab templates{C.E}")
+        print(f"{C.DIM}{'━' * 70}{C.E}\n")
+
         cmd = a.cmd
         if cmd == "dev":      asyncio.run(dev(a.args[0] if a.args else None))
         elif cmd == "init":   asyncio.run(init_sentinel())
