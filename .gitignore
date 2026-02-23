@@ -51,6 +51,9 @@ htmlcov/
 dnalang/venv/
 *.pyc
 
+# blessed artifacts (terminal state files written when blessed crashes)
+*.blessed-dump
+
 # Next.js
 .next/
 out/
