@@ -362,6 +362,9 @@ HELP_TEXT = """\
 
 [bold]━━━ Memory & System ━━━[/]
   /memory [query]      Search persistent memory
+  /history             Show input command history (↑/↓ arrows)
+  /session             Show current session info
+  /export [md|json]    Export session transcript to file
   /status              Show system status
   /agents              Show agent constellation
   /metrics             Show consciousness telemetry
@@ -542,8 +545,37 @@ class OsirisTUI(App):
         self.telemetry = TelemetryState()
         self.telemetry.llm_backend = _find_llm_backend()
         self.messages: List[Dict[str, str]] = []
+        self.input_history: List[str] = []
+        self.history_index: int = -1
         self.dev_mode = False
         self._status_timer: Optional[Timer] = None
+        self._load_session()
+
+    def _load_session(self):
+        """Restore messages from previous session."""
+        try:
+            if os.path.exists(SESSION_FILE):
+                with open(SESSION_FILE) as f:
+                    data = json.load(f)
+                self.messages = data.get("messages", [])[-50:]  # Last 50 messages
+                self.input_history = data.get("input_history", [])[-100:]
+        except Exception:
+            pass
+
+    def _save_session(self):
+        """Persist session state for next launch."""
+        try:
+            os.makedirs(MEMORY_DIR, exist_ok=True)
+            data = {
+                "messages": self.messages[-50:],
+                "input_history": self.input_history[-100:],
+                "saved_at": datetime.now().isoformat(),
+                "queries": self.telemetry.queries,
+            }
+            with open(SESSION_FILE, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -717,10 +749,38 @@ class OsirisTUI(App):
             return
         event.input.clear()
 
+        # Track input history
+        if not self.input_history or self.input_history[-1] != text:
+            self.input_history.append(text)
+        self.history_index = -1
+
         if text.startswith("/"):
             await self._handle_slash(text)
         else:
             await self._handle_message(text)
+
+    async def on_key(self, event) -> None:
+        """Handle up/down arrow for input history."""
+        inp = self.query_one("#input-field", Input)
+        if not inp.has_focus:
+            return
+        if event.key == "up" and self.input_history:
+            if self.history_index == -1:
+                self.history_index = len(self.input_history) - 1
+            elif self.history_index > 0:
+                self.history_index -= 1
+            inp.value = self.input_history[self.history_index]
+            inp.cursor_position = len(inp.value)
+            event.prevent_default()
+        elif event.key == "down" and self.history_index >= 0:
+            if self.history_index < len(self.input_history) - 1:
+                self.history_index += 1
+                inp.value = self.input_history[self.history_index]
+            else:
+                self.history_index = -1
+                inp.value = ""
+            inp.cursor_position = len(inp.value)
+            event.prevent_default()
 
     async def _handle_slash(self, cmd: str):
         """Route slash commands."""
@@ -734,6 +794,7 @@ class OsirisTUI(App):
         self.bus.emit("command", {"cmd": command, "arg": arg})
 
         if command in ("/quit", "/exit"):
+            self._save_session()
             self.exit()
             return
 
@@ -772,6 +833,22 @@ class OsirisTUI(App):
 
         if command == "/memory":
             self._handle_memory(arg)
+            return
+
+        if command == "/export":
+            self._export_session(arg)
+            return
+
+        if command == "/history":
+            self._show_input_history()
+            return
+
+        if command == "/session":
+            n = len(self.messages)
+            chat.write(Text(f"Session: {n} messages, {self.telemetry.queries} queries", style="cyan"))
+            if self.messages:
+                chat.write(Text(f"First: {self.messages[0]['content'][:60]}...", style="dim"))
+                chat.write(Text(f"Last:  {self.messages[-1]['content'][:60]}...", style="dim"))
             return
 
         # /chat and /ask — force LLM reasoning (bypass tool dispatch)
@@ -938,6 +1015,45 @@ class OsirisTUI(App):
             for r in recent[-10:]:
                 ts = datetime.fromtimestamp(r["timestamp"]).strftime("%H:%M")
                 chat.write(Text(f"  [{ts}] {r['text'][:80]}", style="dim"))
+
+    def _export_session(self, fmt: str):
+        """Export session transcript to file."""
+        chat = self.query_one("#chat-log", RichLog)
+        fmt = fmt.strip().lower() or "md"
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = os.path.expanduser(f"~/osiris_session_{ts}.{fmt}")
+
+        try:
+            if fmt == "json":
+                data = {
+                    "session": {
+                        "exported": datetime.now().isoformat(),
+                        "queries": self.telemetry.queries,
+                        "messages": self.messages,
+                    }
+                }
+                with open(filename, "w") as f:
+                    json.dump(data, f, indent=2)
+            else:
+                lines = [f"# OSIRIS Session — {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"]
+                lines.append(f"Queries: {self.telemetry.queries}\n")
+                for msg in self.messages:
+                    role = "**You**" if msg["role"] == "user" else "**OSIRIS**"
+                    lines.append(f"\n{role}:\n{msg['content']}\n")
+                with open(filename, "w") as f:
+                    f.write("\n".join(lines))
+            chat.write(Text(f"✓ Session exported → {filename}", style="bold green"))
+        except Exception as e:
+            chat.write(Text(f"✗ Export failed: {e}", style="red"))
+
+    def _show_input_history(self):
+        """Show recent input history."""
+        chat = self.query_one("#chat-log", RichLog)
+        chat.write(Text("\n⌨ Input History (last 20)", style="bold cyan"))
+        for i, cmd in enumerate(self.input_history[-20:], 1):
+            chat.write(Text(f"  {i:2d}. {cmd[:80]}", style="dim"))
+        if not self.input_history:
+            chat.write(Text("  (no history yet)", style="dim"))
 
     # ── NATURAL LANGUAGE HANDLER ──────────────────────────────────────────────
 
@@ -1208,6 +1324,7 @@ class OsirisTUI(App):
     # ── ACTIONS ───────────────────────────────────────────────────────────────
 
     def action_quit(self):
+        self._save_session()
         self._save_state()
         self.exit()
 
