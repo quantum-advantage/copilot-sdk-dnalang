@@ -349,8 +349,38 @@ def phase_6_value_proposition():
         print()
 
 
-def phase_7_competitive():
-    section("PHASE 7 — Competitive Position")
+def phase_7_braket():
+    section("PHASE 7 — AWS Braket / Ocelot Integration")
+
+    sys.path.insert(0, os.path.expanduser("~/osiris_cockpit"))
+    try:
+        from braket_ocelot_adapter import (
+            BraketOcelotAdapter, build_organism_circuit,
+            OcelotErrorModel, format_report,
+        )
+
+        print(f"    {GREEN}⚡ Live multi-backend compilation{RESET}\n")
+
+        adapter = BraketOcelotAdapter(shots=10000)
+        circuit = build_organism_circuit(8)
+        report = adapter.generate_comparison_report(circuit)
+        print(format_report(report))
+
+        # Ocelot error model
+        em = OcelotErrorModel()
+        print(f"\n    {CYAN}Ocelot Cat-Qubit Advantage:{RESET}")
+        print(f"    Physical/logical ratio:  {BOLD}{em.physical_qubits_per_logical}{RESET} vs {em.surface_code_equivalent} (surface code)")
+        print(f"    Overhead reduction:      {GREEN}{em.overhead_reduction*100:.0f}%{RESET}")
+        print(f"    Bit-flip suppression:    {BOLD}{em.cat_qubit.bias_ratio:.0f}:1{RESET}")
+        print(f"    Logical error rate:      {em.logical_error_rate:.2e}")
+        print(f"\n    {DIM}DNA-Lang is the middleware layer Amazon needs.{RESET}")
+
+    except Exception as e:
+        print(f"    {YELLOW}⚠ Braket module unavailable: {e}{RESET}")
+
+
+def phase_8_competitive():
+    section("PHASE 8 — Competitive Position")
 
     print(f"    {'Feature':35s} {BOLD}{'DNA-Lang':12s} {'IBM Qiskit':12s} {'Google Cirq':12s} {'AWS Braket':12s}{RESET}")
     print(f"    {'─' * 35} {'─' * 12} {'─' * 12} {'─' * 12} {'─' * 12}")
@@ -377,7 +407,7 @@ def phase_7_competitive():
         print(f"    {feat:35s} {dna_c}{dna:12s}{RESET} {ibm_c}{ibm:12s}{RESET} {g_c}{google:12s}{RESET} {a_c}{aws:12s}{RESET}")
 
 
-def phase_8_call_to_action():
+def phase_9_call_to_action():
     print()
     print(f"  {CYAN}{'═' * 64}{RESET}")
     print(f"""
@@ -439,10 +469,13 @@ def main():
     phase_6_value_proposition()
     pause("", 2)
 
-    phase_7_competitive()
+    phase_7_braket()
     pause("", 2)
 
-    phase_8_call_to_action()
+    phase_8_competitive()
+    pause("", 2)
+
+    phase_9_call_to_action()
 
 
 if __name__ == "__main__":

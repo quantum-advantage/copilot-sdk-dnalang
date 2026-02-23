@@ -72,7 +72,7 @@ class I(Enum):
     DIAG=auto(); PHYSICS=auto(); IDENT=auto(); HELP=auto()
     HIST=auto(); EXPERIMENT=auto(); HARDWARE=auto(); DEMO=auto()
     RESEARCH=auto(); ARCH=auto(); METRICS=auto(); DEPLOY=auto()
-    CLOUD=auto(); GROK=auto()
+    CLOUD=auto(); GROK=auto(); BRAKET=auto()
     UNKNOWN=auto()
 
 # Priority-ordered: first match wins
@@ -84,6 +84,7 @@ _RULES = [
     (r'\b(deploy|sam deploy|cloudformation|stack)\b',                    I.DEPLOY),
     (r'\b(cloud|dashboard|aws.?status|cloud.?status|infra)\b',           I.CLOUD),
     (r'\b(grok|workload|analyze.?job|ibm.?job|marrakesh|job.?result)\b', I.GROK),
+    (r'\b(braket|ocelot|cat.?qubit|amazon.?quantum|aws.?quantum|multi.?backend)\b', I.BRAKET),
     (r'\b(architecture|arch|cloud.?diagram|aws.?diagram|deployment)\b', I.ARCH),
     (r'\b(hardware|ibm.?torino|titan|hw.?results|real.?results)\b',     I.HARDWARE),
     (r'\b(experiments?|circuits?|run.?exp|theta.?lock|lambda.?phi|vqe|ghz|z8)\b', I.EXPERIMENT),
@@ -219,6 +220,7 @@ class Osiris:
             I.DEPLOY:      self._deploy,
             I.CLOUD:       self._cloud,
             I.GROK:        self._grok,
+            I.BRAKET:      self._braket,
         }
         fn = table.get(intent, self._gen_code)
         return fn(text, p)
@@ -1131,6 +1133,54 @@ class Osiris:
         except Exception as e:
             return Result(False, f"  {red('✗')} Workload analysis failed: {e}")
 
+    def _braket(self, text, p):
+        """AWS Braket / Ocelot multi-backend compilation."""
+        try:
+            sys.path.insert(0, str(self.oc))
+            from braket_ocelot_adapter import (
+                BraketOcelotAdapter, BraketBackend,
+                build_bell_circuit, build_ghz_circuit, build_tfd_circuit,
+                build_ocelot_repetition_code, build_organism_circuit,
+                demo_mode, format_report,
+            )
+
+            if re.search(r'\b(demo|full|showcase)\b', text, re.I):
+                demo_mode()
+                return Result(True, f"\n  {green('✓')} Braket/Ocelot compilation demo complete")
+
+            # Parse circuit type
+            adapter = BraketOcelotAdapter(shots=10000)
+            if re.search(r'\b(organism|gene|dna)\b', text, re.I):
+                m = re.search(r'(\d+)\s*gene', text)
+                n = int(m.group(1)) if m else 8
+                circuit = build_organism_circuit(n)
+            elif re.search(r'\b(ghz|multi)', text, re.I):
+                circuit = build_ghz_circuit(5)
+            elif re.search(r'\b(tfd|er.?epr|bridge)', text, re.I):
+                circuit = build_tfd_circuit(10)
+            elif re.search(r'\b(ocelot|cat|repetition|error.?correct)', text, re.I):
+                circuit = build_ocelot_repetition_code(5)
+            elif re.search(r'\b(code|sdk|python)\b', text, re.I):
+                circuit = build_bell_circuit(2)
+                code = adapter.to_braket_sdk_code(circuit, BraketBackend.OCELOT)
+                return Result(True, f"\n  {bold('Generated Braket SDK Code:')}\n\n{code}")
+            else:
+                circuit = build_bell_circuit(2)
+
+            report = adapter.generate_comparison_report(circuit)
+            output = format_report(report)
+
+            if re.search(r'\b(save|json|out)\b', text, re.I):
+                out_path = self.oc / "braket_compilation.json"
+                import json as _json
+                with open(out_path, 'w') as f:
+                    _json.dump(report, f, indent=2, default=str)
+                output += f"\n  {green('✓')} Saved to {out_path}"
+
+            return Result(True, output)
+        except Exception as e:
+            return Result(False, f"  {red('✗')} Braket compilation failed: {e}")
+
     def _help(self, text, p):
         return Result(True, "\n".join([
             f"  {bold('OSIRIS')} — speak naturally, I act autonomously.",
@@ -1145,6 +1195,7 @@ class Osiris:
             f"  {cyan('system')}     {dim('diagnostics · check physics · who am I · history')}",
             f"  {cyan('aws')}        {dim('deploy · deploy status · deploy run · cloud dashboard')}",
             f"  {cyan('grok')}       {dim('grok workloads · analyze jobs · grok and upload to aws')}",
+            f"  {cyan('braket')}     {dim('compile to braket · ocelot demo · generate braket code')}",
             "",
             f"  {dim('chain:')} {cyan('run experiments, then show hardware, then benchmark decoder')}",
             f"  {dim('unknown input → auto-generates code via quantum NLP engine')}",
