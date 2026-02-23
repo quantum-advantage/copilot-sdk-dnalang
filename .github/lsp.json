@@ -1,6 +1,6 @@
 {
   "language": "dnalang",
-  "sdk_path": "./sdk",
+  "sdk_path": "./dnalang",
   "consistency_checks": true,
   "agent_integration": true,
   "features": {
