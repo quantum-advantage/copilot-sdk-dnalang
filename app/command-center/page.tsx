@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Activity,
@@ -309,19 +309,35 @@ export default function CommandCenterPage() {
   })
   const [timestamp, setTimestamp] = useState("")
 
-  // Simulate live metrics
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMetrics((prev) => ({
-        phi: Math.max(0.7, Math.min(0.95, prev.phi + (Math.random() - 0.5) * 0.02)),
-        lambda: Math.max(0.85, Math.min(0.98, prev.lambda + (Math.random() - 0.5) * 0.01)),
-        gamma: Math.max(0.05, Math.min(0.15, prev.gamma + (Math.random() - 0.5) * 0.005)),
-        xi: Math.max(5, Math.min(12, prev.xi + (Math.random() - 0.5) * 0.3)),
-      }))
+  // Fetch real metrics from Supabase via /api/agents/live
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await fetch("/api/agents/live")
+      if (!res.ok) return
+      const data = await res.json()
+      const agents = data.agents || []
+      if (agents.length > 0) {
+        const avgPhi = agents.reduce((s: number, a: { phi: number }) => s + a.phi, 0) / agents.length
+        const avgGamma = agents.reduce((s: number, a: { gamma: number }) => s + a.gamma, 0) / agents.length
+        const avgLambda = agents.reduce((s: number, a: { lambda: number }) => s + a.lambda, 0) / agents.length
+        setMetrics({
+          phi: avgPhi,
+          lambda: avgLambda,
+          gamma: avgGamma,
+          xi: avgLambda > 0 && avgGamma > 0 ? (avgLambda * avgPhi) / avgGamma : 8.56,
+        })
+      }
       setTimestamp(new Date().toISOString())
-    }, 2000)
-    return () => clearInterval(interval)
+    } catch {
+      setTimestamp(new Date().toISOString())
+    }
   }, [])
+
+  useEffect(() => {
+    fetchMetrics()
+    const interval = setInterval(fetchMetrics, 15000)
+    return () => clearInterval(interval)
+  }, [fetchMetrics])
 
   const currentDomain = DOMAINS[selectedDomain as keyof typeof DOMAINS]
   const DomainIcon = currentDomain.icon

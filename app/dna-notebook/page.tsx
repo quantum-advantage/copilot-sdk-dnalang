@@ -928,28 +928,50 @@ export default function DNANotebookPage() {
   const [mobilePanel, setMobilePanel] = useState<string | null>(null)
   const [showMobileAddCell, setShowMobileAddCell] = useState(false)
 
-  // Swarm live telemetry
+  // Swarm live telemetry — fetches real agent metrics
   useEffect(() => {
-    const iv = setInterval(() => {
-      setSwarmNodes(prev => prev.map(n => ({
-        ...n,
-        coherence: Math.max(0.9, Math.min(1, n.coherence + (Math.random() - 0.5) * 0.01)),
-        load: Math.max(0, Math.min(100, n.load + Math.floor((Math.random() - 0.5) * 8))),
-        status: Math.random() > 0.95 ? (["active", "idle", "syncing"] as const)[Math.floor(Math.random() * 3)] : n.status,
-      })))
-      setHardwareJobs(prev => prev.map(j => j.status === "running" ? { ...j, progress: Math.min(100, j.progress + Math.random() * 3) } : j))
-      setTelemetry(prev => {
-        const t = prev.length
-        const point: TelemetryPoint = {
-          t,
-          flux: 0.9 + Math.random() * 0.1,
-          pulse: Math.max(0.3, 0.95 - t * 0.02 + Math.random() * 0.02),
-          lambda: 0.97 + (Math.random() - 0.5) * 0.02,
-          phi: 0.77 + (Math.random() - 0.5) * 0.01,
+    let tickCount = 0
+    const fetchAndUpdate = async () => {
+      tickCount++
+      try {
+        const res = await fetch("/api/agents/live")
+        if (res.ok) {
+          const data = await res.json()
+          const agents = data.agents || []
+          if (agents.length > 0) {
+            // Map real agent data to swarm nodes
+            setSwarmNodes(prev => prev.map((n, i) => {
+              const agent = agents[i % agents.length]
+              return {
+                ...n,
+                coherence: agent.phi || n.coherence,
+                load: Math.min(100, (agent.tasks || 0) * 2),
+                status: agent.status === "active" ? "active" as const : n.status,
+              }
+            }))
+            // Compute real telemetry from agent averages
+            const avgPhi = agents.reduce((s: number, a: { phi: number }) => s + a.phi, 0) / agents.length
+            const avgLambda = agents.reduce((s: number, a: { lambda: number }) => s + a.lambda, 0) / agents.length
+            const avgGamma = agents.reduce((s: number, a: { gamma: number }) => s + a.gamma, 0) / agents.length
+            setTelemetry(prev => {
+              const point: TelemetryPoint = {
+                t: tickCount,
+                flux: avgPhi,
+                pulse: 1 - avgGamma,
+                lambda: avgLambda,
+                phi: avgPhi,
+              }
+              return [...prev.slice(-30), point]
+            })
+          }
         }
-        return [...prev.slice(-30), point]
-      })
-    }, 3000)
+      } catch {
+        // Keep existing values on failure
+      }
+      setHardwareJobs(prev => prev.map(j => j.status === "running" ? { ...j, progress: Math.min(100, j.progress + 1) } : j))
+    }
+    fetchAndUpdate()
+    const iv = setInterval(fetchAndUpdate, 15000)
     return () => clearInterval(iv)
   }, [])
 

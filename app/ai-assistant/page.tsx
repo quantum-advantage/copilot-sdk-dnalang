@@ -96,13 +96,25 @@ function AIAssistantContent() {
   }, [messages])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setConnectionStatus((prev) => ({
-        ...prev,
-        latency: Math.floor(Math.random() * 80) + 100,
-        lastHeartbeat: new Date(),
-      }))
-    }, 5000)
+    const measureLatency = async () => {
+      const t0 = performance.now()
+      try {
+        await fetch("/api/iris/chat", { method: "GET" })
+        const rtt = Math.round(performance.now() - t0)
+        setConnectionStatus((prev) => ({
+          ...prev,
+          latency: rtt,
+          lastHeartbeat: new Date(),
+        }))
+      } catch {
+        setConnectionStatus((prev) => ({
+          ...prev,
+          lastHeartbeat: new Date(),
+        }))
+      }
+    }
+    measureLatency()
+    const interval = setInterval(measureLatency, 15000)
     return () => clearInterval(interval)
   }, [])
 
