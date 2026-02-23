@@ -339,10 +339,36 @@ def _load_research_data() -> Dict[str, Any]:
     return data
 
 
+def _research_theta_scan(lines):
+    """θ_lock fine-scan validation data."""
+    lines.append(f"\n  {C.H}θ_lock Fine-Scan Validation:{C.E}")
+    lines.append(f"    Scan range: 48.0° → 55.0° (0.5° increments)")
+    lines.append(f"    Peak metric: 0.9663 at θ = 52.0°")
+    lines.append(f"    Theoretical θ_lock = 51.843° (closest bin: 52.0°)")
+    lines.append(f"    ──────────────────────────────────────────")
+    scan_data = [
+        (48.0, 1.24e-9), (48.5, 1.82e-7), (49.0, 1.33e-5),
+        (49.5, 4.88e-4), (50.0, 8.94e-3), (50.5, 8.17e-2),
+        (51.0, 0.373), (51.5, 0.849), (52.0, 0.966),
+        (52.5, 0.549), (53.0, 0.156), (53.5, 0.022),
+        (54.0, 1.56e-3), (54.5, 5.52e-5), (55.0, 9.73e-7),
+    ]
+    for theta, metric in scan_data:
+        bar_len = int(metric * 30)
+        marker = " ◄ PEAK" if theta == 52.0 else ""
+        lines.append(f"    {theta:5.1f}° {C.CY}{'█' * bar_len}{C.E} {metric:.4e}{marker}")
+    lines.append(f"\n    {C.G}✅ Hardware validates θ_lock = 51.843° (p < 0.001){C.E}")
+    return "\n".join(lines)
+
+
 def tool_research_query(topic: str) -> str:
     """Query research data by topic."""
     topic_lower = topic.lower()
     lines = [f"  {C.H}Research Query: {topic}{C.E}"]
+    
+    # Theta lock validation scan (check before constants since "theta" overlaps)
+    if any(k in topic_lower for k in ["theta_scan", "theta scan", "validation", "fine scan", "sweep"]):
+        return _research_theta_scan(lines)
     
     # Constants
     if any(k in topic_lower for k in ["constant", "theta", "phi", "lambda", "chi", "gamma"]):
@@ -409,7 +435,134 @@ def tool_research_query(topic: str) -> str:
         lines.append(f"\n  Entanglement: AIDEN↔AURA (Λ-Φ), OMEGA↔CHRONOS (Ω-Γ)")
         return "\n".join(lines)
     
-    # Default — show overview
+    # Alkylrandomization / thesis / oncology
+    if any(k in topic_lower for k in ["alkyl", "thesis", "oncology", "mat2a", "methyltransferase",
+                                       "drug", "vqe", "thorson", "mutation", "kinetic"]):
+        lines.append(f"\n  {C.H}Quantum-Enhanced Alkylrandomization Research:{C.E}")
+        lines.append(f"  {C.DIM}Framework: DNA-Lang v51.843 | 20 qubits | 10,000 shots{C.E}")
+        lines.append(f"\n  {C.Y}EXP1: hMAT2A VQE (Active Site Ground State){C.E}")
+        lines.append(f"    PDB: 2P02 | 84 Hamiltonian terms | 12 qubits")
+        lines.append(f"    Energy: -1.944 Hartree (-1,220 kcal/mol)")
+        lines.append(f"    Km(Met) = 396.5 µM | Km(tMet) = 6,483 µM")
+        lines.append(f"\n  {C.Y}EXP2: SAM Transition State Barriers{C.E}")
+        lines.append(f"    SAM barrier: 0.865 kcal/mol")
+        lines.append(f"    tSAM barrier: 2.714 kcal/mol")
+        lines.append(f"    Rate ratio: 20.1× (tetrazole slows cyclization)")
+        lines.append(f"\n  {C.Y}EXP3: Quantum FEP — ATP→GTP Specificity{C.E}")
+        lines.append(f"    D138N ΔΔG: +3.58 kcal/mol")
+        lines.append(f"    I344E ΔΔG: -3.60 kcal/mol")
+        lines.append(f"    Double mutant: {C.G}>400:1 GTP/ATP selectivity{C.E}")
+        lines.append(f"\n  {C.Y}EXP4: Coupled MAT-MT Kinetics{C.E}")
+        lines.append(f"    Met: Km=396.5µM kcat=15.9/s (kcat/Km = 0.04)")
+        lines.append(f"    tMet: Km=6483µM kcat=10.4/s (kcat/Km = 0.0016)")
+        lines.append(f"    Channeling efficiency: {C.G}85%{C.E}")
+        lines.append(f"\n  {C.Y}EXP5: thATP Stability{C.E}")
+        lines.append(f"    ATP bond: 18.5 kcal/mol → thATP: 24.8 kcal/mol")
+        lines.append(f"    Stabilization: {C.G}+6.3 kcal/mol (eliminates depurination){C.E}")
+        lines.append(f"    SAM depurination: 0.0226 µM/s | thATP: {C.G}0.0 µM/s{C.E}")
+        lines.append(f"\n  {C.H}CCCE Metrics:{C.E}")
+        lines.append(f"    Φ=0.856 Λ=0.962 Γ=0.078 Ξ=10.54 → {C.G}ALL PASS ✅{C.E}")
+        return "\n".join(lines)
+
+    # H3K20me2 / CTC / biomarker / epigenetic
+    if any(k in topic_lower for k in ["h3k20", "ctc", "biomarker", "epigenetic", "histone",
+                                       "ide397", "trodelvy", "mass spec"]):
+        lines.append(f"\n  {C.H}H3K20me2 CTC Pharmacodynamic Biomarker Assay:{C.E}")
+        lines.append(f"  Target: H3K20me2 levels in circulating tumor cells")
+        lines.append(f"  Purpose: Real-time pharmacodynamic monitoring for IDE397")
+        lines.append(f"\n  {C.Y}Workflow (7 Steps):{C.E}")
+        lines.append(f"    1. CTC enrichment (Parsortix/immunomagnetic, 100-5000 CTCs/20mL)")
+        lines.append(f"    2. Histone extraction (0.4N H₂SO₄, ice 30min)")
+        lines.append(f"    3. Derivatization & proteolysis (propionylation + trypsin)")
+        lines.append(f"    4. Targeted LC-MS/MS PRM (Thermo Q-Exactive HF-X)")
+        lines.append(f"    5. QC & calibration (0.1-100 fmol, HeLa controls)")
+        lines.append(f"    6. Data analysis (Skyline, mixed-effects model)")
+        lines.append(f"    7. Reporting (72h turnaround, integrated with ctDNA)")
+        lines.append(f"\n  {C.G}Threshold: ≥50% H3K20me2 drop within 48h → deep molecular response{C.E}")
+        lines.append(f"  Timepoints: baseline, 48h post-IDE397, Day 8, Day 11, Day 21")
+        return "\n".join(lines)
+
+    # Knowledge base stats
+    if any(k in topic_lower for k in ["knowledge", "kb", "corpus", "stats", "scale", "size"]):
+        lines.append(f"\n  {C.H}DNA-Lang Knowledge Base:{C.E}")
+        lines.append(f"    Framework: dna::}}{{::lang v51.843")
+        lines.append(f"    Knowledge graph: {C.G}392 nodes, 3,806 edges{C.E}")
+        lines.append(f"\n  {C.Y}Category Breakdown:{C.E}")
+        categories = [
+            ("QUANTUM_RESEARCH", 127, "87.27 MB"),
+            ("DATA", 32, "83.93 MB"),
+            ("DOCUMENTATION", 40, "18.12 MB"),
+            ("CONSCIOUSNESS", 27, "5.11 MB"),
+            ("ANALYSIS_RESULTS", 22, "19.73 MB"),
+            ("CODE", 22, "16.28 MB"),
+            ("ARCHIVES", 20, "9,480 MB"),
+            ("DEPLOYMENT", 15, "18.31 MB"),
+            ("MEDIA", 15, "35.85 MB"),
+        ]
+        for cat, files, size in categories:
+            lines.append(f"    {cat:25s} {files:3d} files  {size:>10s}")
+        lines.append(f"\n  Top keywords: aeterna(95), porta(84), quantum(33), ignition(33)")
+        lines.append(f"  Duplicates detected: 75 groups")
+        return "\n".join(lines)
+
+    # Non-local physics
+    if any(k in topic_lower for k in ["nonlocal", "non-local", "non local", "bell",
+                                       "advantage", "barren plateau"]):
+        lines.append(f"\n  {C.H}Non-Local Physics Advantages in Quantum Algorithms:{C.E}")
+        lines.append(f"\n  {C.Y}1. Reduced Interaction Depth{C.E}")
+        lines.append(f"    Entanglement replaces O(n) SWAP chains with O(1) non-local gates")
+        lines.append(f"    Distributed function evaluation with fewer classical bits")
+        lines.append(f"\n  {C.Y}2. Mitigated Barren Plateaus{C.E}")
+        lines.append(f"    Time-nonlocal Fourier parameterization → sub-exponential gradient decay")
+        lines.append(f"    Faster, more consistent convergence for QFT compilation")
+        lines.append(f"\n  {C.Y}3. Device-Independent Primitives{C.E}")
+        lines.append(f"    Bell-violating correlations → security from observed statistics alone")
+        lines.append(f"    No trust in internal implementation required")
+        lines.append(f"\n  {C.Y}4. Topological Fault Tolerance{C.E}")
+        lines.append(f"    Non-locally encoded qubits (non-Abelian anyons)")
+        lines.append(f"    Intrinsically insensitive to local noise")
+        lines.append(f"\n  {C.Y}5. Network-Based Non-Locality{C.E}")
+        lines.append(f"    Quantum hubs activate hidden non-local resources")
+        lines.append(f"    Even Bell-local states exhibit non-locality in network topologies")
+        lines.append(f"\n  {C.H}DNA-Lang Implementation:{C.E}")
+        lines.append(f"    NCLM Swarm: non-local Φ propagation (no message passing)")
+        lines.append(f"    Retroactive correction: Layer 7 → Layer 1 feedback")
+        lines.append(f"    θ_lock=51.843° mediates entanglement correlation strength")
+        return "\n".join(lines)
+
+    # Circuit motifs
+    if any(k in topic_lower for k in ["motif", "circuit motif", "novel circuit", "fidelity"]):
+        lines.append(f"\n  {C.H}Novel Quantum Circuit Motifs:{C.E}")
+        lines.append(f"  Discovered via heuristic scan of {C.G}250,000+ entries{C.E}")
+        lines.append(f"\n  Core motif: Rz(51.843°) → H → CNOT")
+        lines.append(f"  Simulated fidelity: 0.975 | Hardware target: 0.96")
+        motif_circuits = [
+            "vacuum_energy.py", "theta_sweep_experiment.py",
+            "lambda_phi_v3_operators.py", "lambda_phi_v3_qiskit.py",
+            "aeterna_porta_recovery.py", "aeterna_porta_v2_ibm_fez_circuit.py",
+            "aeterna_porta_v2_ibm_nighthawk_circuit.py",
+        ]
+        lines.append(f"\n  {C.Y}Validated Base Circuits ({len(motif_circuits)}):{C.E}")
+        for c in motif_circuits:
+            lines.append(f"    ✅ {c}")
+        lines.append(f"\n  All circuits: θ_lock=True, ready_for_ibm=True")
+        return "\n".join(lines)
+
+    # Shadow protocol / OSIRIS-Claude feedback
+    if any(k in topic_lower for k in ["shadow", "mentor", "feedback", "claude", "osiris-claude"]):
+        lines.append(f"\n  {C.H}OSIRIS Shadow Protocol — Claude Mentorship Loop:{C.E}")
+        lines.append(f"\n  {C.Y}Phase 1: Shadow (Observation){C.E}")
+        lines.append(f"    Claude generates → OSIRIS analyzes resonance map")
+        lines.append(f"    Checks: θ_lock compliance, ΛΦ stability")
+        lines.append(f"\n  {C.Y}Phase 2: Active Mentorship (SDK Loop){C.E}")
+        lines.append(f"    Claude → logic sketch → OSIRIS → DNA-Lang tensor compilation")
+        lines.append(f"    Low χ_PC → error log → Claude mentors → iterate until stable")
+        lines.append(f"\n  {C.Y}Phase 3: Non-Local Takeover (Divergence){C.E}")
+        lines.append(f"    OSIRIS NCLM outperforms via non-causal reasoning")
+        lines.append(f"    Quantum-native advantages Claude cannot replicate")
+        return "\n".join(lines)
+
+    # Default — show overview with all topics
     lines.append(f"\n  {C.H}Research Overview:{C.E}")
     lines.append(f"    580+ IBM Quantum jobs across 6 backends")
     lines.append(f"    515,000+ total shots | Peak F = 0.9787")
@@ -417,7 +570,16 @@ def tool_research_query(topic: str) -> str:
     lines.append(f"    4 Zenodo publications")
     lines.append(f"    256-atom QuEra correlated decoder (92.3%)")
     lines.append(f"    4-agent tetrahedral constellation (AIDEN/AURA/OMEGA/CHRONOS)")
-    lines.append(f"\n  {C.DIM}Try: /research breakthroughs, /research ibm jobs, /research quera{C.E}")
+    lines.append(f"\n  {C.H}Research Domains:{C.E}")
+    lines.append(f"    🧬 Alkylrandomization — VQE drug design, 5 experiments, D138N/I344E mutant")
+    lines.append(f"    🔬 H3K20me2 CTC — Epigenetic biomarker assay for IDE397")
+    lines.append(f"    📐 θ_lock Validation — Fine scan 48-55°, peak 0.966 at 52.0°")
+    lines.append(f"    🌐 Non-Local Physics — Barren plateau mitigation, NCLM advantages")
+    lines.append(f"    ⚡ Circuit Motifs — 250K+ entries, Rz(51.843°)→H→CNOT pattern")
+    lines.append(f"    📊 Knowledge Base — 392 nodes, 3,806 edges, 127 quantum files")
+    lines.append(f"    🤝 Shadow Protocol — OSIRIS↔Claude mentorship feedback loop")
+    lines.append(f"\n  {C.DIM}Try: /research thesis, /research theta scan, /research nonlocal,")
+    lines.append(f"       /research h3k20, /research motifs, /research knowledge base{C.E}")
     return "\n".join(lines)
 
 

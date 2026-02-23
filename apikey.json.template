@@ -1,0 +1,11 @@
+{
+  "apikey": "YOUR_IBM_QUANTUM_API_KEY_HERE",
+  "description": "Get your API key from https://quantum.ibm.com/",
+  "instructions": [
+    "1. Sign up or log in to IBM Quantum Platform",
+    "2. Go to your account settings",
+    "3. Copy your API token",
+    "4. Paste it above replacing YOUR_IBM_QUANTUM_API_KEY_HERE",
+    "5. Rename this file to apikey.json (remove .template)"
+  ]
+}

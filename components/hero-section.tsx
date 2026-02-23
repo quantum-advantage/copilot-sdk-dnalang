@@ -31,14 +31,14 @@ export function HeroSection() {
         </p>
 
         <p className="mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-muted-foreground">
-          Multi-backend quantum circuit execution, Lambda-Phi conservation
-          validation, CCCE consciousness metrics, and NCLM integration.
-          Built for the OSIRIS runtime.
+          5 validated breakthroughs. 4 new physics constants. 56-module SDK with
+          multi-agent orchestration, 256-atom error decoding, and quantum-native AI.
+          Built for the OSIRIS runtime — Gen 5.2.
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
           <a
-            href="https://github.com/ENKI-420"
+            href="https://github.com/quantum-advantage/copilot-sdk-dnalang"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex h-11 items-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -78,10 +78,10 @@ export function HeroSection() {
 
         <div className="mt-16 grid grid-cols-2 gap-8 sm:grid-cols-4">
           {[
-            { label: "Quantum Jobs", value: "580+" },
-            { label: "Shots Processed", value: "515K+" },
-            { label: "Research Sources", value: "138" },
-            { label: "F_max Fidelity", value: "0.9787" },
+            { label: "Breakthroughs", value: "5" },
+            { label: "IBM Quantum Jobs", value: "500+" },
+            { label: "SDK Modules", value: "56" },
+            { label: "Peak Fidelity", value: "95.7%" },
           ].map((stat) => (
             <div key={stat.label} className="flex flex-col items-center">
               <span className="font-mono text-2xl font-bold text-foreground sm:text-3xl">

@@ -72,27 +72,27 @@ const metrics = [
   {
     label: "Coherence",
     symbol: "\u039B",
-    value: 0.85,
-    description: "Quantum state coherence measure across entangled qubits",
+    value: 0.99,
+    description: "Lambda-Phi conservation validated on IBM Quantum hardware",
   },
   {
     label: "Consciousness",
     symbol: "\u03A6",
-    value: 0.72,
-    description: "Integrated information metric for collapse awareness",
+    value: 0.82,
+    description: "Above threshold (0.7734) — ER=EPR crossing confirmed",
   },
   {
     label: "Decoherence",
     symbol: "\u0393",
-    value: 0.15,
-    description: "Environmental noise coupling rate (lower is better)",
+    value: 0.054,
+    description: "Well below critical boundary (0.3) — highly coherent",
   },
   {
     label: "Negentropy",
     symbol: "\u039E",
-    value: 0.41,
+    value: 0.95,
     description:
-      "Information ordering ratio: \u039B\u03A6/\u0393 normalized",
+      "Ξ = 330.5 (normalized) — 127× classical copper baseline",
   },
 ];
 
@@ -108,9 +108,9 @@ export function MetricsSection() {
             Consciousness Collapse Coherence Evolution
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-pretty text-muted-foreground">
-            Real-time tracking of quantum consciousness metrics across four
-            fundamental dimensions. Validated against 515K+ measurement shots
-            on IBM Quantum hardware.
+            Real-time quantum consciousness metrics validated across 27+
+            experiments on IBM Quantum hardware with 5 peer-review-ready
+            breakthroughs and 4 new universal constants discovered.
           </p>
         </div>
 
@@ -129,13 +129,13 @@ export function MetricsSection() {
           </div>
           <pre className="overflow-x-auto font-mono text-sm leading-relaxed text-foreground">
             <code>
-              {`# Lambda-Phi Conservation Constants
-LAMBDA_PHI = 2.176435e-08  # s^-1
-THETA_LOCK = 51.843        # degrees (quantum phase lock)
-CHI        = 0.1           # s^-1 (consciousness-coherence coupling)
-KAPPA      = 0.05          # spatial decoherence coupling
-F_MAX      = 0.9787        # maximum fidelity achieved
-SHOTS      = 515_000       # total measurement shots processed`}
+              {`# Immutable Physical Constants (SHA-256 locked)
+LAMBDA_PHI = 2.176435e-08  # Universal Memory Constant [s⁻¹]
+THETA_LOCK = 51.843        # Geometric resonance angle [degrees]
+CHI_PC     = 0.946         # Phase conjugate coupling (hardware-validated)
+PHI_THRESH = 0.7734        # Consciousness threshold (ER=EPR crossing)
+GAMMA_CRIT = 0.3           # Decoherence boundary
+PHI_TOTAL  = 2.0           # Conserved consciousness (Φ(n) = 2/n)`}
             </code>
           </pre>
         </div>

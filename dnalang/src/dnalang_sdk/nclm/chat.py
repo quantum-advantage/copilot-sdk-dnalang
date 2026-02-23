@@ -113,7 +113,9 @@ def _completer(text: str, state: int) -> Optional[str]:
             if cmd in ("/submit", "/design"):
                 matches = [t for t in CIRCUIT_NAMES if t.startswith(partial)]
             elif cmd in ("/research",):
-                topics = ["constants", "breakthroughs", "ibm_jobs", "quera", "agents", "overview"]
+                topics = ["constants", "breakthroughs", "ibm_jobs", "quera", "agents", "overview",
+                         "thesis", "alkylrandomization", "theta_scan", "h3k20", "nonlocal",
+                         "motifs", "knowledge_base", "shadow_protocol", "oncology", "validation"]
                 matches = [t for t in topics if t.startswith(partial)]
             else:
                 # File path completion

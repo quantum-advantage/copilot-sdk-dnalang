@@ -1,47 +1,58 @@
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import type React from "react"
+import type { Metadata, Viewport } from "next"
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google"
+import "./globals.css"
+import { Navigation } from "@/components/navigation"
+import { MobileNav } from "@/components/mobile-nav"
+import { QuantumMetricsBar } from "@/components/quantum-metrics-bar"
+import { SkipLink } from "@/components/ui/skip-link"
+import { ToastProvider } from "@/components/ui/toast-provider"
 
-const geistSans = Geist({
+const ibmPlexSans = IBM_Plex_Sans({
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
+  variable: "--font-ibm-plex-sans",
+})
 
-const geistMono = Geist_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
-  variable: "--font-geist-mono",
-});
+  variable: "--font-ibm-plex-mono",
+})
 
 export const metadata: Metadata = {
-  title: "DNA-Lang | Sovereign Quantum Engineering SDK",
+  title: "DNA::}{::lang — Sovereign Quantum SDK | Agile Defense Systems",
   description:
-    "Multi-backend quantum circuit execution, Lambda-Phi conservation validation, CCCE consciousness metrics, Sovereign Shield, OSIRIS CLI, and NCLM integration. 150,000+ lines of living code by Devin Phillip Davis (ENKI-420).",
-  openGraph: {
-    title: "DNA-Lang Copilot SDK",
-    description:
-      "Quantum computing meets consciousness scaling. 580+ quantum jobs. 515K+ shots. 5.06-sigma physical validation.",
-    type: "website",
-  },
-};
+    "5 validated breakthroughs. 27+ IBM Quantum experiments. 256-atom QuEra decoding. Multi-agent OSIRIS runtime with zero-token sovereignty. Built by Agile Defense Systems (CAGE 9HUP5).",
+  generator: "OSIRIS Gen 5.2",
+}
 
 export const viewport: Viewport = {
-  themeColor: "#0d9488",
   width: "device-width",
   initialScale: 1,
-};
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#0a0a0a",
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
-      >
-        {children}
+    <html lang="en" suppressHydrationWarning className="dark">
+      <body className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} font-sans antialiased`}>
+        <SkipLink />
+        <ToastProvider>
+          <Navigation />
+          <QuantumMetricsBar />
+          <main id="main-content" tabIndex={-1} className="focus:outline-none pb-20 md:pb-0">
+            {children}
+          </main>
+          <MobileNav />
+        </ToastProvider>
       </body>
     </html>
-  );
+  )
 }

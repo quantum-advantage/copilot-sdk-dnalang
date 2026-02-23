@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Osiris Plan Artifact Schema v1",
+  "type": "object",
+  "required": ["plan_version","meta","authority","steps","validation"],
+  "properties": {
+    "plan_version": {"type":"string","const":"1.0"},
+    "meta": {
+      "type":"object",
+      "required":["plan_id","intent_id","created_at","planner_hash"],
+      "properties":{
+        "plan_id": {"type":"string"},
+        "intent_id": {"type":"string"},
+        "created_at": {"type":"string","format":"date-time"},
+        "planner_hash": {"type":"string"},
+        "confidence": {"type":"number","minimum":0,"maximum":1}
+      }
+    },
+    "authority":{
+      "type":"object",
+      "required":["domain","execution_level","confirmed"],
+      "properties":{
+        "domain":{"type":"string"},
+        "execution_level":{"type":"string","enum":["read","modify","deploy"]},
+        "confirmed":{"type":"boolean"}
+      }
+    },
+    "constraints":{
+      "type":"object",
+      "properties":{
+        "write_allowed":{"type":"boolean"},
+        "network_allowed":{"type":"boolean"},
+        "quantum_domain":{"type":"string"},
+        "crsm_axes_touched":{"type":"array","items":{"type":"string"}}
+      }
+    },
+    "steps":{
+      "type":"array",
+      "minItems":1,
+      "items":{
+        "type":"object",
+        "required":["id","type"],
+        "properties":{
+          "id":{"type":"string"},
+          "type":{"type":"string","enum":["edit_file","create_file","delete_file","run_command","apply_patch","verify"]},
+          "path":{"type":"string"},
+          "diff":{"type":"string"},
+          "command":{"type":"string"},
+          "cwd":{"type":"string"}
+        }
+      }
+    },
+    "validation":{
+      "type":"object",
+      "properties":{
+        "preconditions":{"type":"array","items":{"type":"string"}},
+        "postconditions":{"type":"array","items":{"type":"string"}}
+      }
+    }
+  }
+}

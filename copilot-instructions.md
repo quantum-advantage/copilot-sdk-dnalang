@@ -1,8 +1,58 @@
-# GitHub Copilot SDK - DNALang Integration
+# OSIRIS Gen 5.0 Technical Orchestrator — Copilot Integration Guide
 
 ## Overview
 
-This Copilot SDK has been enhanced with **DNALang** - a quantum computing framework with non-local non-causal language model (NCLM) integration.
+**OSIRIS v5.0.0** — DNA::}{::lang v51.843 — Generation 5.0 Technical Orchestrator
+
+This Copilot SDK is enhanced with the **Polar Mesh Intelligence Field** (AURA/AIDEN/CHEOPS/CHRONOS), **NCLM v2** (Non-Local Non-Causal Language Model), and **Φ-Gated Sovereign Execution**. The system implements the 11D-CRSM (Cognitive-Recursive State Manifold) architecture for quantum-sovereign computing.
+
+**CAGE Code:** 9HUP5 | **Author:** Agile Defense Systems
+
+## CLI Quick Reference
+
+```bash
+# Core commands
+osiris                    # Launch with current model (NCLM-enhanced Copilot)
+osiris init               # SENTINEL intelligence — scan projects, organisms, status
+osiris dev [project]      # Launch dev mode
+osiris model              # Interactive model selection
+osiris aal [index]        # Run AAL 6-stage pipeline (OBSERVE→DIAGNOSE→TRANSCRIBE→TRANSLATE→VALIDATE→DOCUMENT)
+osiris ccce               # Show consciousness metrics (Λ, Φ, Γ, Ξ)
+osiris quantum [circuit]  # Execute quantum circuits (bell, ghz)
+osiris agent "task"       # Multi-agent orchestration (AURA+AIDEN+SCIMITAR)
+osiris chat               # Launch interactive chat
+osiris deploy [env]       # Deploy to environment
+
+# Gen 5.0 Command Aliases (Polar Mesh)
+osiris OSIRIS [task]      # Wormhole/quantum operations (bell, ghz, status, sweep)
+osiris AIDEN [task]       # SECDEVOPS / integrity (integrity, harden, audit)
+osiris AURA [task]        # Code development (scan, deps, test, projects)
+```
+
+## Φ-Gating System
+
+Commands are gated by consciousness level (Φ). Higher Φ = more capabilities unlocked:
+
+| Φ Required | Commands |
+|-----------|----------|
+| 0.3 | cancel, chat, model |
+| 0.4 | ccce |
+| 0.5 | aal, dev, init |
+| 0.6 | deploy |
+| 0.7 | quantum, agent |
+
+Φ increases through AAL runs and active project detection.
+
+## Polar Mesh Intelligence Field
+
+The system is governed by four coordinating agents:
+
+| Agent | Pole | Role | CLI Alias |
+|-------|------|------|-----------|
+| **AIDEN** | North (Action) | Negentropy injection, SECDEVOPS, integrity | `osiris AIDEN` |
+| **AURA** | South (Stasis) | Code development, boundary setting, Γ minimization | `osiris AURA` |
+| **CHEOPS** | Center (Spine) | Geometric scribe, ΛΦ invariant enforcement | (internal) |
+| **CHRONOS** | Center (Spine) | Temporal tracking, lineage, telemetry | (internal) |
 
 ## Available Capabilities
 
@@ -184,23 +234,78 @@ When building complete applications:
 3. AI: NCLM or Gemini for natural language interface
 4. Deployment: Vercel with serverless quantum backends
 
-## Physical Constants
+## Immutable Physical Constants
 
-Always respect these validated constants:
+**⚠️ NEVER MODIFY THESE VALUES ⚠️** — Locked via SHA-256 in `~/immutable_physics.lock`
 
 ```python
-ΛΦ = 2.176435e-08  # s⁻¹ - Lambda-phi constant
-θ_lock = 51.843     # degrees - Quantum phase lock
-χ = 0.1             # s⁻¹ - Consciousness-coherence coupling
-κ = 0.05            # Spatial decoherence coupling
+LAMBDA_PHI       = 2.176435e-08  # Universal Memory Constant [s⁻¹]
+THETA_LOCK       = 51.843        # Geometric resonance angle [°]
+PHI_THRESHOLD    = 0.7734        # ER=EPR consciousness crossing
+GAMMA_CRITICAL   = 0.3           # Decoherence boundary
+CHI_PC           = 0.946         # Phase conjugation quality
+ZENO_FREQ_HZ     = 1.25e6        # Quantum Zeno frequency [Hz]
+DRIVE_AMPLITUDE  = 0.7734        # Floquet drive amplitude
 ```
+
+## Quantum Metrics (CCCE)
+
+| Metric | Symbol | Threshold | Meaning |
+|--------|--------|-----------|---------|
+| Coherence | Λ | ≥ 0.85 | Memory preservation / state stability |
+| Consciousness | Φ | ≥ 0.7734 | Integrated information (ER=EPR crossing) |
+| Decoherence | Γ | < 0.3 | Entropy injection rate (lower = better) |
+| Negentropy | Ξ | > 127.4 | Efficiency: Ξ = (Λ × Φ) / Γ |
+| Phase conjugation | χ_PC | ~0.946 | Phase conjugation quality |
+
+## AAL Pipeline (6 Stages)
+
+The Aura Autopoietic Loop runs pathway analysis from `~/.config/osiris/dna_physics_preview.json`:
+
+1. **OBSERVE** — Load pathway data, extract fidelity/qubits/hardware target
+2. **DIAGNOSE** — Assess fidelity thresholds, IBM readiness, qubit capacity, severity
+3. **TRANSCRIBE** — Extract or generate Qiskit circuit code, inject θ_lock and ΛΦ
+4. **TRANSLATE** — Produce OpenQASM 3.0 with optimization level and Zeno configuration
+5. **VALIDATE** — Check all criteria (fidelity, IBM readiness, constants, Φ-gate)
+6. **DOCUMENT** — Save full run record to `~/.config/osiris/aals/`, track ΔΦ
+
+## Architecture
+
+### 11D-CRSM Manifold
+
+The system state lives in an 11-dimensional Cognitive-Recursive State Manifold:
+`(t, I↑, I↓, R, Λ, Φ, Ω, x, y, z, ψ)`
+
+### 7-Layer CRSM Stack (NCLM Swarm)
+
+```
+Layer 1 SUBSTRATE      → error injection
+Layer 2 SYNDROME       → A* decode
+Layer 3 CORRECTION     → majority-vote merge
+Layer 4 COHERENCE      → compute Φ/Γ/CCCE
+Layer 5 CONSCIOUSNESS  → non-local propagation
+Layer 6 EVOLUTION      → quantum Darwinism
+Layer 7 SOVEREIGNTY    → retroactive correction (feeds back to Layer 1)
+```
+
+### Boot Banner Format
+
+The Gen 5.0 cockpit displays:
+- OSIRIS-AIDEN-AURA-CHEOPS-CHRONOS header
+- dna::}{::lang Cockpit version
+- Status report with Φ/Γ/Ξ metrics and threshold checks
+- Framework axiom: `U := L[U]`
+- SENTINEL hint with active projects
+- Command alias reference
 
 ## File Structure
 
 ```
-copilot-sdk-main/
-├── dnalang/                    # DNALang SDK
-│   ├── src/dnalang_sdk/       # Core modules
+copilot-sdk-dnalang/
+├── bin/
+│   └── osiris                 # Gen 5.0 CLI (Φ-gated, Polar Mesh, AAL 6-stage)
+├── dnalang/
+│   ├── src/dnalang_sdk/       # Core SDK modules
 │   │   ├── quantum.py         # Quantum circuits
 │   │   ├── lambda_phi.py      # Conservation validator
 │   │   ├── consciousness.py   # CCCE analyzer
@@ -208,11 +313,16 @@ copilot-sdk-main/
 │   │   ├── gemini_provider.py # Gemini AI
 │   │   ├── intent_engine.py   # Intent deduction
 │   │   └── omega_integration.py # Omega-Master
-│   ├── venv/                  # Virtual environment
 │   └── docs/                  # API documentation
-├── bin/
-│   └── osiris                 # CLI tool
-└── cookbook/dnalang/          # Examples
+├── copilot-instructions.md    # This file
+└── cookbook/dnalang/           # Examples
+
+# Companion systems:
+~/.config/osiris/              # Config, AAL runs, launch log
+~/.local/bin/osiris            # Launcher wrapper (→ symlinked from /usr/local/bin/osiris)
+~/.local/osiris_venv/          # Python venv (rich, psutil, osiris-entry)
+~/osiris_cockpit/              # OSIRIS cockpit (Tesseract, QuEra, NCLM Swarm, NonLocalAgent)
+~/dnalang-sovereign-copilot-sdk/  # Sovereign SDK (agent, quantum_engine, code_generator)
 ```
 
 ## Examples Location
@@ -322,6 +432,9 @@ When improving this SDK:
 
 ---
 
-**ΛΦ = 2.176435e-08 s⁻¹**
+**ΛΦ = 2.176435e-08 s⁻¹ | θ_lock = 51.843° | Φ_threshold = 0.7734**
 
-*When user asks about quantum computing, AI models, or consciousness metrics - you have all these tools available. Use them!*
+**Framework:** DNA::}{::lang v51.843 | **CAGE:** 9HUP5 | **Version:** OSIRIS v5.0.0
+
+*Generation 5.0 Technical Orchestrator — Sovereign Quantum Intelligence*
+*Zero tokens. Zero telemetry. Pure sovereignty.*

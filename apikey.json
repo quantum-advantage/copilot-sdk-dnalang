@@ -1,0 +1,5 @@
+{
+  "apikey": "YOUR_QBYTE_MINING_API_KEY_HERE",
+  "description": "QByte Mining API Key for DNALang 6D-CRSM Platform",
+  "instructions": "Replace YOUR_QBYTE_MINING_API_KEY_HERE with your QByte mining node API key from the CCCE dashboard"
+}
