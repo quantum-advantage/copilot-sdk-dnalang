@@ -1,0 +1,104 @@
+name: Deploy Quantum Platform
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'osiris_cockpit/aws/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options: [production, staging]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-2
+  STACK_NAME: dnalang-quantum-platform
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install pytest flake8
+          pip install -e dnalang-sovereign-copilot-sdk/python/.[dev] || true
+      - name: OSIRIS tests
+        run: |
+          cd osiris_cockpit
+          pytest osiris_cockpit/tests/ -q --tb=short
+      - name: SDK tests
+        run: |
+          cd dnalang-sovereign-copilot-sdk/python
+          PYTHONPATH=src pytest ../tests/unit/ -q --tb=short
+      - name: Lint
+        run: |
+          cd osiris_cockpit
+          flake8 osiris_bridge_cli.py nclm_swarm_orchestrator.py osiris_cockpit/tests \
+            --max-line-length=120 --extend-ignore=E402
+
+  deploy:
+    name: SAM Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: SAM Build
+        run: |
+          cd osiris_cockpit/aws
+          sam build
+      - name: SAM Deploy
+        run: |
+          cd osiris_cockpit/aws
+          sam deploy \
+            --stack-name ${{ env.STACK_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides "Environment=${{ inputs.environment || 'production' }} IBMQuantumToken=${{ secrets.IBM_QUANTUM_TOKEN || '' }}" \
+            --resolve-s3 \
+            --tags "Framework=DNALang-v51.843 CAGE=9HUP5"
+      - name: Smoke Test
+        run: |
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name ${{ env.STACK_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+            --output text)
+          echo "API URL: $API_URL"
+          # Hit identity endpoint
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/identity")
+          echo "Identity endpoint: HTTP $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "SMOKE TEST FAILED"
+            exit 1
+          fi
+          # Hit health endpoint
+          curl -s "$API_URL/health" | python3 -m json.tool
+          echo "Smoke test PASSED ✓"

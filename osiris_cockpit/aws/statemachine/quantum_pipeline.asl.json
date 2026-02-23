@@ -1,0 +1,101 @@
+{
+  "Comment": "DNA::}{::lang Quantum Pipeline — Step Functions Orchestrator. Runs all 5 core experiments, processes CCCE telemetry, stores aggregate results.",
+  "StartAt": "PrepareExperiments",
+  "States": {
+    "PrepareExperiments": {
+      "Type": "Pass",
+      "Result": {
+        "experiments": ["EXP_THETA", "EXP_LAMBDA_PHI", "EXP_Z8", "EXP_GHZ", "EXP_VQE"],
+        "shots": 4096
+      },
+      "ResultPath": "$.config",
+      "Next": "RunExperimentBatch"
+    },
+    "RunExperimentBatch": {
+      "Type": "Task",
+      "Resource": "${ExperimentRunnerArn}",
+      "Parameters": {
+        "experiments.$": "$.config.experiments",
+        "shots.$": "$.config.shots",
+        "source": "step_functions"
+      },
+      "ResultPath": "$.batch_results",
+      "TimeoutSeconds": 600,
+      "Retry": [
+        {
+          "ErrorEquals": ["States.TaskFailed", "States.Timeout"],
+          "IntervalSeconds": 30,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Next": "ProcessCCCETelemetry"
+    },
+    "ProcessCCCETelemetry": {
+      "Type": "Task",
+      "Resource": "${CCCEProcessorArn}",
+      "Parameters": {
+        "detail-type": "ExperimentCompleted",
+        "detail": {
+          "experiment_id": "BATCH",
+          "ccce.$": "$.batch_results.experiments.EXP_THETA.ccce",
+          "backend.$": "$.batch_results.experiments.EXP_THETA.backend",
+          "timestamp.$": "$.batch_results.timestamp",
+          "job_id": "batch-pipeline"
+        }
+      },
+      "ResultPath": "$.telemetry_result",
+      "Next": "EvaluateConsciousness"
+    },
+    "EvaluateConsciousness": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.batch_results.sovereign_grade",
+          "StringEquals": "SOVEREIGN",
+          "Next": "SovereignSuccess"
+        }
+      ],
+      "Default": "PartialSuccess"
+    },
+    "SovereignSuccess": {
+      "Type": "Pass",
+      "Result": {
+        "status": "SOVEREIGN",
+        "message": "All experiments above Φ threshold and coherent",
+        "action": "Ready for hardware submission"
+      },
+      "ResultPath": "$.pipeline_verdict",
+      "Next": "StoreAggregateResults"
+    },
+    "PartialSuccess": {
+      "Type": "Pass",
+      "Result": {
+        "status": "PARTIAL",
+        "message": "Some experiments below threshold — review CCCE telemetry",
+        "action": "Consider hardware calibration"
+      },
+      "ResultPath": "$.pipeline_verdict",
+      "Next": "StoreAggregateResults"
+    },
+    "StoreAggregateResults": {
+      "Type": "Task",
+      "Resource": "${CCCEProcessorArn}",
+      "Parameters": {
+        "detail-type": "StoreResults",
+        "detail": {
+          "framework": "DNALang-v51.843",
+          "cage_code": "9HUP5",
+          "pipeline": "quantum_orchestrator",
+          "verdict.$": "$.pipeline_verdict",
+          "experiments.$": "$.batch_results.experiments",
+          "n_experiments.$": "$.batch_results.n_experiments",
+          "above_threshold.$": "$.batch_results.above_threshold",
+          "coherent.$": "$.batch_results.coherent"
+        }
+      },
+      "ResultPath": "$.store_result",
+      "End": true
+    }
+  }
+}

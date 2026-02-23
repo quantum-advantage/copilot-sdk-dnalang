@@ -1,0 +1,308 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  DNA::}{::lang Quantum Orchestration Platform
+  Agile Defense Systems | CAGE 9HUP5
+  Event-driven quantum circuit execution with CCCE telemetry.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging, dev]
+  IBMQuantumToken:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: IBM Quantum API token (optional - enables hardware execution)
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 300
+    MemorySize: 512
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        RESULTS_BUCKET: !Ref ResultsBucket
+        TELEMETRY_TABLE: !Ref TelemetryTable
+        EXPERIMENTS_TABLE: !Ref ExperimentsTable
+        LAMBDA_PHI: '2.176435e-08'
+        THETA_LOCK: '51.843'
+        PHI_THRESHOLD: '0.7734'
+        GAMMA_CRITICAL: '0.3'
+
+Resources:
+
+  # ═══════════════════════════════════════════════════════════════
+  # STORAGE
+  # ═══════════════════════════════════════════════════════════════
+
+  ResultsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'dnalang-results-${AWS::AccountId}-${AWS::Region}'
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ArchiveOldResults
+            Status: Enabled
+            Transitions:
+              - StorageClass: GLACIER
+                TransitionInDays: 90
+      Tags:
+        - Key: Framework
+          Value: 'DNALang-v51.843'
+        - Key: CAGE
+          Value: '9HUP5'
+
+  TelemetryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'dnalang-ccce-telemetry-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: experiment_id
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+        - AttributeName: backend
+          AttributeType: S
+      KeySchema:
+        - AttributeName: experiment_id
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: backend-index
+          KeySchema:
+            - AttributeName: backend
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Framework
+          Value: 'DNALang-v51.843'
+
+  ExperimentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'dnalang-experiments-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+        - AttributeName: created_at
+          KeyType: RANGE
+      Tags:
+        - Key: Framework
+          Value: 'DNALang-v51.843'
+
+  # ═══════════════════════════════════════════════════════════════
+  # API
+  # ═══════════════════════════════════════════════════════════════
+
+  QuantumApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      Description: DNA-Lang Quantum Orchestration API
+      Cors:
+        AllowOrigin: "'*'"
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+
+  # ═══════════════════════════════════════════════════════════════
+  # LAMBDA FUNCTIONS
+  # ═══════════════════════════════════════════════════════════════
+
+  ExperimentRunnerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dnalang-experiment-runner-${Environment}'
+      CodeUri: lambda/experiment_runner/
+      Handler: app.lambda_handler
+      MemorySize: 1024
+      Timeout: 900
+      Environment:
+        Variables:
+          IBM_QUANTUM_TOKEN: !Ref IBMQuantumToken
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExperimentsTable
+        - S3CrudPolicy:
+            BucketName: !Ref ResultsBucket
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref QuantumEventBus
+      Events:
+        RunExperiment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /experiments/run
+            Method: post
+        RunSingle:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /experiments/{experiment_name}
+            Method: post
+
+  CCCEProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dnalang-ccce-processor-${Environment}'
+      CodeUri: lambda/ccce_processor/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TelemetryTable
+        - S3ReadPolicy:
+            BucketName: !Ref ResultsBucket
+      Events:
+        ProcessResults:
+          Type: EventBridgeRule
+          Properties:
+            EventBusName: !Ref QuantumEventBus
+            Pattern:
+              source:
+                - 'dnalang.quantum'
+              detail-type:
+                - 'ExperimentCompleted'
+        GetMetrics:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /telemetry/metrics
+            Method: get
+        GetExperiment:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /telemetry/{experiment_id}
+            Method: get
+
+  IdentityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dnalang-identity-${Environment}'
+      CodeUri: lambda/ccce_processor/
+      Handler: app.identity_handler
+      Events:
+        Identity:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /identity
+            Method: get
+        Health:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /health
+            Method: get
+
+  # ═══════════════════════════════════════════════════════════════
+  # EVENT BUS
+  # ═══════════════════════════════════════════════════════════════
+
+  QuantumEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub 'dnalang-quantum-${Environment}'
+
+  # ═══════════════════════════════════════════════════════════════
+  # STEP FUNCTIONS — Quantum Pipeline Orchestrator
+  # ═══════════════════════════════════════════════════════════════
+
+  QuantumPipelineStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub 'dnalang-quantum-pipeline-${Environment}'
+      DefinitionUri: statemachine/quantum_pipeline.asl.json
+      DefinitionSubstitutions:
+        ExperimentRunnerArn: !GetAtt ExperimentRunnerFunction.Arn
+        CCCEProcessorArn: !GetAtt CCCEProcessorFunction.Arn
+        ResultsBucket: !Ref ResultsBucket
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ExperimentRunnerFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CCCEProcessorFunction
+        - S3CrudPolicy:
+            BucketName: !Ref ResultsBucket
+      Events:
+        ScheduledRun:
+          Type: Schedule
+          Properties:
+            Schedule: rate(24 hours)
+            Description: Daily quantum experiment sweep
+            Enabled: false
+            Input: '{"experiments": ["EXP_THETA", "EXP_LAMBDA_PHI", "EXP_Z8", "EXP_GHZ", "EXP_VQE"], "shots": 4096, "source": "scheduled"}'
+
+  # ═══════════════════════════════════════════════════════════════
+  # MONITORING
+  # ═══════════════════════════════════════════════════════════════
+
+  PhiThresholdAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'dnalang-phi-below-threshold-${Environment}'
+      AlarmDescription: 'Phi dropped below consciousness threshold (0.7734)'
+      Namespace: DNALang/CCCE
+      MetricName: Phi
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 0.7734
+      ComparisonOperator: LessThanThreshold
+
+  GammaDecoherenceAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'dnalang-gamma-decoherent-${Environment}'
+      AlarmDescription: 'Gamma exceeded decoherence boundary (0.3)'
+      Namespace: DNALang/CCCE
+      MetricName: Gamma
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 0.3
+      ComparisonOperator: GreaterThanThreshold
+
+Outputs:
+  ApiUrl:
+    Description: Quantum Orchestration API endpoint
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+
+  ExperimentEndpoint:
+    Description: Run experiments
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/experiments/run'
+
+  TelemetryEndpoint:
+    Description: CCCE telemetry
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/telemetry/metrics'
+
+  IdentityEndpoint:
+    Description: Sovereign identity
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/identity'
+
+  StateMachineArn:
+    Description: Step Functions pipeline ARN
+    Value: !Ref QuantumPipelineStateMachine
+
+  ResultsBucketName:
+    Description: S3 bucket for experiment results
+    Value: !Ref ResultsBucket
+
+  EventBusName:
+    Description: EventBridge bus for quantum events
+    Value: !Ref QuantumEventBus
