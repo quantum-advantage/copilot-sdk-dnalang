@@ -220,6 +220,54 @@ Resources:
       Name: !Sub 'dnalang-quantum-${Environment}'
 
   # ═══════════════════════════════════════════════════════════════
+  # 11dCRSM VALIDATION — Cryptographic Experiment Ledger
+  # ═══════════════════════════════════════════════════════════════
+
+  CRSMValidatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'dnalang-crsm-validator-${Environment}'
+      CodeUri: lambda/crsm_validator/
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      MemorySize: 512
+      Timeout: 60
+      Environment:
+        Variables:
+          LEDGER_TABLE: !Ref ExperimentsTable
+          RESULTS_BUCKET: !Ref ResultsBucket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ExperimentsTable
+        - S3CrudPolicy:
+            BucketName: !Ref ResultsBucket
+      Events:
+        Validate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /validate
+            Method: post
+        Verify:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /verify
+            Method: post
+        Ledger:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /ledger
+            Method: get
+        Attestation:
+          Type: Api
+          Properties:
+            RestApiId: !Ref QuantumApi
+            Path: /attestation
+            Method: get
+
+  # ═══════════════════════════════════════════════════════════════
   # STEP FUNCTIONS — Quantum Pipeline Orchestrator
   # ═══════════════════════════════════════════════════════════════
 
@@ -306,3 +354,15 @@ Outputs:
   EventBusName:
     Description: EventBridge bus for quantum events
     Value: !Ref QuantumEventBus
+
+  ValidationEndpoint:
+    Description: 11dCRSM experiment validation
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/validate'
+
+  LedgerEndpoint:
+    Description: Experiment ledger
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/ledger'
+
+  AttestationEndpoint:
+    Description: Framework attestation
+    Value: !Sub 'https://${QuantumApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/attestation'

@@ -72,7 +72,7 @@ class I(Enum):
     DIAG=auto(); PHYSICS=auto(); IDENT=auto(); HELP=auto()
     HIST=auto(); EXPERIMENT=auto(); HARDWARE=auto(); DEMO=auto()
     RESEARCH=auto(); ARCH=auto(); METRICS=auto(); DEPLOY=auto()
-    CLOUD=auto()
+    CLOUD=auto(); GROK=auto()
     UNKNOWN=auto()
 
 # Priority-ordered: first match wins
@@ -83,6 +83,7 @@ _RULES = [
     (r'\b(demo|showcase|aws.?meeting|talking.?points|meeting.?prep)\b', I.DEMO),
     (r'\b(deploy|sam deploy|cloudformation|stack)\b',                    I.DEPLOY),
     (r'\b(cloud|dashboard|aws.?status|cloud.?status|infra)\b',           I.CLOUD),
+    (r'\b(grok|workload|analyze.?job|ibm.?job|marrakesh|job.?result)\b', I.GROK),
     (r'\b(architecture|arch|cloud.?diagram|aws.?diagram|deployment)\b', I.ARCH),
     (r'\b(hardware|ibm.?torino|titan|hw.?results|real.?results)\b',     I.HARDWARE),
     (r'\b(experiments?|circuits?|run.?exp|theta.?lock|lambda.?phi|vqe|ghz|z8)\b', I.EXPERIMENT),
@@ -217,6 +218,7 @@ class Osiris:
             I.METRICS:     self._metrics,
             I.DEPLOY:      self._deploy,
             I.CLOUD:       self._cloud,
+            I.GROK:        self._grok,
         }
         fn = table.get(intent, self._gen_code)
         return fn(text, p)
@@ -1097,6 +1099,25 @@ class Osiris:
         ])
         return Result(True, "\n".join(lines))
 
+    def _grok(self, text, p):
+        """Analyze IBM Quantum workloads — full entropy/CCCE/correlation analysis."""
+        try:
+            sys.path.insert(0, str(self.oc))
+            from workload_analyzer import analyze_all_workloads, format_report_cli, upload_to_aws
+            report = analyze_all_workloads()
+            output = format_report_cli(report)
+
+            # Auto-upload if "upload" or "aws" in text
+            if re.search(r'\b(upload|aws|save|store|push)\b', text, re.I):
+                result = upload_to_aws(report)
+                s3_key = result.get("s3_key", "?")
+                output += f"\n\n  {green('↑')} Uploaded to S3: {s3_key}"
+                output += f"\n  {green('↑')} DynamoDB: {result.get('dynamodb', 0)} records"
+
+            return Result(True, output)
+        except Exception as e:
+            return Result(False, f"  {red('✗')} Workload analysis failed: {e}")
+
     def _help(self, text, p):
         return Result(True, "\n".join([
             f"  {bold('OSIRIS')} — speak naturally, I act autonomously.",
@@ -1110,6 +1131,7 @@ class Osiris:
             f"  {cyan('bench')}      {dim('benchmark decoder 512 · run quera · evolve swarm 10')}",
             f"  {cyan('system')}     {dim('diagnostics · check physics · who am I · history')}",
             f"  {cyan('aws')}        {dim('deploy · deploy status · deploy run · cloud dashboard')}",
+            f"  {cyan('grok')}       {dim('grok workloads · analyze jobs · grok and upload to aws')}",
             "",
             f"  {dim('chain:')} {cyan('run experiments, then show hardware, then benchmark decoder')}",
             f"  {dim('unknown input → auto-generates code via quantum NLP engine')}",
