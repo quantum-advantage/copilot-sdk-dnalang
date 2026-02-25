@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Osiris launcher — sovereign quantum copilot
-# Routes ALL input through the dnalang-sovereign-copilot-sdk CLI
+# OSIRIS — Sovereign Quantum Copilot (DNA::}{::lang v51.843)
+# Launches the REAL OSIRIS CLI (1552 lines, 63+ tools, LLM backends)
+# with DNA-Lang physics tools (τ-phase, organism compiler, CRSM validation).
 set -euo pipefail
 
 OWNER_HOME="/home/devinpd"
-SYS_PY="$(command -v python3 || command -v python)"
-export HOME="$OWNER_HOME"
-export PYTHONPATH="${OWNER_HOME}/dnalang-sovereign-copilot-sdk/python/src:${PYTHONPATH:-}"
+SDK_ROOT="${OWNER_HOME}/Documents/copilot-sdk-dnalang"
+BOOTSTRAP="${SDK_ROOT}/dnalang/src/dnalang_sdk/osiris_bootstrap.py"
 
-# Launch the SDK's CLI agent
-exec "$SYS_PY" -m copilot_quantum.cli "$@"
+export HOME="$OWNER_HOME"
+export PYTHONPATH="${SDK_ROOT}/dnalang/src:${OWNER_HOME}/osiris_cockpit:${OWNER_HOME}/dnalang-sovereign-copilot-sdk/python/src:${PYTHONPATH:-}"
+
+exec python3 "$BOOTSTRAP" "$@"
