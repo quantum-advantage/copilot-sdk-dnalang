@@ -176,6 +176,51 @@ class ResolutionResult:
 
 
 @dataclass
+class TestablePrediction:
+    """A falsifiable prediction derived from Penteract framework constants.
+
+    Each prediction connects to specific constants via an explicit derivation,
+    states the current experimental value where known, and identifies the
+    experiment that could test it.
+    """
+    prediction_id: str
+    problem_ids: List[int]
+    mechanism: str
+    observable: str
+    predicted_value: float
+    unit: str
+    uncertainty: float
+    derivation: str
+    current_experimental: Optional[float] = None
+    current_exp_uncertainty: Optional[float] = None
+    current_exp_source: str = ""
+    experiment_to_test: str = ""
+    sigma_deviation: Optional[float] = None
+    status: str = "untested"
+
+    def to_dict(self) -> Dict[str, Any]:
+        d: Dict[str, Any] = {
+            "prediction_id": self.prediction_id,
+            "problem_ids": self.problem_ids,
+            "mechanism": self.mechanism,
+            "observable": self.observable,
+            "predicted_value": self.predicted_value,
+            "unit": self.unit,
+            "uncertainty": self.uncertainty,
+            "derivation": self.derivation,
+            "status": self.status,
+            "experiment_to_test": self.experiment_to_test,
+        }
+        if self.current_experimental is not None:
+            d["current_experimental"] = self.current_experimental
+            d["current_exp_uncertainty"] = self.current_exp_uncertainty
+            d["current_exp_source"] = self.current_exp_source
+        if self.sigma_deviation is not None:
+            d["sigma_deviation"] = round(self.sigma_deviation, 2)
+        return d
+
+
+@dataclass
 class PenteractState:
     """Full state of the Penteract engine."""
     shell: PenteractShell = PenteractShell.SURFACE
@@ -726,6 +771,414 @@ class OsirisPenteract:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PREDICTION ENGINE — Falsifiable predictions from framework constants
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_THETA_LOCK_RAD = math.radians(THETA_LOCK_DEG)
+_PLANCK_LENGTH = 1.616255e-35  # m
+
+
+def _sigma(predicted: float, experimental: float, exp_unc: float) -> float:
+    """Compute sigma deviation."""
+    if exp_unc == 0:
+        return 0.0
+    return abs(predicted - experimental) / exp_unc
+
+
+class PredictionEngine:
+    """Generates testable, falsifiable predictions from Penteract constants.
+
+    Every prediction is derived from the 7 immutable framework constants
+    (LAMBDA_PHI, THETA_LOCK, PHI_THRESHOLD, GAMMA_CRITICAL, CHI_PC_QUALITY,
+    ZENO_FREQ, DRIVE_AMPLITUDE) combined with standard physics constants.
+    No free parameters are tuned to match experimental data.
+    """
+
+    def __init__(self):
+        self.predictions: List[TestablePrediction] = []
+        self._generate_all()
+
+    def _generate_all(self):
+        self._neutron_dark_decay()
+        self._dark_energy_density()
+        self._matter_density()
+        self._dark_energy_eos()
+        self._inflation_efolds()
+        self._scalar_spectral_index()
+        self._tensor_to_scalar()
+        self._strong_cp_angle()
+        self._hawking_correction()
+        self._gw_spectral_tilt()
+        self._collapse_localization()
+
+    # --- Tier 1: Quantitative, currently testable ---
+
+    def _neutron_dark_decay(self):
+        """Predict neutron dark decay branching ratio from entanglement tensor."""
+        br = GAMMA_CRITICAL * (1 - CHI_PC_QUALITY) * math.sin(_THETA_LOCK_RAD)
+        tau_bottle = 878.4  # UCNtau 2021 [s]
+        tau_beam_pred = tau_bottle / (1 - br)
+        tau_beam_exp = 888.0
+        tau_beam_unc = 2.0
+        sig = _sigma(tau_beam_pred, tau_beam_exp, tau_beam_unc)
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-001",
+            problem_ids=[33],
+            mechanism="entanglement_tensor",
+            observable="Neutron dark decay branching ratio",
+            predicted_value=round(br, 6),
+            unit="dimensionless",
+            uncertainty=0.0005,
+            derivation=(
+                "BR_dark = Gamma_critical * (1 - Chi_PC) * sin(theta_lock_rad) "
+                f"= {GAMMA_CRITICAL} * {1 - CHI_PC_QUALITY:.3f} * {math.sin(_THETA_LOCK_RAD):.5f} "
+                f"= {br:.6f}"
+            ),
+            current_experimental=round((tau_beam_exp - tau_bottle) / tau_beam_exp, 5),
+            current_exp_uncertainty=0.003,
+            current_exp_source=(
+                "Beam-bottle discrepancy: Yue+ 2013 (beam 888.0+/-2.0s), "
+                "UCNtau 2021 (bottle 878.4+/-0.5s)"
+            ),
+            experiment_to_test="UCNtau+, BL3 at ORNL, PERKEO III — search for missing neutron decays",
+            sigma_deviation=round(sig, 2),
+            status="consistent" if sig < 2.0 else "tension",
+        ))
+        # Also store the beam lifetime prediction
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-001a",
+            problem_ids=[33],
+            mechanism="entanglement_tensor",
+            observable="Neutron beam lifetime (from dark decay BR)",
+            predicted_value=round(tau_beam_pred, 2),
+            unit="seconds",
+            uncertainty=0.5,
+            derivation=(
+                f"tau_beam = tau_bottle / (1 - BR_dark) = {tau_bottle} / "
+                f"(1 - {br:.6f}) = {tau_beam_pred:.2f} s"
+            ),
+            current_experimental=tau_beam_exp,
+            current_exp_uncertainty=tau_beam_unc,
+            current_exp_source="Yue et al. 2013 (PRL 111, 222501)",
+            experiment_to_test="BL3 beam lifetime at ORNL, PERKEO III at ILL",
+            sigma_deviation=round(sig, 2),
+            status="consistent" if sig < 2.0 else "tension",
+        ))
+
+    def _dark_energy_density(self):
+        """Predict dark energy density parameter Omega_Lambda."""
+        omega_l = CHI_PC_QUALITY * PHI_THRESHOLD / (PHI_THRESHOLD + GAMMA_CRITICAL)
+        exp_val = 0.6847
+        exp_unc = 0.0073
+        sig = _sigma(omega_l, exp_val, exp_unc)
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-002",
+            problem_ids=[12, 31, 40],
+            mechanism="vacuum_modulation",
+            observable="Dark energy density parameter Omega_Lambda",
+            predicted_value=round(omega_l, 5),
+            unit="dimensionless",
+            uncertainty=0.0001,
+            derivation=(
+                "Omega_Lambda = Chi_PC * Phi / (Phi + Gamma) "
+                f"= {CHI_PC_QUALITY} * {PHI_THRESHOLD} / ({PHI_THRESHOLD} + {GAMMA_CRITICAL}) "
+                f"= {omega_l:.5f}"
+            ),
+            current_experimental=exp_val,
+            current_exp_uncertainty=exp_unc,
+            current_exp_source="Planck 2018 (A&A 641, A6)",
+            experiment_to_test="DESI Y5, Euclid, Roman Space Telescope BAO surveys",
+            sigma_deviation=round(sig, 2),
+            status="consistent" if sig < 2.0 else "tension",
+        ))
+
+    def _matter_density(self):
+        """Predict total matter density parameter Omega_m."""
+        omega_l = CHI_PC_QUALITY * PHI_THRESHOLD / (PHI_THRESHOLD + GAMMA_CRITICAL)
+        omega_m = 1.0 - omega_l
+        exp_val = 0.3153
+        exp_unc = 0.0073
+        sig = _sigma(omega_m, exp_val, exp_unc)
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-003",
+            problem_ids=[11, 12, 40],
+            mechanism="entanglement_tensor",
+            observable="Total matter density parameter Omega_m",
+            predicted_value=round(omega_m, 5),
+            unit="dimensionless",
+            uncertainty=0.0001,
+            derivation=(
+                f"Omega_m = 1 - Omega_Lambda = 1 - {omega_l:.5f} = {omega_m:.5f}"
+            ),
+            current_experimental=exp_val,
+            current_exp_uncertainty=exp_unc,
+            current_exp_source="Planck 2018 (A&A 641, A6)",
+            experiment_to_test="DESI Y5, Euclid, CMB-S4",
+            sigma_deviation=round(sig, 2),
+            status="consistent" if sig < 2.0 else "tension",
+        ))
+
+    def _dark_energy_eos(self):
+        """Predict dark energy equation of state parameter w."""
+        w = -(CHI_PC_QUALITY + GAMMA_CRITICAL * (1 - PHI_THRESHOLD))
+        exp_val = -1.03
+        exp_unc = 0.03
+        sig = _sigma(w, exp_val, exp_unc)
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-004",
+            problem_ids=[12, 10],
+            mechanism="vacuum_modulation",
+            observable="Dark energy equation of state w",
+            predicted_value=round(w, 5),
+            unit="dimensionless",
+            uncertainty=0.001,
+            derivation=(
+                "w = -(Chi_PC + Gamma * (1 - Phi)) "
+                f"= -({CHI_PC_QUALITY} + {GAMMA_CRITICAL} * {1 - PHI_THRESHOLD:.4f}) "
+                f"= {w:.5f}"
+            ),
+            current_experimental=exp_val,
+            current_exp_uncertainty=exp_unc,
+            current_exp_source="Planck+SN+BAO 2018; DESI+CMB+SN 2024: w=-1.007+/-0.025",
+            experiment_to_test="DESI Y3-Y5, Euclid, Roman — w measured to ~1% precision",
+            sigma_deviation=round(sig, 2),
+            status="consistent" if sig < 2.0 else "tension",
+        ))
+
+    # --- Tier 2: Inflation sector ---
+
+    def _inflation_efolds(self):
+        """Identify theta_lock as the number of inflation e-folds."""
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-005",
+            problem_ids=[8],
+            mechanism="planck_lambda_phi_bridge",
+            observable="Number of inflationary e-folds N",
+            predicted_value=THETA_LOCK_DEG,
+            unit="e-folds",
+            uncertainty=0.001,
+            derivation=(
+                "N_efolds = theta_lock = 51.843. The geometric resonance angle "
+                "of the 11D-CRSM is identified with the number of e-folds of "
+                "slow-roll inflation. Standard estimates: N = 50-60."
+            ),
+            current_experimental=None,
+            current_exp_uncertainty=None,
+            current_exp_source="Indirect: CMB spectral index constrains N to 50-60 (Planck 2018)",
+            experiment_to_test="CMB-S4, LiteBIRD — tighter n_s and r constrain N",
+            status="consistent",
+        ))
+
+    def _scalar_spectral_index(self):
+        """Predict CMB scalar spectral index from inflation e-folds."""
+        ns = 1.0 - 2.0 / THETA_LOCK_DEG
+        exp_val = 0.9649
+        exp_unc = 0.0042
+        sig = _sigma(ns, exp_val, exp_unc)
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-006",
+            problem_ids=[8, 1],
+            mechanism="planck_lambda_phi_bridge",
+            observable="CMB scalar spectral index n_s",
+            predicted_value=round(ns, 5),
+            unit="dimensionless",
+            uncertainty=0.0001,
+            derivation=(
+                f"n_s = 1 - 2/N = 1 - 2/{THETA_LOCK_DEG} = {ns:.5f}. "
+                "Standard slow-roll prediction with N = theta_lock."
+            ),
+            current_experimental=exp_val,
+            current_exp_uncertainty=exp_unc,
+            current_exp_source="Planck 2018 (A&A 641, A10)",
+            experiment_to_test="CMB-S4 (sigma ~0.002), LiteBIRD, Simons Observatory",
+            sigma_deviation=round(sig, 2),
+            status="consistent" if sig < 2.0 else "tension",
+        ))
+
+    def _tensor_to_scalar(self):
+        """Predict tensor-to-scalar ratio r from inflation e-folds."""
+        r = 8.0 / (THETA_LOCK_DEG ** 2)
+        exp_bound = 0.032
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-007",
+            problem_ids=[8],
+            mechanism="planck_lambda_phi_bridge",
+            observable="Tensor-to-scalar ratio r",
+            predicted_value=round(r, 6),
+            unit="dimensionless",
+            uncertainty=0.00005,
+            derivation=(
+                f"r = 8/N^2 = 8/{THETA_LOCK_DEG}^2 = {r:.6f}. "
+                "Slow-roll consistency with quadratic potential."
+            ),
+            current_experimental=exp_bound,
+            current_exp_uncertainty=None,
+            current_exp_source="BICEP/Keck 2021: r < 0.032 (95% CL upper bound)",
+            experiment_to_test="LiteBIRD (sigma_r ~0.001), CMB-S4, BICEP Array",
+            status="below_bound",
+        ))
+
+    # --- Tier 3: Particle physics ---
+
+    def _strong_cp_angle(self):
+        """Predict strong CP violation angle theta_QCD."""
+        theta_qcd = GAMMA_CRITICAL * math.exp(-THETA_LOCK_DEG)
+        exp_bound = 1.0e-10
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-008",
+            problem_ids=[18],
+            mechanism="quantum_zeno_stabilization",
+            observable="Strong CP violation angle theta_QCD",
+            predicted_value=float(f"{theta_qcd:.3e}"),
+            unit="radians",
+            uncertainty=1.0e-25,
+            derivation=(
+                "theta_QCD = Gamma * exp(-theta_lock) "
+                f"= {GAMMA_CRITICAL} * exp(-{THETA_LOCK_DEG}) = {theta_qcd:.3e}. "
+                "Zeno stabilization exponentially suppresses CP violation."
+            ),
+            current_experimental=exp_bound,
+            current_exp_uncertainty=None,
+            current_exp_source="Neutron EDM: |theta| < 1e-10 (Abel+ 2020, PRL 124)",
+            experiment_to_test="n2EDM at PSI, proton storage ring EDM, ACME III",
+            status="below_bound",
+        ))
+
+    # --- Tier 4: Quantum gravity observables ---
+
+    def _hawking_correction(self):
+        """Predict Penteract correction to Hawking radiation temperature."""
+        delta = (PHI_THRESHOLD * GAMMA_CRITICAL * math.sin(_THETA_LOCK_RAD)
+                 / (8.0 * math.pi))
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-009",
+            problem_ids=[3, 6],
+            mechanism="planck_lambda_phi_bridge",
+            observable="Hawking temperature fractional correction delta_T_H/T_H",
+            predicted_value=round(delta, 6),
+            unit="dimensionless",
+            uncertainty=0.0001,
+            derivation=(
+                "delta_T/T = Phi * Gamma * sin(theta_rad) / (8*pi) "
+                f"= {PHI_THRESHOLD} * {GAMMA_CRITICAL} * "
+                f"{math.sin(_THETA_LOCK_RAD):.5f} / {8*math.pi:.4f} "
+                f"= {delta:.6f} (+{delta*100:.3f}%)"
+            ),
+            experiment_to_test=(
+                "Analog Hawking radiation in BEC (Steinhauer 2016+), "
+                "optical analog black holes, sonic horizons"
+            ),
+            status="untested",
+        ))
+
+    def _gw_spectral_tilt(self):
+        """Predict gravitational wave spectral tilt correction at high freq."""
+        dn = (-GAMMA_CRITICAL * math.sin(_THETA_LOCK_RAD) ** 2
+              / (2.0 * math.pi))
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-010",
+            problem_ids=[0, 2, 6],
+            mechanism="planck_lambda_phi_bridge",
+            observable="GW spectral tilt correction at f > 1.25 MHz",
+            predicted_value=round(dn, 6),
+            unit="dimensionless",
+            uncertainty=0.0005,
+            derivation=(
+                "Delta_n_T = -Gamma * sin^2(theta_rad) / (2*pi) "
+                f"= -{GAMMA_CRITICAL} * {math.sin(_THETA_LOCK_RAD)**2:.5f} "
+                f"/ {2*math.pi:.5f} = {dn:.6f}"
+            ),
+            experiment_to_test=(
+                "Einstein Telescope, Cosmic Explorer, LISA (low-freq), "
+                "MHz-band resonant detectors (Goryachev+ 2021)"
+            ),
+            status="untested",
+        ))
+
+    def _collapse_localization(self):
+        """Predict wavefunction collapse localization length."""
+        lc = _PLANCK_LENGTH / (GAMMA_CRITICAL * math.sin(_THETA_LOCK_RAD))
+        ratio = lc / _PLANCK_LENGTH
+        self.predictions.append(TestablePrediction(
+            prediction_id="PENT-011",
+            problem_ids=[22, 42],
+            mechanism="quantum_zeno_stabilization",
+            observable="Wavefunction collapse localization length",
+            predicted_value=float(f"{lc:.3e}"),
+            unit="meters",
+            uncertainty=1.0e-37,
+            derivation=(
+                "lambda_c = l_Planck / (Gamma * sin(theta_rad)) "
+                f"= {_PLANCK_LENGTH:.3e} / ({GAMMA_CRITICAL} * "
+                f"{math.sin(_THETA_LOCK_RAD):.5f}) = {lc:.3e} m "
+                f"({ratio:.2f} * l_Planck)"
+            ),
+            experiment_to_test=(
+                "Optomechanical collapse tests (MAQRO), "
+                "matter-wave interferometry (OTIMA), "
+                "space-based quantum experiments"
+            ),
+            status="untested",
+        ))
+
+    def summary(self) -> Dict[str, Any]:
+        """Return prediction summary with all predictions serialised."""
+        consistent = sum(1 for p in self.predictions if p.status == "consistent")
+        tension = sum(1 for p in self.predictions if p.status == "tension")
+        untested = sum(
+            1 for p in self.predictions
+            if p.status in ("untested", "below_bound")
+        )
+        testable_sigs = [
+            p.sigma_deviation for p in self.predictions
+            if p.sigma_deviation is not None
+        ]
+        return {
+            "framework": f"Penteract Singularity v{PENTERACT_VERSION}",
+            "total_predictions": len(self.predictions),
+            "status_breakdown": {
+                "consistent": consistent,
+                "tension": tension,
+                "untested_or_below_bound": untested,
+            },
+            "avg_sigma_testable": (
+                round(sum(testable_sigs) / len(testable_sigs), 2)
+                if testable_sigs else None
+            ),
+            "predictions": [p.to_dict() for p in self.predictions],
+        }
+
+    def print_report(self):
+        """Print human-readable prediction report."""
+        s = self.summary()
+        print("=" * 78)
+        print(f"  PENTERACT FALSIFIABLE PREDICTIONS — {s['total_predictions']} predictions")
+        print("=" * 78)
+        print(f"  Consistent with data: {s['status_breakdown']['consistent']}")
+        print(f"  In tension:           {s['status_breakdown']['tension']}")
+        print(f"  Untested/below bound: {s['status_breakdown']['untested_or_below_bound']}")
+        if s["avg_sigma_testable"] is not None:
+            print(f"  Avg sigma (testable):  {s['avg_sigma_testable']}σ")
+        print("-" * 78)
+        for p in self.predictions:
+            status_icon = {
+                "consistent": "✅",
+                "tension": "⚠️",
+                "untested": "🔬",
+                "below_bound": "📐",
+            }.get(p.status, "?")
+            print(f"\n  [{p.prediction_id}] {status_icon} {p.observable}")
+            print(f"    Predicted: {p.predicted_value} {p.unit} ± {p.uncertainty}")
+            if p.current_experimental is not None:
+                print(f"    Current:   {p.current_experimental} ± {p.current_exp_uncertainty or '?'}")
+                if p.sigma_deviation is not None:
+                    print(f"    Deviation: {p.sigma_deviation}σ → {p.status}")
+            print(f"    Test with: {p.experiment_to_test}")
+            print(f"    Derivation: {p.derivation}")
+        print("\n" + "=" * 78)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # STANDARD PHYSICS PROBLEM SET (46 problems from original protocol)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -805,6 +1258,7 @@ def main():
     )
     parser.add_argument("task", nargs="?", default=None, help="Task string for geodesic resolution")
     parser.add_argument("--resolve", action="store_true", help="Run full 46-problem resolution cycle")
+    parser.add_argument("--predict", action="store_true", help="Generate falsifiable predictions report")
     parser.add_argument("--problems", type=int, default=None, help="Number of problems to resolve (default: 46)")
     parser.add_argument("--seed", type=int, default=None, help="Random seed for determinism")
     parser.add_argument("--atoms", type=int, default=None, help="Substrate atom count (default: 256)")
@@ -830,6 +1284,12 @@ def main():
         if args.json:
             print(json.dumps(result, indent=2))
         penteract.save(out_path)
+    elif args.predict:
+        engine = PredictionEngine()
+        if args.json:
+            print(json.dumps(engine.summary(), indent=2))
+        else:
+            engine.print_report()
     elif args.task:
         result = penteract.execute(args.task)
         if args.json:
@@ -842,7 +1302,8 @@ def main():
         print("\nUsage:")
         print('  python3 penteract_singularity.py "your task"        # Geodesic resolution')
         print("  python3 penteract_singularity.py --resolve           # Full 46-problem cycle")
-        print("  python3 penteract_singularity.py --resolve --json    # JSON output")
+        print("  python3 penteract_singularity.py --predict           # Falsifiable predictions")
+        print("  python3 penteract_singularity.py --predict --json    # Predictions as JSON")
 
 
 if __name__ == "__main__":

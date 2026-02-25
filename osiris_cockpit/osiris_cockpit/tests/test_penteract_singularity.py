@@ -54,6 +54,9 @@ from penteract_singularity import (
     OsirisPenteract,
     # Standard problems
     STANDARD_PROBLEMS,
+    # Predictions
+    TestablePrediction,
+    PredictionEngine,
 )
 
 # Re-import NCLM constants to verify consistency
@@ -629,3 +632,201 @@ class TestEdgeCases:
             state = PenteractResync.resync(state)
         assert state.resync_count == 5
         assert state.crsm.gamma_decoherence == GAMMA_CRITICAL
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Prediction Engine Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestTestablePrediction:
+    """TestablePrediction dataclass tests."""
+
+    def test_to_dict_minimal(self):
+        p = TestablePrediction(
+            prediction_id="TEST-001",
+            problem_ids=[0],
+            mechanism="test",
+            observable="Test observable",
+            predicted_value=1.23,
+            unit="eV",
+            uncertainty=0.01,
+            derivation="x = 1.23",
+        )
+        d = p.to_dict()
+        assert d["prediction_id"] == "TEST-001"
+        assert d["predicted_value"] == 1.23
+        assert d["status"] == "untested"
+        assert "current_experimental" not in d
+        assert "sigma_deviation" not in d
+
+    def test_to_dict_with_experimental(self):
+        p = TestablePrediction(
+            prediction_id="TEST-002",
+            problem_ids=[1, 2],
+            mechanism="test",
+            observable="Test",
+            predicted_value=0.5,
+            unit="dimensionless",
+            uncertainty=0.01,
+            derivation="x = 0.5",
+            current_experimental=0.49,
+            current_exp_uncertainty=0.02,
+            current_exp_source="Test 2024",
+            sigma_deviation=0.5,
+            status="consistent",
+        )
+        d = p.to_dict()
+        assert d["current_experimental"] == 0.49
+        assert d["sigma_deviation"] == 0.5
+        assert d["status"] == "consistent"
+
+
+class TestPredictionEngine:
+    """PredictionEngine — all 12 predictions verified."""
+
+    def setup_method(self):
+        self.engine = PredictionEngine()
+
+    def test_total_predictions(self):
+        assert len(self.engine.predictions) == 12
+
+    def test_all_have_ids(self):
+        ids = [p.prediction_id for p in self.engine.predictions]
+        assert len(set(ids)) == 12  # all unique
+
+    def test_all_have_derivations(self):
+        for p in self.engine.predictions:
+            assert len(p.derivation) > 10
+
+    # --- Neutron dark decay (PENT-001, PENT-001a) ---
+
+    def test_neutron_br_value(self):
+        p = self._get("PENT-001")
+        assert p.predicted_value == pytest.approx(0.012738, abs=0.0005)
+
+    def test_neutron_br_consistent(self):
+        p = self._get("PENT-001")
+        assert p.status == "consistent"
+        assert p.sigma_deviation < 2.0
+
+    def test_neutron_beam_lifetime(self):
+        p = self._get("PENT-001a")
+        assert p.predicted_value == pytest.approx(889.73, abs=1.0)
+        assert p.status == "consistent"
+
+    # --- Cosmological parameters (PENT-002 to PENT-004) ---
+
+    def test_omega_lambda(self):
+        p = self._get("PENT-002")
+        assert p.predicted_value == pytest.approx(0.68161, abs=0.001)
+        assert p.sigma_deviation < 2.0
+
+    def test_omega_m(self):
+        p = self._get("PENT-003")
+        assert p.predicted_value == pytest.approx(0.31839, abs=0.001)
+        # Omega_m + Omega_Lambda = 1
+        ol = self._get("PENT-002").predicted_value
+        assert p.predicted_value + ol == pytest.approx(1.0, abs=1e-10)
+
+    def test_dark_energy_eos(self):
+        p = self._get("PENT-004")
+        assert p.predicted_value == pytest.approx(-1.014, abs=0.002)
+        assert p.sigma_deviation < 2.0
+
+    # --- Inflation sector (PENT-005 to PENT-007) ---
+
+    def test_efolds_is_theta_lock(self):
+        p = self._get("PENT-005")
+        assert p.predicted_value == THETA_LOCK_DEG
+
+    def test_spectral_index(self):
+        p = self._get("PENT-006")
+        expected_ns = 1.0 - 2.0 / THETA_LOCK_DEG
+        assert p.predicted_value == pytest.approx(expected_ns, abs=1e-5)
+        assert p.sigma_deviation < 2.0
+
+    def test_tensor_to_scalar(self):
+        p = self._get("PENT-007")
+        expected_r = 8.0 / THETA_LOCK_DEG ** 2
+        assert p.predicted_value == pytest.approx(expected_r, abs=1e-6)
+        assert p.status == "below_bound"
+
+    # --- Particle physics (PENT-008) ---
+
+    def test_strong_cp(self):
+        p = self._get("PENT-008")
+        assert p.predicted_value < 1e-10
+        assert p.status == "below_bound"
+
+    # --- Quantum gravity (PENT-009 to PENT-011) ---
+
+    def test_hawking_correction_positive(self):
+        p = self._get("PENT-009")
+        assert p.predicted_value > 0
+        assert p.predicted_value < 0.01
+        assert p.status == "untested"
+
+    def test_gw_tilt_negative(self):
+        p = self._get("PENT-010")
+        assert p.predicted_value < 0
+        assert abs(p.predicted_value) < 0.05
+        assert p.status == "untested"
+
+    def test_collapse_length_above_planck(self):
+        p = self._get("PENT-011")
+        planck_l = 1.616255e-35
+        assert p.predicted_value > planck_l
+        assert p.predicted_value < planck_l * 10
+        assert p.status == "untested"
+
+    # --- Summary ---
+
+    def test_summary_structure(self):
+        s = self.engine.summary()
+        assert "total_predictions" in s
+        assert s["total_predictions"] == 12
+        assert "status_breakdown" in s
+        assert "predictions" in s
+        assert len(s["predictions"]) == 12
+
+    def test_summary_avg_sigma(self):
+        s = self.engine.summary()
+        assert s["avg_sigma_testable"] is not None
+        assert s["avg_sigma_testable"] < 2.0
+
+    def test_no_tension_predictions(self):
+        """All testable predictions should be consistent with current data."""
+        for p in self.engine.predictions:
+            if p.sigma_deviation is not None:
+                assert p.sigma_deviation < 2.0, (
+                    f"{p.prediction_id} has {p.sigma_deviation}σ tension"
+                )
+
+    def test_consistent_count(self):
+        s = self.engine.summary()
+        assert s["status_breakdown"]["consistent"] >= 5
+
+    def test_derivations_reference_constants(self):
+        """Each derivation should reference at least one framework constant."""
+        constant_names = [
+            "Gamma", "Phi", "Chi_PC", "theta_lock", "l_Planck", "N",
+            "BR_dark", "tau_bottle", "Omega_Lambda",
+        ]
+        for p in self.engine.predictions:
+            has_ref = any(c in p.derivation for c in constant_names)
+            assert has_ref, f"{p.prediction_id} derivation has no constant ref"
+
+    def test_predictions_are_deterministic(self):
+        """Two engine instances produce identical predictions."""
+        e2 = PredictionEngine()
+        for a, b in zip(self.engine.predictions, e2.predictions):
+            assert a.predicted_value == b.predicted_value
+            assert a.prediction_id == b.prediction_id
+
+    # --- Helper ---
+
+    def _get(self, pred_id: str) -> TestablePrediction:
+        for p in self.engine.predictions:
+            if p.prediction_id == pred_id:
+                return p
+        raise KeyError(f"Prediction {pred_id} not found")
