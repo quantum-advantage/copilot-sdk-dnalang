@@ -73,6 +73,7 @@ class I(Enum):
     HIST=auto(); EXPERIMENT=auto(); HARDWARE=auto(); DEMO=auto()
     RESEARCH=auto(); ARCH=auto(); METRICS=auto(); DEPLOY=auto()
     CLOUD=auto(); GROK=auto(); BRAKET=auto()
+    FORGE=auto(); COMPILE=auto()
     UNKNOWN=auto()
 
 # Priority-ordered: first match wins
@@ -85,6 +86,8 @@ _RULES = [
     (r'\b(cloud|dashboard|aws.?status|cloud.?status|infra(?:structure)?)\b', I.CLOUD),
     (r'\b(grok|workload|analyze.*jobs?|ibm.*jobs?|marrakesh|job.?result)\b', I.GROK),
     (r'\b(braket|ocelot|cat.?qubit|amazon.?quantum|aws.?quantum|multi.?backend)\b', I.BRAKET),
+    (r'\b(forge|compile.?dna|evolve.?organism|dna.?lang.?demo|self.?evolv|dnalang)\b', I.FORGE),
+    (r'\b(compile|parse|lex|ir|intermediate)\b.*\b(organism|circuit|dna|program)\b', I.COMPILE),
     (r'\b(architecture|arch|cloud.?diagram|aws.?diagram|deployment)\b', I.ARCH),
     (r'\b(hardware|ibm.?torino|titan|hw.?results|real.?results)\b',     I.HARDWARE),
     (r'\b(experiments?|circuits?|run.?exp|theta.?lock|lambda.?phi|vqe|ghz|z8)\b', I.EXPERIMENT),
@@ -221,6 +224,8 @@ class Osiris:
             I.CLOUD:       self._cloud,
             I.GROK:        self._grok,
             I.BRAKET:      self._braket,
+            I.FORGE:       self._forge,
+            I.COMPILE:     self._forge,
         }
         fn = table.get(intent, self._gen_code)
         return fn(text, p)
@@ -1178,6 +1183,51 @@ class Osiris:
         except Exception as e:
             return Result(False, f"  {red('✗')} Braket compilation failed: {e}")
 
+    def _forge(self, text, p):
+        """DNA-Lang Forge — self-evolving quantum compiler."""
+        try:
+            sys.path.insert(0, str(self.oc))
+            from dnalang_forge import DNALangForge, EXAMPLES, run_demo, run_benchmark
+
+            # Full demo mode
+            if re.search(r'\b(demo|showcase|present|cinematic)\b', text, re.I):
+                run_demo()
+                return Result(True, f"\n  {green('✓')} DNA-Lang Forge demo complete")
+
+            # Benchmark mode
+            if re.search(r'\b(bench|benchmark|all|suite)\b', text, re.I):
+                run_benchmark()
+                return Result(True, f"\n  {green('✓')} DNA-Lang Forge benchmark complete")
+
+            # Pick example organism
+            forge = DNALangForge(population_size=12, max_generations=30, seed=51843)
+            example = None
+            for name in EXAMPLES:
+                if name.replace("_", " ") in text.lower() or name in text.lower():
+                    example = name
+                    break
+
+            # Keywords to pick example
+            if not example:
+                if re.search(r'\b(drug|therapy|kinase|mtap|cancer)\b', text, re.I):
+                    example = "therapeutic_target"
+                elif re.search(r'\b(wormhole|er.?epr|bridge|tfd)\b', text, re.I):
+                    example = "er_epr_bridge"
+                elif re.search(r'\b(ghz|multi.?qubit|3.?qubit)\b', text, re.I):
+                    example = "ghz_state"
+                elif re.search(r'\b(grover|search|oracle)\b', text, re.I):
+                    example = "grover_search"
+                else:
+                    example = "bell_state"
+
+            result = forge.forge(EXAMPLES[example], animate=True)
+            return Result(True, f"\n  {green('✓')} Forged {bold(result.organism_name)} — "
+                          f"fitness {result.evolved_fitness:.4f} "
+                          f"({result.improvement_pct:+.1f}%) "
+                          f"lineage {cyan(result.lineage_hash[:12])}")
+        except Exception as e:
+            return Result(False, f"  {red('✗')} Forge failed: {e}")
+
     def _help(self, text, p):
         return Result(True, "\n".join([
             f"  {bold('OSIRIS')} — speak naturally, I act autonomously.",
@@ -1193,6 +1243,7 @@ class Osiris:
             f"  {cyan('aws')}        {dim('deploy · deploy status · deploy run · cloud dashboard')}",
             f"  {cyan('grok')}       {dim('grok workloads · analyze jobs · grok and upload to aws')}",
             f"  {cyan('braket')}     {dim('compile to braket · ocelot demo · generate braket code')}",
+            f"  {cyan('forge')}      {dim('forge bell_state · evolve organism · dnalang demo · forge benchmark')}",
             "",
             f"  {dim('chain:')} {cyan('run experiments, then show hardware, then benchmark decoder')}",
             f"  {dim('unknown input → auto-generates code via quantum NLP engine')}",
