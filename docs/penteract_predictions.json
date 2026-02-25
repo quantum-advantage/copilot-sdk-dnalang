@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "<string>", line 2, in <module>
+    from dnalang_sdk.crsm.penteract import PenteractSingularity
+ImportError: cannot import name 'PenteractSingularity' from 'dnalang_sdk.crsm.penteract' (/tmp/copilot-sdk-dnalang-clean/dnalang/src/dnalang_sdk/crsm/penteract.py)
