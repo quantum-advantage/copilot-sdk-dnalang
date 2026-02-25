@@ -74,6 +74,7 @@ class I(Enum):
     RESEARCH=auto(); ARCH=auto(); METRICS=auto(); DEPLOY=auto()
     CLOUD=auto(); GROK=auto(); BRAKET=auto()
     FORGE=auto(); COMPILE=auto()
+    TAU=auto(); ORGANISMS=auto()
     UNKNOWN=auto()
 
 # Priority-ordered: first match wins
@@ -87,6 +88,8 @@ _RULES = [
     (r'\b(grok|workload|analyze.*jobs?|ibm.*jobs?|marrakesh|job.?result)\b', I.GROK),
     (r'\b(braket|ocelot|cat.?qubit|amazon.?quantum|aws.?quantum|multi.?backend)\b', I.BRAKET),
     (r'\b(forge|compile.?dna|evolve.?organism|dna.?lang.?demo|self.?evolv|dnalang)\b', I.FORGE),
+    (r'\b(tau.?phase|anomaly|golden.?ratio|revival|phi.?\^?8|490k|hardware.?data)\b', I.TAU),
+    (r'\b(organism|\.dna|compile.?all|qasm|sovereign.?organism)\b', I.ORGANISMS),
     (r'\b(compile|parse|lex|ir|intermediate)\b.*\b(organism|circuit|dna|program)\b', I.COMPILE),
     (r'\b(architecture|arch|cloud.?diagram|aws.?diagram|deployment)\b', I.ARCH),
     (r'\b(hardware|ibm.?torino|titan|hw.?results|real.?results)\b',     I.HARDWARE),
@@ -226,6 +229,8 @@ class Osiris:
             I.BRAKET:      self._braket,
             I.FORGE:       self._forge,
             I.COMPILE:     self._forge,
+            I.TAU:         self._tau,
+            I.ORGANISMS:   self._organisms,
         }
         fn = table.get(intent, self._gen_code)
         return fn(text, p)
@@ -1228,6 +1233,30 @@ class Osiris:
         except Exception as e:
             return Result(False, f"  {red('✗')} Forge failed: {e}")
 
+    def _tau(self, text, p):
+        """Run τ-phase anomaly analysis on real IBM Quantum data."""
+        try:
+            out = subprocess.run(
+                [sys.executable, os.path.join(self.root, "tau_phase_analyzer.py")],
+                capture_output=True, text=True, timeout=30, cwd=self.root
+            )
+            return Result(True, out.stdout + out.stderr)
+        except Exception as e:
+            return Result(False, f"  {red('✗')} τ-phase analysis failed: {e}")
+
+    def _organisms(self, text, p):
+        """Compile all DNA-Lang organisms on this machine."""
+        try:
+            args = [sys.executable, os.path.join(self.root, "organism_compiler.py")]
+            if 'qasm' in text.lower():
+                args.append('--qasm')
+            out = subprocess.run(
+                args, capture_output=True, text=True, timeout=30, cwd=self.root
+            )
+            return Result(True, out.stdout + out.stderr)
+        except Exception as e:
+            return Result(False, f"  {red('✗')} Organism compilation failed: {e}")
+
     def _help(self, text, p):
         return Result(True, "\n".join([
             f"  {bold('OSIRIS')} — speak naturally, I act autonomously.",
@@ -1244,6 +1273,7 @@ class Osiris:
             f"  {cyan('grok')}       {dim('grok workloads · analyze jobs · grok and upload to aws')}",
             f"  {cyan('braket')}     {dim('compile to braket · ocelot demo · generate braket code')}",
             f"  {cyan('forge')}      {dim('forge bell_state · evolve organism · dnalang demo · forge benchmark')}",
+            f"  {cyan('data')}       {dim('tau phase analysis · compile organisms · show organism qasm')}",
             "",
             f"  {dim('chain:')} {cyan('run experiments, then show hardware, then benchmark decoder')}",
             f"  {dim('unknown input → auto-generates code via quantum NLP engine')}",
