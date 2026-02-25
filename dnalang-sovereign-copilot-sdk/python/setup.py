@@ -56,6 +56,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
+            "dnalang=copilot_quantum.cli:main",
             "dnalang-agent=copilot_quantum.agent:quick_test",
         ],
     },

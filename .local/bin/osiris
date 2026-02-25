@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Osiris launcher — sovereign quantum copilot
+# Routes ALL input through the dnalang-sovereign-copilot-sdk CLI
+set -euo pipefail
+
+OWNER_HOME="/home/devinpd"
+SYS_PY="$(command -v python3 || command -v python)"
+export HOME="$OWNER_HOME"
+export PYTHONPATH="${OWNER_HOME}/dnalang-sovereign-copilot-sdk/python/src:${PYTHONPATH:-}"
+
+# Launch the SDK's CLI agent
+exec "$SYS_PY" -m copilot_quantum.cli "$@"
