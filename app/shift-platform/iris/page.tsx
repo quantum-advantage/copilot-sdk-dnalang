@@ -54,11 +54,11 @@ export default function IRISEnginePage() {
   ])
 
   const [workflowSteps, setWorkflowSteps] = useState<WorkflowStep[]>([
-    { id: "1", name: "Intent Classification", agent: "AURA", status: "pending" },
-    { id: "2", name: "Knowledge Retrieval", agent: "OSIRIS", status: "pending" },
-    { id: "3", name: "Context Assembly", agent: "AIDEN", status: "pending" },
-    { id: "4", name: "Response Generation", agent: "IRIS", status: "pending" },
-    { id: "5", name: "Stream Delivery", agent: "OMEGA", status: "pending" },
+    { id: "1", name: "NCLM Knowledge Lookup", agent: "AURA", status: "pending" },
+    { id: "2", name: "Supabase Data Query", agent: "OSIRIS", status: "pending" },
+    { id: "3", name: "LLM Inference (Gemini)", agent: "AIDEN", status: "pending" },
+    { id: "4", name: "Agent Consensus", agent: "IRIS", status: "pending" },
+    { id: "5", name: "Response Synthesis", agent: "OMEGA", status: "pending" },
   ])
 
   const [agentPool] = useState([
@@ -97,7 +97,7 @@ export default function IRISEnginePage() {
         id: `${Date.now()}-assess`,
         role: "agent",
         agent: "AURA",
-        content: `Classifying intent and routing to specialist agents...`,
+        content: `Analyzing: "${userMessage.content}" — querying Supabase + Gemini LLM...`,
         timestamp: new Date(),
       },
     ])
@@ -138,7 +138,7 @@ export default function IRISEnginePage() {
           id: `${Date.now()}-collab`,
           role: "agent",
           agent: "AIDEN",
-          content: "Generating contextual response from knowledge base...",
+          content: "Streaming LLM response with live experiment context...",
           timestamp: new Date(),
         },
       ])
