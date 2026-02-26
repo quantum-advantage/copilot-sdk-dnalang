@@ -621,12 +621,15 @@ export async function POST(req: Request) {
       fetchPredictions(),
     ])
 
+    let usedLlm = false
+
     if (llmAvailable) {
       // Real LLM inference with full quantum context
       try {
         responseText = await llmResponse(message, experiments, breakthroughs, predictions)
+        usedLlm = true
       } catch (err) {
-        // LLM failed — fall back to template
+        // LLM failed (quota, network, etc) — fall back to template
         const { intent: fallbackIntent, entities } = classifyIntent(message)
         intent = fallbackIntent
         const generator = RESPONSES[fallbackIntent] || RESPONSES.general
@@ -660,7 +663,7 @@ export async function POST(req: Request) {
         "Cache-Control": "no-cache",
         "Transfer-Encoding": "chunked",
         "X-IRIS-Intent": intent,
-        "X-IRIS-Engine": llmAvailable ? "llm" : "template",
+        "X-IRIS-Engine": usedLlm ? engineName : "template-fallback",
       },
     })
   } catch (err) {
