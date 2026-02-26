@@ -35,6 +35,14 @@ from .core.organism import Organism
 from .core.gene import Gene
 from .core.genome import Genome
 from .core.evolution import evolve, EvolutionEngine
+from .core.mitosis import MitosisOrganism
+from .core.symbiosis import SymbiosisOrganism, SymbiosisType, SymbiosisMetrics
+from .core.predator_prey import (
+    PredatorPreyEcosystem,
+    EcosystemEntity,
+    EcologicalRole,
+    PopulationSnapshot,
+)
 from .agents.aura import AURA
 from .agents.aiden import AIDEN
 from .quantum.circuits import to_circuit
@@ -48,6 +56,14 @@ __all__ = [
     'Genome',
     'evolve',
     'EvolutionEngine',
+    'MitosisOrganism',
+    'SymbiosisOrganism',
+    'SymbiosisType',
+    'SymbiosisMetrics',
+    'PredatorPreyEcosystem',
+    'EcosystemEntity',
+    'EcologicalRole',
+    'PopulationSnapshot',
     'AURA',
     'AIDEN',
     'to_circuit',
