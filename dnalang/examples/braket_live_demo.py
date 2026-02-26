@@ -455,84 +455,197 @@ M  = "\033[35m"
 CY = "\033[36m"
 DM = "\033[2m"
 B  = "\033[1m"
+W  = "\033[97m"
+BG = "\033[48;5;236m"
 E  = "\033[0m"
+
+SPARK = " ▁▂▃▄▅▆▇█"
+
+
+def _sparkline(counts: Dict[str, int], width: int = 12) -> str:
+    """Generate a sparkline from measurement counts."""
+    if not counts:
+        return " " * width
+    vals = sorted(counts.values(), reverse=True)[:width]
+    mx = max(vals) if vals else 1
+    return "".join(SPARK[min(8, int(v / mx * 8))] for v in vals)
+
+
+def _bar(value: float, width: int = 20, threshold: float = None) -> str:
+    """Render a horizontal bar with optional threshold marker."""
+    filled = int(value * width)
+    bar_str = "█" * filled + "░" * (width - filled)
+    if threshold is not None:
+        t_pos = int(threshold * width)
+        bar_list = list(bar_str)
+        if 0 <= t_pos < width:
+            bar_list[t_pos] = "┃"
+        bar_str = "".join(bar_list)
+    return bar_str
+
+
+def _imp_bar(factor: float, max_factor: float = 2.0) -> str:
+    """Small horizontal bar for improvement factor."""
+    clamped = min(factor / max_factor, 1.0)
+    filled = int(clamped * 8)
+    return "▓" * filled + "░" * (8 - filled)
 
 
 def render_results(demo: DemoResults):
-    """Print formatted demo results."""
-    print(f"\n{H}{'═' * 70}{E}")
-    print(f"{H}  OSIRIS × AWS Braket — Live Quantum Execution Results{E}")
-    print(f"{H}  DNA::}}{{::lang v51.843  |  CAGE 9HUP5  |  Agile Defense Systems{E}")
-    print(f"{H}{'═' * 70}{E}\n")
+    """Print enhanced formatted demo results."""
+    w = 78
 
-    # Circuit results
-    print(f"{B}{'Circuit':<25} {'Qubits':>6} {'Depth':>6} {'Fidelity':>9} {'Φ':>7} {'Γ':>7} {'Ξ':>12} {'CCCE':>7}{E}")
-    print(f"{'─' * 85}")
+    # Header
+    print(f"\n{H}╔{'═' * w}╗{E}")
+    print(f"{H}║{E}  {B}{W}OSIRIS × AWS Braket — Live Quantum Execution Results{E}{' ' * 23}{H}║{E}")
+    print(f"{H}║{E}  {CY}DNA::}}{{::lang v51.843{E}  │  {CY}CAGE 9HUP5{E}  │  {CY}Agile Defense Systems{E}    {H}║{E}")
+    print(f"{H}╠{'═' * w}╣{E}")
+
+    # Circuit results header
+    print(f"{H}║{E} {B}{'Circuit':<22} {'Q':>2} {'D':>2} {'Fidelity':>8} {'Φ':>6}  {'Γ':>6}  {'Ξ':>10} {'CCCE':>6} {'Distribution':>12}{E} {H}║{E}")
+    print(f"{H}╟{'─' * w}╢{E}")
+
     for c in demo.circuits:
-        phi_icon = "✅" if c.above_threshold() else "  "
-        gam_icon = "✅" if c.is_coherent() else "  "
-        print(f"  {c.name:<23} {c.n_qubits:>6} {c.depth:>6} {c.fidelity:>9.4f} "
-              f"{c.phi:>6.4f}{phi_icon} {c.gamma:>6.4f}{gam_icon} {c.xi:>11.2e} {c.ccce:>7.4f}")
-    print()
+        phi_c = G if c.above_threshold() else (Y if c.phi > 0.5 else R)
+        gam_c = G if c.is_coherent() else R
+        fid_c = G if c.fidelity > 0.9 else (Y if c.fidelity > 0.5 else R)
+        spark = _sparkline(c.counts)
+        print(f"{H}║{E}  {c.name:<21} {c.n_qubits:>2} {c.depth:>2} "
+              f"{fid_c}{c.fidelity:>8.4f}{E} "
+              f"{phi_c}{c.phi:>6.4f}{E}  "
+              f"{gam_c}{c.gamma:>6.4f}{E}  "
+              f"{c.xi:>10.2e} "
+              f"{c.ccce:>6.4f} "
+              f"{DM}{spark}{E} {H}║{E}")
 
-    # θ_lock advantage
+    print(f"{H}╟{'─' * w}╢{E}")
+
+    # θ_lock advantage with visual bar
     if demo.theta_lock_advantage_pct != 0:
         color = G if demo.theta_lock_advantage_pct > 0 else Y
-        print(f"  {color}θ_lock advantage: {demo.theta_lock_advantage_pct:+.2f}% fidelity improvement{E}\n")
+        sign = "▲" if demo.theta_lock_advantage_pct > 0 else "▼"
+        print(f"{H}║{E}  {color}{sign} θ_lock advantage: {demo.theta_lock_advantage_pct:+.2f}% fidelity improvement{E}"
+              f"{' ' * (w - 55)}{H}║{E}")
+    # Legend
+    print(f"{H}║{E}  {DM}Φ ≥ 0.7734 = {G}above threshold{E}  {DM}│  Γ < 0.3 = {G}coherent{E}  "
+          f"{DM}│  Fidelity > 0.9 = {G}high{E}     {H}║{E}")
 
     # Decoder benchmarks
     if demo.decoder_benchmarks:
-        print(f"{B}{'Decoder Benchmark':<25} {'p_err':>7} {'Naive':>8} {'Tesseract':>10} {'Improvement':>12} {'Time':>8}{E}")
-        print(f"{'─' * 75}")
+        print(f"{H}╠{'═' * w}╣{E}")
+        print(f"{H}║{E}  {B}{W}⚡ Tesseract A* Decoder Benchmark{E}"
+              f"{' ' * (w - 37)}{H}║{E}")
+        print(f"{H}╟{'─' * w}╢{E}")
+        print(f"{H}║{E}  {B}{'p_err':>6} {'Naive':>8} {'Tesseract':>10} {'Gain':>6} {'':>8} {'Time':>7}{E}"
+              f"{' ' * (w - 53)}{H}║{E}")
+
+        max_imp = max(d.improvement_factor for d in demo.decoder_benchmarks)
         for d in demo.decoder_benchmarks:
-            imp_color = G if d.improvement_factor > 1.5 else Y
-            print(f"  {d.name:<23} {d.error_rate:>7.3f} {d.naive_logical_error:>8.4f} "
-                  f"{d.tesseract_logical_error:>10.4f} {imp_color}{d.improvement_factor:>11.1f}×{E} "
-                  f"{d.decode_time_ms:>7.1f}ms")
-        print()
+            imp_color = G if d.improvement_factor > 1.0 else R
+            bar = _imp_bar(d.improvement_factor, max(max_imp, 2.0))
+            print(f"{H}║{E}  {d.error_rate:>6.3f} {d.naive_logical_error:>8.4f} "
+                  f"{d.tesseract_logical_error:>10.4f} "
+                  f"{imp_color}{d.improvement_factor:>5.1f}×{E} "
+                  f"{imp_color}{bar}{E} "
+                  f"{DM}{d.decode_time_ms:>6.1f}ms{E}"
+                  f"{' ' * (w - 58)}{H}║{E}")
+
+    # Decoder scaling
+    sc = demo.summary.get('decoder_scaling', [])
+    if sc:
+        print(f"{H}╟{'─' * w}╢{E}")
+        print(f"{H}║{E}  {B}📈 Decoder Scaling (p=0.05, 50 trials){E}"
+              f"{' ' * (w - 42)}{H}║{E}")
+        max_sc_imp = max(x['improvement'] for x in sc) if sc else 1.0
+        for s_item in sc:
+            sc_color = G if s_item['improvement'] > 1.0 else Y
+            sc_bar = _imp_bar(s_item['improvement'], max(max_sc_imp, 2.0))
+            print(f"{H}║{E}  {s_item['atoms']:>4} atoms  "
+                  f"naive={s_item['naive']:.4f}  "
+                  f"tesseract={s_item['tesseract']:.4f}  "
+                  f"{sc_color}{s_item['improvement']:>5.1f}× {sc_bar}{E} "
+                  f"{DM}{s_item['time_ms']:>6.1f}ms{E}"
+                  f"{' ' * (w - 71)}{H}║{E}")
 
     # Ocelot analysis
     if demo.ocelot_analysis:
         oc = demo.ocelot_analysis
-        print(f"{B}  Ocelot Cat-Qubit Error Correction{E}")
-        print(f"  {'─' * 45}")
-        print(f"  Bias ratio:           {oc['bias_ratio']:.0e}")
-        print(f"  Physical phase error: {oc['physical_phase_error']:.1e}")
-        print(f"  Physical bit error:   {oc['physical_bit_error']:.1e}")
-        print(f"  Logical total error:  {G}{oc['logical_total_error']:.2e}{E}")
-        print(f"  Suppression gain:     {G}{oc['suppression_gain_dB']:.1f} dB{E}")
-        print(f"  Measured fidelity:    {oc['measured_fidelity']:.4f}")
-        print()
+        print(f"{H}╠{'═' * w}╣{E}")
+        print(f"{H}║{E}  {B}{W}🐱 Ocelot Cat-Qubit Error Correction{E}"
+              f"{' ' * (w - 41)}{H}║{E}")
+        print(f"{H}╟{'─' * w}╢{E}")
+        print(f"{H}║{E}  Bias ratio:           {CY}{oc['bias_ratio']:.0e}{E}"
+              f"  (bit-flip suppression){' ' * (w - 52)}{H}║{E}")
+        print(f"{H}║{E}  Physical phase error: {Y}{oc['physical_phase_error']:.1e}{E}"
+              f"{' ' * (w - 36)}{H}║{E}")
+        print(f"{H}║{E}  Physical bit error:   {G}{oc['physical_bit_error']:.1e}{E}"
+              f"{' ' * (w - 36)}{H}║{E}")
+        supp_bar = _bar(min(oc['suppression_gain_dB'] / 30.0, 1.0), width=15)
+        print(f"{H}║{E}  Logical total error:  {G}{oc['logical_total_error']:.2e}{E}  "
+              f"│  Suppression: {G}{oc['suppression_gain_dB']:.1f} dB{E} {G}{supp_bar}{E} {H}║{E}")
+        print(f"{H}║{E}  Measured fidelity:    {oc['measured_fidelity']:.4f}"
+              f"{' ' * (w - 36)}{H}║{E}")
 
     # Summary
     s = demo.summary
-    print(f"{H}{'═' * 70}{E}")
-    print(f"{B}  Summary{E}")
-    print(f"  Circuits executed:    {s.get('total_circuits', 0)}")
-    print(f"  Total shots:          {s.get('total_shots', 0):,}")
-    print(f"  Noise model:          {G}Realistic per-gate (RZ=virtual, 0 noise){E}")
-    print(f"  Above Φ threshold:    {s.get('above_threshold', 0)}/{s.get('total_circuits', 0)}")
-    print(f"  Coherent (Γ < 0.3):   {s.get('coherent', 0)}/{s.get('total_circuits', 0)}")
-    print(f"  Mean fidelity:        {s.get('mean_fidelity', 0):.4f}")
-    print(f"  Mean Ξ (negentropy):  {s.get('mean_xi', 0):.2e}")
+    print(f"{H}╠{'═' * w}╣{E}")
+    print(f"{H}║{E}  {B}{W}Summary{E}"
+          f"{' ' * (w - 11)}{H}║{E}")
+    print(f"{H}╟{'─' * w}╢{E}")
+
+    total_c = s.get('total_circuits', 0)
+    above = s.get('above_threshold', 0)
+    coherent = s.get('coherent', 0)
+    mean_f = s.get('mean_fidelity', 0)
+    mean_xi = s.get('mean_xi', 0)
+
+    fid_bar = _bar(mean_f, width=20, threshold=0.9)
+    fid_c = G if mean_f > 0.9 else (Y if mean_f > 0.5 else R)
+
+    print(f"{H}║{E}  Circuits executed:   {B}{total_c}{E}     "
+          f"Total shots: {B}{s.get('total_shots', 0):,}{E}"
+          f"{' ' * (w - 55)}{H}║{E}")
+    print(f"{H}║{E}  Mean fidelity:      {fid_c}{mean_f:.4f}{E}  {DM}{fid_bar}{E}"
+          f"{' ' * (w - 51)}{H}║{E}")
+    print(f"{H}║{E}  Above Φ threshold:  {G if above > 0 else Y}{above}/{total_c}{E}     "
+          f"Coherent (Γ<0.3): {G if coherent > total_c // 2 else Y}{coherent}/{total_c}{E}"
+          f"{' ' * (w - 52)}{H}║{E}")
+    print(f"{H}║{E}  Mean Ξ (negentropy): {CY}{mean_xi:.2e}{E}"
+          f"{' ' * (w - 36)}{H}║{E}")
+    print(f"{H}║{E}  Noise model:        {G}Realistic per-gate (RZ=virtual, 0 noise){E}"
+          f"{' ' * (w - 55)}{H}║{E}")
+
     if demo.decoder_benchmarks:
         best = max(demo.decoder_benchmarks, key=lambda d: d.improvement_factor)
-        print(f"  Best decoder gain:    {G}{best.improvement_factor:.1f}× at p={best.error_rate}{E}")
-    # Scaling highlight
-    sc = s.get('decoder_scaling', [])
+        print(f"{H}║{E}  Best decoder gain:  {G}{best.improvement_factor:.1f}× at p={best.error_rate}{E}"
+              f"{' ' * (w - 39)}{H}║{E}")
     if sc:
         best_sc = max(sc, key=lambda x: x['improvement'])
-        print(f"  Best scaling gain:    {G}{best_sc['improvement']:.1f}× at {best_sc['atoms']} atoms{E}")
-    print(f"{H}{'═' * 70}{E}")
-    print(f"{DM}  Backend: Braket DM Simulator (density matrix + noise){E}")
-    print(f"{DM}  Ready for: IonQ Aria, Rigetti Ankaa-3, Alice&Bob Ocelot QPU{E}")
-    print(f"{DM}  Framework: DNA::}}{{::lang v51.843 | Zero tokens, zero telemetry{E}\n")
+        print(f"{H}║{E}  Best scaling gain:  {G}{best_sc['improvement']:.1f}× at {best_sc['atoms']} atoms{E}"
+              f"{' ' * (w - 39)}{H}║{E}")
+
+    elapsed = s.get('elapsed_s', 0)
+    if elapsed > 0:
+        throughput = s.get('total_shots', 0) / elapsed
+        print(f"{H}║{E}  Wall time:          {B}{elapsed:.1f}s{E}  "
+              f"({CY}{throughput:,.0f} shots/s{E})"
+              f"{' ' * (w - 46)}{H}║{E}")
+
+    print(f"{H}╠{'═' * w}╣{E}")
+    print(f"{H}║{E}  {DM}Backend:   Braket DM Simulator (density matrix + noise){E}"
+          f"{' ' * (w - 56)}{H}║{E}")
+    print(f"{H}║{E}  {DM}Ready for: IonQ Aria · Rigetti Ankaa-3 · Alice&Bob Ocelot QPU{E}"
+          f"{' ' * (w - 63)}{H}║{E}")
+    print(f"{H}║{E}  {DM}Framework: DNA::}}{{::lang v51.843 │ Zero tokens, zero telemetry{E}"
+          f"{' ' * (w - 63)}{H}║{E}")
+    print(f"{H}╚{'═' * w}╝{E}\n")
 
 
 # ── Main Demo ──────────────────────────────────────────────────────────────────
 
 def run_demo(circuit_filter: str = None, output_path: str = None, shots: int = SHOTS) -> DemoResults:
     """Run the full Braket live demo."""
+    t_start = time.time()
     demo = DemoResults(
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     )
@@ -553,16 +666,20 @@ def run_demo(circuit_filter: str = None, output_path: str = None, shots: int = S
         circuit_defs = [(n, f, kw) for n, f, kw in circuit_defs
                         if circuit_filter.lower() in n.lower()]
 
-    print(f"\n{M}  ⚛  Executing {len(circuit_defs)} circuits on Braket LocalSimulator ({shots:,} shots each)...{E}\n")
+    total = len(circuit_defs)
+    print(f"\n{M}  ⚛  Executing {total} circuits on Braket LocalSimulator ({shots:,} shots each)...{E}\n")
 
-    for name, builder, kwargs in circuit_defs:
+    for idx, (name, builder, kwargs) in enumerate(circuit_defs, 1):
         theta = kwargs.get("theta_lock", True)
+        progress = f"[{idx}/{total}]"
+        print(f"  {DM}{progress}{E} {name:<25}", end="", flush=True)
         circuit, targets = builder(**kwargs)
         result = execute_circuit(circuit, targets, shots=shots, name=name, theta_lock=theta)
         demo.circuits.append(result)
-        icon = "✅" if result.above_threshold() else "○ "
-        print(f"  {icon} {name:<25} F={result.fidelity:.4f}  Φ={result.phi:.4f}  Γ={result.gamma:.4f}  "
-              f"({result.execution_time_s:.3f}s)")
+        fid_c = G if result.fidelity > 0.9 else (Y if result.fidelity > 0.5 else R)
+        phi_c = G if result.above_threshold() else Y
+        print(f" {fid_c}F={result.fidelity:.4f}{E}  {phi_c}Φ={result.phi:.4f}{E}  "
+              f"Γ={result.gamma:.4f}  ({result.execution_time_s:.3f}s)")
 
     # θ_lock advantage: compare Bell+θ vs Bell baseline
     bell_lock = next((c for c in demo.circuits if "Bell + θ" in c.name), None)
@@ -572,12 +689,13 @@ def run_demo(circuit_filter: str = None, output_path: str = None, shots: int = S
             (bell_lock.fidelity - bell_base.fidelity) / bell_base.fidelity * 100, 4)
 
     # Decoder benchmarks
-    print(f"\n{M}  🔬 Benchmarking Tesseract A* decoder...{E}\n")
+    print(f"\n{M}  🔬 Benchmarking Tesseract A* decoder (6 error rates × 50 trials)...{E}\n")
     demo.decoder_benchmarks = benchmark_decoder(atoms=64, rounds=3)
     for d in demo.decoder_benchmarks:
+        imp_c = G if d.improvement_factor > 1.0 else Y
         print(f"  p={d.error_rate:.2f}  naive={d.naive_logical_error:.4f}  "
               f"tesseract={d.tesseract_logical_error:.4f}  "
-              f"({d.improvement_factor:.1f}× better, {d.decode_time_ms:.1f}ms)")
+              f"{imp_c}({d.improvement_factor:.1f}× better){E}  {DM}{d.decode_time_ms:.1f}ms{E}")
 
     # Ocelot analysis
     rep3 = next((c for c in demo.circuits if "Rep-3" in c.name), None)
@@ -585,24 +703,27 @@ def run_demo(circuit_filter: str = None, output_path: str = None, shots: int = S
         demo.ocelot_analysis = analyze_ocelot(rep3)
 
     # Decoder scaling: how improvement grows with atom count
-    print(f"\n{M}  📈 Decoder scaling analysis (p=0.05, 50 trials)...{E}\n")
+    atom_sizes = [16, 32, 64, 128, 256]
+    print(f"\n{M}  📈 Decoder scaling analysis (p=0.05, 50 trials, {len(atom_sizes)} sizes)...{E}\n")
     scaling = []
-    for n_atoms in [16, 32, 64, 128, 256]:
+    for si, n_atoms in enumerate(atom_sizes, 1):
+        print(f"  {DM}[{si}/{len(atom_sizes)}]{E} {n_atoms:>3} atoms ", end="", flush=True)
         bench = benchmark_decoder(atoms=n_atoms, rounds=3,
                                   error_rates=[0.05], trials=50)
         if bench:
             b = bench[0]
-            scaling.append((n_atoms, b.naive_logical_error, b.tesseract_logical_error,
-                            b.improvement_factor, b.decode_time_ms))
-            print(f"  atoms={n_atoms:>3}  naive={b.naive_logical_error:.4f}  "
+            scaling.append({"atoms": n_atoms, "naive": b.naive_logical_error,
+                            "tesseract": b.tesseract_logical_error,
+                            "improvement": b.improvement_factor,
+                            "time_ms": b.decode_time_ms})
+            imp_c = G if b.improvement_factor > 1.0 else Y
+            print(f" naive={b.naive_logical_error:.4f}  "
                   f"tesseract={b.tesseract_logical_error:.4f}  "
-                  f"({b.improvement_factor:.1f}× better, {b.decode_time_ms:.1f}ms)")
-    demo.summary["decoder_scaling"] = [
-        {"atoms": a, "naive": n, "tesseract": t, "improvement": i, "time_ms": tm}
-        for a, n, t, i, tm in scaling
-    ]
+                  f"{imp_c}{b.improvement_factor:.1f}×{E}  {DM}{b.decode_time_ms:.1f}ms{E}")
 
-    # Summary
+    elapsed = round(time.time() - t_start, 2)
+
+    # Summary (build AFTER scaling so we can include it)
     fidelities = [c.fidelity for c in demo.circuits]
     demo.summary = {
         "total_circuits": len(demo.circuits),
@@ -614,6 +735,8 @@ def run_demo(circuit_filter: str = None, output_path: str = None, shots: int = S
         "theta_lock_advantage_pct": demo.theta_lock_advantage_pct,
         "backend": "Braket LocalSimulator",
         "shots_per_circuit": shots,
+        "decoder_scaling": scaling,
+        "elapsed_s": elapsed,
     }
 
     # Render
