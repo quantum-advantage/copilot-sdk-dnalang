@@ -66,8 +66,10 @@ class TesseractDecoderOrganism:
             max_f = max(F)
             return {e for e in candidates if e <= max_f}
         else:
-            # approximate: forbid up to two smallest candidates
-            return set(sorted(candidates)[:2])
+            # approximate: forbid up to two smallest candidates already in F
+            if not F:
+                return set()
+            return set(sorted(candidates & set(F))[:2])
 
     def prune_edges(self, F, residual_syndrome):
         """Predicate pruning P(F,e): only errors touching the lowest-index activated detector are allowed,
