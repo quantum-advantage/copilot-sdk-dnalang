@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from copy import deepcopy
 import json
 
-from dna_ir import (
+from .dna_ir import (
     QuantumCircuitIR, IROperation, IROpType,
     QuantumRegister, ClassicalRegister
 )

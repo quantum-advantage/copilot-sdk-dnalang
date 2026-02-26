@@ -12,9 +12,9 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 
-from dna_ir import QuantumCircuitIR
-from dna_evolve import FitnessMetrics, EvolutionResult
-from dna_runtime import ExecutionResult
+from .dna_ir import QuantumCircuitIR
+from .dna_evolve import FitnessMetrics, EvolutionResult
+from .dna_runtime import ExecutionResult
 
 # ==========================================
 # LEDGER ENTRY STRUCTURES

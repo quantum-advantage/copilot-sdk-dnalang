@@ -34,19 +34,37 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Co-located imports — Tesseract decoder for substrate error correction
-from tesseract_resonator import TesseractDecoderOrganism
+try:
+    from dnalang_sdk.decoders.tesseract import TesseractDecoderOrganism
+except ImportError:
+    try:
+        from dnalang_sdk.mesh.tesseract import TesseractDecoderOrganism
+    except ImportError:
+        from tesseract_resonator import TesseractDecoderOrganism
 
 # NCLM core — CRSM state model
-from nclm_swarm_orchestrator import (
-    CRSMState,
-    THETA_LOCK_DEG,
-    PHI_THRESHOLD,
-    GAMMA_CRITICAL,
-    LAMBDA_PHI_M,
-    CHI_PC_QUALITY,
-    ZENO_FREQUENCY_HZ,
-    DRIVE_AMPLITUDE,
-)
+try:
+    from dnalang_sdk.crsm.swarm_orchestrator import (
+        CRSMState,
+        THETA_LOCK_DEG,
+        PHI_THRESHOLD,
+        GAMMA_CRITICAL,
+        LAMBDA_PHI_M,
+        CHI_PC_QUALITY,
+        ZENO_FREQUENCY_HZ,
+        DRIVE_AMPLITUDE,
+    )
+except ImportError:
+    from nclm_swarm_orchestrator import (
+        CRSMState,
+        THETA_LOCK_DEG,
+        PHI_THRESHOLD,
+        GAMMA_CRITICAL,
+        LAMBDA_PHI_M,
+        CHI_PC_QUALITY,
+        ZENO_FREQUENCY_HZ,
+        DRIVE_AMPLITUDE,
+    )
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("penteract")

@@ -1,23 +1,28 @@
 """Defense subsystem — Phase conjugation, PCRB, sentinel, zero-trust."""
 
+from .sentinel import Sentinel, ThreatLevel, Threat
+from .zero_trust import ZeroTrust
 from .phase_conjugate import (
-    SphericalTetrahedron,
-    PhaseConjugateHowitzer,
     PlanckConstants,
     UniversalConstants,
+    SphericalTetrahedron,
+    PhaseConjugateHowitzer,
+    CentripetalConvergence,
+    PhaseConjugateSubstratePreprocessor,
 )
 from .pcrb_engine import (
     StabilizerCode,
     PhaseConjugateMirror,
     RecursionBus,
     PCRB,
+    PCRBFactory,
 )
-from .sentinel import SCIMITARSentinel
-from .zero_trust import ZeroTrustVerifier
 
 __all__ = [
-    "SphericalTetrahedron", "PhaseConjugateHowitzer",
+    "Sentinel", "ThreatLevel", "Threat",
+    "ZeroTrust",
     "PlanckConstants", "UniversalConstants",
-    "StabilizerCode", "PhaseConjugateMirror", "RecursionBus", "PCRB",
-    "SCIMITARSentinel", "ZeroTrustVerifier",
+    "SphericalTetrahedron", "PhaseConjugateHowitzer",
+    "CentripetalConvergence", "PhaseConjugateSubstratePreprocessor",
+    "StabilizerCode", "PhaseConjugateMirror", "RecursionBus", "PCRB", "PCRBFactory",
 ]

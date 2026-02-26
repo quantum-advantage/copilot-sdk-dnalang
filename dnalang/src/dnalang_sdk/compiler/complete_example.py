@@ -10,11 +10,11 @@ from pathlib import Path
 # Add current directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from dna_parser import parse_dna_lang, parse_canon
-from dna_ir import compile_to_ir, IROptimizer
-from dna_evolve import evolve_organism, FitnessEvaluator
-from dna_runtime import execute_circuit, get_backend_calibration
-from dna_ledger import QuantumLedger
+from .dna_parser import parse_dna_lang, parse_canon
+from .dna_ir import compile_to_ir, IROptimizer
+from .dna_evolve import evolve_organism, FitnessEvaluator
+from .dna_runtime import execute_circuit, get_backend_calibration
+from .dna_ledger import QuantumLedger
 
 def print_header(text: str):
     """Print formatted header"""

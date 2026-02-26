@@ -17,23 +17,48 @@ permissions:
 
 jobs:
   test:
-    name: "DNALang SDK Tests"
+    name: "DNALang SDK Tests (Python ${{ matrix.python-version }})"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
-      - name: Install SDK dependencies
+      - name: Install dependencies
         run: |
-          pip install numpy scipy pytest pytest-asyncio
-          pip install -e dnalang/ 2>/dev/null || true
+          pip install numpy scipy pytest pytest-asyncio pytest-cov
 
-      - name: Run DNALang unit tests
+      - name: Validate import chain
         working-directory: .
-        run: PYTHONPATH=dnalang/src python -m pytest dnalang/tests/ -q --tb=short
+        run: |
+          PYTHONPATH=dnalang/src python -c "
+          import dnalang_sdk
+          print(f'DNALang SDK v{dnalang_sdk.__version__}')
+          print(f'{len(dnalang_sdk.__all__)} exports validated')
+          assert len(dnalang_sdk.__all__) >= 180, 'Export count too low'
+          "
+
+      - name: Run all tests
+        working-directory: .
+        run: |
+          PYTHONPATH=dnalang/src python -m pytest dnalang/tests/ -q --tb=short \
+            --ignore=dnalang/tests/test_core.py  # Skip qiskit-dependent test
+
+      - name: Run import validation tests
+        working-directory: .
+        run: |
+          PYTHONPATH=dnalang/src python -m pytest dnalang/tests/test_imports.py -v
+
+      - name: Validate CLI entry point
+        working-directory: .
+        run: |
+          PYTHONPATH=dnalang/src python -m dnalang_sdk.cli version
+          PYTHONPATH=dnalang/src python -m dnalang_sdk.cli validate
 
       - name: Validate examples syntax
         working-directory: .
@@ -44,5 +69,6 @@ jobs:
 
       - name: Lint SDK core
         run: |
-          pip install flake8
-          flake8 dnalang/src/dnalang_sdk/ --max-line-length=120 --extend-ignore=E402,E501,W503,E741 --count --statistics || true
+          pip install ruff
+          ruff check dnalang/src/dnalang_sdk/ --select E,F,W --ignore E501,E402,W503,E741 \
+            --statistics || true

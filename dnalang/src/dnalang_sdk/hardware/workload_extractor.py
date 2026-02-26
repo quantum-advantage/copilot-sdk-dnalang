@@ -33,14 +33,24 @@ from datetime import datetime
 import hashlib
 
 # Import the substrate preprocessor
-from phase_conjugate_preprocessor import (
-    PhaseConjugateSubstratePreprocessor,
-    PlanckConstants,
-    UniversalConstants,
-    SphericalTrig,
-    SphericalTetrahedron,
-    PlanckLambdaPhiBridge
-)
+try:
+    from dnalang_sdk.defense.phase_conjugate import (
+        PhaseConjugateSubstratePreprocessor,
+        PlanckConstants,
+        UniversalConstants,
+        SphericalTrig,
+        SphericalTetrahedron,
+        PlanckLambdaPhiBridge,
+    )
+except ImportError:
+    from phase_conjugate_preprocessor import (
+        PhaseConjugateSubstratePreprocessor,
+        PlanckConstants,
+        UniversalConstants,
+        SphericalTrig,
+        SphericalTetrahedron,
+        PlanckLambdaPhiBridge,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

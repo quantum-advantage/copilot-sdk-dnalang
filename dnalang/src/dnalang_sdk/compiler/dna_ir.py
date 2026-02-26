@@ -11,7 +11,7 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 import numpy as np
 
-from dna_parser import (
+from .dna_parser import (
     OrganismNode, GenomeNode, GeneNode, QuantumStateNode,
     QuantumOpNode, ControlNode, ExpressionNode
 )

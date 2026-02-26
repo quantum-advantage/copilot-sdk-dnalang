@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dnalang-copilot-sdk"
+version = "5.3.0"
+description = "Quantum-native SDK extension for GitHub Copilot CLI — DNA::}{::lang v51.843"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Devin Phillip Davis", email = "devin@agiledefensesystems.com"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+]
+
+[project.optional-dependencies]
+quantum = [
+    "qiskit>=1.0.0",
+    "qiskit-ibm-runtime>=0.18.0",
+]
+tui = [
+    "textual>=1.0.0",
+    "rich>=13.0.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.4.0",
+    "mypy>=1.0.0",
+]
+full = [
+    "qiskit>=1.0.0",
+    "qiskit-ibm-runtime>=0.18.0",
+    "textual>=1.0.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+dnalang-sdk = "dnalang_sdk.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/quantum-advantage/copilot-sdk-dnalang"
+Repository = "https://github.com/quantum-advantage/copilot-sdk-dnalang"
+Documentation = "https://github.com/quantum-advantage/copilot-sdk-dnalang/tree/main/dnalang/docs"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dnalang_sdk = ["py.typed", "compiler/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "integration: integration tests",
+    "slow: slow tests",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501", "E402", "W503", "E741"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

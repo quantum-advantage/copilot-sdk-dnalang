@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import numpy as np
 
-from dna_ir import QuantumCircuitIR
+from .dna_ir import QuantumCircuitIR
 
 
 # ==========================================
