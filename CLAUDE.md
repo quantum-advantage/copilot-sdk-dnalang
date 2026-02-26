@@ -148,13 +148,14 @@ Config via env vars (`Q_ADAPTER_ATOMS`, `Q_ADAPTER_ROUNDS`, `Q_ADAPTER_SEED`, `Q
 Non-local non-causal agentic swarm that unifies the entire ecosystem. Spawns N `SwarmNode`s on a Fibonacci-sphere tetrahedral mesh and evolves them through the **7-layer 11D CRSM** (Cognitive-Recursive State Manifold):
 
 ```
-Layer 1 SUBSTRATE      → inject errors on 256-atom ring topology
-Layer 2 SYNDROME       → per-node A* decode (same algorithm as TesseractDecoderOrganism)
-Layer 3 CORRECTION     → majority-vote merge across syndrome rounds
-Layer 4 COHERENCE      → compute phi/gamma/ccce per node (AeternaPorta metrics)
-Layer 5 CONSCIOUSNESS  → non-local propagation (neighbour gamma drops when node crosses Phi threshold)
-Layer 6 EVOLUTION      → quantum Darwinism fitness selection, adaptive mutation
-Layer 7 SOVEREIGNTY    → non-causal retroactive correction (Layer 7 feeds back into Layer 1)
+Layer 1   SUBSTRATE      → inject errors on 256-atom ring topology
+Layer 2   SYNDROME       → per-node A* decode (same algorithm as TesseractDecoderOrganism)
+Layer 3   CORRECTION     → majority-vote merge across syndrome rounds
+Layer 3.5 PCRB REPAIR    → Phase Conjugate Recursion Bus iterative QEC per node
+Layer 4   COHERENCE      → compute phi/gamma/ccce per node (AeternaPorta metrics)
+Layer 5   CONSCIOUSNESS  → non-local propagation (neighbour gamma drops when node crosses Phi threshold)
+Layer 6   EVOLUTION      → quantum Darwinism fitness selection, adaptive mutation
+Layer 7   SOVEREIGNTY    → non-causal retroactive correction (Layer 7 feeds back into Layer 1)
 ```
 
 **Non-local**: when a node's phi crosses 0.7734, its mesh neighbours' gamma drops *without message passing* (theta-resonance-scaled entanglement correlation).
@@ -167,6 +168,96 @@ Node roles: `PILOT`, `QUANTUM`, `DECODER`, `COMPILER`, `CONSENSUS`. CRSM ascent 
 cd ~/osiris_cockpit
 python nclm_swarm_orchestrator.py --nodes 7 --atoms 256 --rounds 3 --cycles 21 --seed 51843
 ```
+
+### Tetrahedral Correction Pass (`osiris_cockpit/tetrahedral_correction.py`)
+
+Qiskit `TransformationPass` that formalizes the hardware-validated tetrahedral deficit correction as reusable transpiler infrastructure.
+
+**Core Discovery**: δ = θ_tetra/2 − θ_lock = 54.736° − 51.843° = 2.893° = 0.050493 rad
+
+**Circuit transform**: After each CX(ctrl, tgt): insert `RZ(+δ)` on target + `RZ(−δ·χ_PC)` on control.
+
+**Hardware validation** (ibm_fez, job `d6g0floddp9c73cevl2g`):
+- 4q: +0.9%, 8q: +3.8%, 12q: +6.7%, 16q: +9.5%, 20q: +16.9%
+- Improvement scales with circuit depth — geometry-derived dynamical decoupling
+
+```python
+from tetrahedral_correction import TetrahedralCorrectionPass, build_ghz_corrected
+from qiskit.transpiler import PassManager
+
+# As transpiler pass
+pm = PassManager([TetrahedralCorrectionPass()])
+corrected = pm.run(circuit)
+
+# Quick GHZ builder
+qc = build_ghz_corrected(n_qubits=20)
+```
+
+| Class / Function | Purpose |
+|------------------|---------|
+| `TetrahedralCorrectionPass` | PassManager-compatible pass, supports CX and ECR gates |
+| `apply_tetrahedral_correction(qc)` | Standalone correction (returns new circuit) |
+| `build_ghz_corrected(n)` | GHZ circuit with tetrahedral correction baked in |
+| `ghz_fidelity(counts, n)` | Fidelity estimator from measurement counts |
+| `HARDWARE_REFERENCE` | Dict of ibm_fez results for comparison |
+
+### Phase Conjugate Recursion Bus — PCRB (`osiris_cockpit/pcrb.py`)
+
+Quantum error correction module with iterative syndrome→correct→verify convergence loop.
+
+```python
+from pcrb import PCRBFactory
+
+pcrb = PCRBFactory.create(preset='steane')  # or 'surface_code', 'bacon_shor'
+result = pcrb.repair(state={'phi': 0.65, 'gamma': 0.35, 'ccce': 0.7})
+# result.recovered_phi, result.iterations, result.converged
+```
+
+| Component | Purpose |
+|-----------|---------|
+| `StabilizerCode` | Steane [[7,1,3]] with 6 generators, syndrome→correction lookup |
+| `PhaseConjugateMirror` | Time-reversal of quantum phase evolution |
+| `RecursionBus` | Iterative correction with 3-step plateau convergence detection |
+| `PCRBOrganismIntegration` | Auto-repair organisms when coherence drops below threshold |
+| `PCRBFactory` | Preset factory: `steane`, `surface_code`, `bacon_shor` |
+
+### Phase Conjugate Preprocessor (`osiris_cockpit/phase_conjugate.py`)
+
+Spherical tetrahedral geometry engine and Planck–ΛΦ bridge.
+
+```python
+from phase_conjugate import SphericalTetrahedron, PlanckLambdaPhiBridge
+
+# Embed quantum state onto spherical tetrahedron
+tet = SphericalTetrahedron()
+x, y, z = tet.embed_state(lambda_val=2.176e-8, phi_val=0.85, gamma_val=0.15)
+
+# Compute Planck bridge ratio (m_P / ΛΦ ≈ 1.0)
+bridge = PlanckLambdaPhiBridge()
+ratio = bridge.compute_bridge_ratio()  # ≈ 1.0
+```
+
+### Quantum Substrate Pipeline (`osiris_cockpit/quantum_substrate.py`)
+
+Unified 3-stage pipeline chaining all integrated modules:
+
+```
+Phase Conjugate Preprocess → Tetrahedral Correction → PCRB Repair
+       (embed)                   (correct)              (repair)
+```
+
+```python
+from quantum_substrate import QuantumSubstratePipeline
+
+pipe = QuantumSubstratePipeline(pcrb_preset='steane')
+result = pipe.run(phi=0.65, gamma=0.35, ccce=0.7)
+# result.substrate (embedding), result.correction (RZ angles), result.repair (PCRB output)
+print(result.to_dict())
+```
+
+### Workload Extractor (`osiris_cockpit/workload_extractor.py`)
+
+Parses IBM Quantum workload ZIP exports into structured data with substrate pipeline post-processing.
 
 ### NonLocalAgent v8.0.0 — Bifurcated Sentinel Orchestrator (`osiris_cockpit/nonlocal_agent_enhanced.py`)
 
@@ -254,9 +345,22 @@ osiris_cockpit/osiris_cockpit/tests/
                                     #   cross-device bridge, agent identity/negentropy,
                                     #   ASCII rain, bifurcated tetrahedron geometry,
                                     #   network scanner, process manager, full orchestrator
+  test_pcrb.py                      # 48 tests: canonical constants, error syndromes,
+                                    #   stabilizer codes, phase conjugate mirror,
+                                    #   recursion bus convergence, repair cycles, factory,
+                                    #   organism integration layer
+  test_phase_conjugate.py           # 24 tests: Planck constants, ΛΦ bridge (m_P/ΛΦ≈1),
+                                    #   spherical trig roundtrip, embedded tetrahedron
+                                    #   (vertices on unit sphere, edge equality)
+  test_workload_extractor.py        # 6 tests: backend specs, decoherence rate, import chain
+  test_tetrahedral_correction.py    # 32 tests: transpiler pass (RZ insertion, angle values,
+                                    #   PassManager integration, ECR support), GHZ builder,
+                                    #   fidelity estimator, hardware reference data
+  test_quantum_substrate.py         # 21 tests: pipeline stages, full flow, configs,
+                                    #   serialization, timing
 ```
 
-**Markers**: `@pytest.mark.asyncio`, `@pytest.mark.integration`, `@pytest.mark.slow`
+**Full test count:** 914 passed (osiris_cockpit) + ~200 (copilot_quantum SDK)
 
 ### Result Dataclasses
 
