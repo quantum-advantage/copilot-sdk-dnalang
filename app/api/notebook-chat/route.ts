@@ -1,8 +1,4 @@
-import {
-  convertToModelMessages,
-  streamText,
-  UIMessage,
-} from "ai"
+import { streamText } from "ai"
 
 // Dynamic provider selection
 function getModel() {
@@ -26,10 +22,16 @@ export const maxDuration = 60
 export async function POST(req: Request) {
   const model = getModel()
   if (!model) {
-    return new Response("No LLM API key configured (set GROQ_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, or OPENAI_API_KEY)", { status: 503 })
+    return new Response("No LLM API key configured", { status: 503 })
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json()
+  const { messages } = await req.json()
+
+  // Normalize messages to simple {role, content} format
+  const normalizedMessages = (messages || []).map((m: { role: string; content: string }) => ({
+    role: m.role === "assistant" || m.role === "system" ? m.role : "user",
+    content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+  }))
 
   const result = streamText({
     model,
@@ -57,12 +59,10 @@ For CCCE metrics questions, reference:
 - Hardware job d5votjt7fc0s73au96h0: 156q running on ibm_fez
 
 Be concise, precise, and technical. Use code blocks with language tags. Reference actual experiment parameters and real data. You are the world's most knowledgeable assistant on quantum-biological computing.`,
-    messages: await convertToModelMessages(messages),
+    messages: normalizedMessages,
     abortSignal: req.signal,
-    maxOutputTokens: 2000,
+    maxTokens: 2000,
   })
 
-  return result.toUIMessageStreamResponse({
-    originalMessages: messages,
-  })
+  return result.toDataStreamResponse()
 }
