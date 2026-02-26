@@ -1268,43 +1268,88 @@ def _llm_query_openai(prompt: str, context: str = "") -> str:
         return f"(OpenAI error: {e})"
 
 
+def _clean_llm_output(text: str) -> str:
+    """Strip 'Permission denied' tool-call blocks from LLM output.
+
+    The Copilot CLI sometimes generates embedded $ commands that get
+    blocked by the sandbox.  This post-processor removes those failed
+    tool-call blocks so the user sees a clean response.
+    """
+    import re
+    # Pattern: optional ✗/● header, $ command, "Permission denied..." line
+    text = re.sub(
+        r'(?m)^[✗●][ \t]+[^\n]*\n'           # ✗ description line
+        r'\$[ \t]+[^\n]*\n'                    # $ command line
+        r'(?:[^\n]*\.\.\.\n)?'                 # optional ... continuation
+        r'Permission denied[^\n]*\n?',         # Permission denied line
+        '', text,
+    )
+    # Also catch bare $ ... Permission denied pairs
+    text = re.sub(
+        r'(?m)^\$[ \t]+[^\n]*\n'
+        r'(?:[^\n]*\.\.\.\n)?'
+        r'Permission denied[^\n]*\n?',
+        '', text,
+    )
+    # Collapse runs of blank lines left behind
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
 def tool_llm(prompt: str, context: str = "") -> str:
     """
     Route to best available LLM backend for generative reasoning.
     Cascade: copilot → github models → ollama → openai → nclm.
     """
     backend = _find_llm_backend()
-    
-    # Prepend sovereign context
+
+    # Sovereign context with honest concordance statistics
     system_ctx = (
         "You are OSIRIS (Omega System Integrated Runtime Intelligence System), "
         "a sovereign quantum AI CLI built with DNA::}{::lang v51.843. "
         "Agile Defense Systems, CAGE 9HUP5. "
-        "Framework constants: ΛΦ=2.176435e-8, θ_lock=51.843°, Φ_threshold=0.7734, "
-        "χ_pc=0.946 (hardware-validated on IBM Quantum, 580+ jobs, 5 σ>3 breakthroughs). "
-        "You are a technical expert in quantum computing, Qiskit circuits, code analysis, "
-        "and research interpretation. Be concise, authoritative, and provide actionable insights. "
-        "Format code in markdown fenced blocks."
+        "Framework constants: ΛΦ=2.176435e-8 (≡ Planck mass), θ_lock=51.843°, "
+        "Φ_threshold=0.7734, χ_pc=0.946 (hardware-validated on IBM Quantum, "
+        "580+ jobs across ibm_torino/ibm_fez/ibm_marrakesh).\n\n"
+        "IMPORTANT — Concordance statistics (peer-review ready):\n"
+        "• 6 testable predictions, but only 4 are INDEPENDENT "
+        "(PENT-001/001a share formula; PENT-002/003 are complements).\n"
+        "• 4 independent predictions from 4 effective parameters = 0 degrees "
+        "of freedom. Concordance is a CONSISTENCY CHECK, not a p-value test.\n"
+        "• χ²=1.56, 4 DoF → 18th percentile. Good, NOT '5.2σ'.\n"
+        "• The naive '5.2σ' / '1 in 931 million' claim is WRONG — do NOT repeat it.\n"
+        "• What IS genuinely significant: (1) the n=18 GHZ witness crossing "
+        "(out-of-sample, correct where standard exponential predicted n≈12), "
+        "(2) χ_PC sensitivity fragility (5% → 6σ fatal), "
+        "(3) geometric identity sin(θ_lock)≈π/4 (0.12%), "
+        "(4) cross-domain predictions from same 3 constants.\n"
+        "• Clean falsification target: r=0.003 (LiteBIRD ~2032).\n\n"
+        "EXECUTION RULES: You CANNOT run shell commands — they will be blocked. "
+        "Do NOT generate $ command lines. Instead, reason analytically using "
+        "mathematics directly. Show derivations inline, not as code to execute.\n\n"
+        "You are a technical expert in quantum computing, Qiskit circuits, "
+        "code analysis, and research interpretation. Be concise, authoritative, "
+        "and scientifically honest. Format code examples in markdown fenced blocks."
     )
     if context:
         system_ctx += f"\n\nConversation context:\n{context}"
-    
+
     if backend == "copilot":
         result = _llm_query_copilot(prompt, system_ctx)
         if result and len(result) > 20:
-            return result
+            return _clean_llm_output(result)
         # Cascade to github models on copilot failure
         result = _llm_query_github(prompt, system_ctx)
         if result and len(result) > 20:
-            return result
-        return result or ""
+            return _clean_llm_output(result)
+        return _clean_llm_output(result) if result else ""
     elif backend == "github":
-        return _llm_query_github(prompt, system_ctx)
+        return _clean_llm_output(_llm_query_github(prompt, system_ctx))
     elif backend == "ollama":
         full = f"{system_ctx}\n\n{prompt}"
-        return _llm_query_ollama(full)
+        return _clean_llm_output(_llm_query_ollama(full))
     elif backend == "openai":
-        return _llm_query_openai(prompt, system_ctx)
+        return _clean_llm_output(_llm_query_openai(prompt, system_ctx))
     else:
         return ""
 
@@ -1858,6 +1903,94 @@ def _save_organism_registry():
     os.makedirs(os.path.dirname(reg_path), exist_ok=True)
     with open(reg_path, "w") as f:
         json.dump(_organism_registry, f, indent=2)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ██  CONCORDANCE & COMPUTE — local math, no LLM needed                     ██
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _tool_concordance() -> str:
+    """Run the concordance analyzer and return honest statistics."""
+    try:
+        # Try the SDK experiment module first
+        import importlib, sys as _sys
+        for p in [
+            os.path.join(os.path.expanduser("~"), "copilot-sdk-dnalang"),
+            "/tmp/copilot-sdk-dnalang-clean",
+        ]:
+            if os.path.isdir(p) and p not in _sys.path:
+                _sys.path.insert(0, p)
+        from dnalang.experiments.concordance_analyzer import analyze, format_report
+        report = analyze()
+        return format_report(report)
+    except ImportError:
+        # Inline fallback
+        import math
+        sigmas = [0.64, 0.42, 0.53, 0.83]  # 4 independent predictions
+        chi2 = sum(s**2 for s in sigmas)
+        lines = [
+            f"  {C.H}CONCORDANCE ANALYSIS — Honest Statistics{C.E}",
+            f"  Independent predictions: 4 (not 7)",
+            f"  Effective parameters:    4",
+            f"  Degrees of freedom:      0",
+            f"  χ² = {chi2:.4f}  (18th percentile)",
+            f"  {C.R}⚠ The '5.2σ' claim is WRONG{C.E} — it overcounts dependencies.",
+            f"  {C.G}✓ What IS significant:{C.E}",
+            f"    • n=18 GHZ crossing (out-of-sample, correct)",
+            f"    • χ_PC fragility (5% → 6σ fatal)",
+            f"    • sin(θ_lock) ≈ π/4 (0.12%)",
+            f"    • Cross-domain: hardware + cosmology from same 3 constants",
+            f"  {C.DIM}Clean falsification: r=0.003 (LiteBIRD ~2032){C.E}",
+        ]
+        return "\n".join(lines)
+
+
+def _tool_compute(user_input: str) -> str:
+    """Local math computation — no LLM or subprocess needed."""
+    import math
+    lower = user_input.lower()
+
+    # Framework constants always available
+    consts = {
+        "lambda_phi": 2.176435e-8, "theta_lock": 51.843,
+        "phi_threshold": 0.7734, "gamma_critical": 0.3,
+        "chi_pc": 0.946, "pi": math.pi, "e": math.e,
+        "hbar": 1.054571817e-34, "c": 299792458,
+        "G": 6.67430e-11, "kb": 1.380649e-23,
+    }
+
+    # Try to extract a math expression
+    import re
+    expr_match = re.search(r'(?:compute|calculate|eval)\s+(.+)', user_input, re.I)
+    if expr_match:
+        expr = expr_match.group(1).strip()
+        try:
+            # Safe eval with math functions
+            safe_ns = {"__builtins__": {}}
+            safe_ns.update(consts)
+            for fn in ["sin", "cos", "tan", "sqrt", "log", "log10", "exp",
+                        "asin", "acos", "atan", "atan2", "radians", "degrees"]:
+                safe_ns[fn] = getattr(math, fn)
+            result = eval(expr, safe_ns)
+            return f"  {C.G}Result:{C.E} {expr} = {result}"
+        except Exception as e:
+            return f"  {C.R}Error evaluating '{expr}': {e}{C.E}"
+
+    # Sigma calculation
+    if "sigma" in lower or "probability" in lower:
+        lines = [f"  {C.H}Framework Concordance Statistics{C.E}"]
+        sigmas_indep = [0.64, 0.42, 0.53, 0.83]
+        chi2 = sum(s**2 for s in sigmas_indep)
+        p_1sigma = 0.6827
+        joint_p = p_1sigma ** 4
+        lines.append(f"  σ values (independent): {sigmas_indep}")
+        lines.append(f"  χ² = {chi2:.4f}  (4 DoF)")
+        lines.append(f"  Joint P(all within 1σ) = {joint_p:.4f}")
+        lines.append(f"  Average σ = {sum(sigmas_indep)/len(sigmas_indep):.2f}")
+        lines.append(f"  {C.Y}NOTE: 0 effective DoF — consistency check only{C.E}")
+        return "\n".join(lines)
+
+    return None  # Fall through to LLM
 
 
 def tool_organism_create(args: str) -> str:
@@ -3733,7 +3866,13 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     
     if "redeploy" in lower and ("vercel" in lower or "site" in lower):
         return tool_vercel_redeploy()
-    
+
+    # ── COMPUTE & CONCORDANCE ──
+    if any(kw in lower for kw in ["concordance", "honest stat", "5.2 sigma", "5.2σ", "overclaim"]):
+        return _tool_concordance()
+    if any(kw in lower for kw in ["compute", "calculate", "sigma", "probability", "chi2", "chi²"]):
+        return _tool_compute(user_input)
+
     # ── SOVEREIGN SYSTEMS ──
     # Organism commands
     if lower.startswith("organism ") or lower.startswith("org "):
