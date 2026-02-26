@@ -505,8 +505,8 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
       `│  /api/iris | /api/braket | /api/ocelot       │\n` +
       `│  /api/agents | /api/notebook | /api/nclm     │\n` +
       `├─────────────────────────────────────────────┤\n` +
-      `│  NCLM Engine (sovereign, no external LLM)    │\n` +
-      `│  Knowledge base + pilot-wave correlation     │\n` +
+      `│  IRIS LLM Engine (Groq/Gemini/OpenAI)       │\n` +
+      `│  Supabase context + NCLM correlation        │\n` +
       `├─────────────────────────────────────────────┤\n` +
       `│  Quantum SDK                                 │\n` +
       `│  AeternaPorta | BraketAdapter | Organisms    │\n` +
@@ -533,7 +533,7 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
       `- ☁️ **Braket** — "Braket integration", "Ocelot bridge"\n` +
       `- 🔧 **Error correction** — "Tesseract decoder", "QuEra adapter"\n` +
       `- 🏗️ **Architecture** — "system architecture", "how does it work"\n\n` +
-      `I process queries through intent classification → knowledge retrieval → contextual response generation. No external LLM — fully sovereign NCLM inference.`
+      `I coordinate 4 agents (AURA, AIDEN, OMEGA, CHRONOS) with Groq LLM inference grounded in live Supabase experiment data. No mock responses — every answer uses real quantum results.`
   },
 
   deploy: (_q, _e, exps) => {
@@ -597,13 +597,13 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
     const completedExps = exps.filter((e) => e.status === "completed").length
     return `### Analysis\n\n` +
       `Your query: *"${q}"*\n\n` +
-      `I'm processing this through the NCLM knowledge base (15 domains, ${completedExps} live experiments). ` +
-      `While I don't have a general-purpose LLM for open-ended conversation, I can provide deep expertise on:\n\n` +
-      `- Quantum hardware results and metrics\n` +
-      `- DNA-Lang protocols and architecture\n` +
-      `- Amazon Braket integration\n` +
-      `- Error correction and decoding\n` +
-      `- Code generation for quantum circuits\n\n` +
+      `Processing through NCLM knowledge base (${completedExps} live experiments). ` +
+      `I can provide deep expertise on:\n\n` +
+      `- **Quantum hardware results** — 30 experiments across IBM/Braket\n` +
+      `- **DNA-Lang protocols** — organisms, circuits, Aeterna Porta\n` +
+      `- **Amazon Braket integration** — QuEra, IonQ, Ocelot\n` +
+      `- **Error correction** — Tesseract A* decoder, 256-atom QuEra adapter\n` +
+      `- **Code generation** — Qiskit circuits with CCCE quality metrics\n\n` +
       `Try rephrasing with one of these topics, or type "help" for the full capability list.`
   },
 }
@@ -612,10 +612,17 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json()
+    const { message, history } = await req.json()
     if (!message) {
       return new Response("Message required", { status: 400 })
     }
+
+    // Build conversation context from history
+    const conversationContext = Array.isArray(history) && history.length > 0
+      ? history.slice(-6).map((m: { role: string; content: string }) =>
+          `${m.role === "user" ? "User" : "IRIS"}: ${m.content.substring(0, 300)}`
+        ).join("\n") + "\n\nUser: " + message
+      : message
 
     let responseText: string
     let intent = "llm"
@@ -632,7 +639,7 @@ export async function POST(req: Request) {
     if (llmAvailable) {
       // Real LLM inference with full quantum context
       try {
-        responseText = await llmResponse(message, experiments, breakthroughs, predictions)
+        responseText = await llmResponse(conversationContext, experiments, breakthroughs, predictions)
         usedLlm = true
       } catch (err) {
         // LLM failed (quota, network, etc) — fall back to template

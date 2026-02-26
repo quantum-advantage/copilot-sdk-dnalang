@@ -4,13 +4,35 @@ import {
   UIMessage,
 } from "ai"
 
+// Dynamic provider selection
+function getModel() {
+  if (process.env.GROQ_API_KEY) {
+    const { groq } = require("@ai-sdk/groq")
+    return groq("llama-3.3-70b-versatile")
+  }
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    const { google } = require("@ai-sdk/google")
+    return google("gemini-2.0-flash")
+  }
+  if (process.env.OPENAI_API_KEY) {
+    const { openai } = require("@ai-sdk/openai")
+    return openai("gpt-4o-mini")
+  }
+  return null
+}
+
 export const maxDuration = 60
 
 export async function POST(req: Request) {
+  const model = getModel()
+  if (!model) {
+    return new Response("No LLM API key configured (set GROQ_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, or OPENAI_API_KEY)", { status: 503 })
+  }
+
   const { messages }: { messages: UIMessage[] } = await req.json()
 
   const result = streamText({
-    model: "openai/gpt-4o-mini",
+    model,
     system: `You are AURA, the sovereign AI development assistant for the DNA-Lang quantum computing platform.
 
 You have deep knowledge of:

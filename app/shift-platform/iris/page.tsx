@@ -103,11 +103,16 @@ export default function IRISEnginePage() {
     ])
 
     try {
+      // Build history from prior messages for multi-turn context
+      const history = messages
+        .filter((m) => m.role === "user" || m.role === "iris")
+        .map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }))
+
       // Real API call to IRIS chat endpoint
       const res = await fetch("/api/iris/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.content }),
+        body: JSON.stringify({ message: userMessage.content, history }),
       })
 
       // Phase 2: Mark synthesis active
