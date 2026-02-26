@@ -442,7 +442,7 @@ class TestRetroactiveCorrection:
 class TestEvolveCycle:
     def test_single_cycle(self):
         o = NCLMSwarmOrchestrator(n_nodes=5, atoms=32, rounds=3, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        result = asyncio.run(o.evolve_cycle())
         assert result["cycle"] == 1
         assert "avg_phi" in result
         assert "avg_gamma" in result
@@ -451,25 +451,25 @@ class TestEvolveCycle:
 
     def test_cycle_count_increments(self):
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         assert o.cycle_count == 2
 
     def test_history_grows(self):
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         assert len(o.history) == 2
 
     def test_node_fitness_computed(self):
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         for node in o.nodes.values():
             assert node.fitness > 0  # should be nonzero after metrics sim
 
     def test_evolution_history_recorded(self):
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         for node in o.nodes.values():
             assert len(node.evolution_history) == 1
             assert node.evolution_history[0]["cycle"] == 1
@@ -480,7 +480,7 @@ class TestEvolveCycle:
 class TestFullRun:
     def test_short_run(self):
         o = NCLMSwarmOrchestrator(n_nodes=5, atoms=32, rounds=3, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(o.run(cycles=7))
+        result = asyncio.run(o.run(cycles=7))
         assert result["cycles_completed"] == 7
         assert "final_crsm_layer" in result
         assert "ignition_active" in result
@@ -491,19 +491,19 @@ class TestFullRun:
     def test_crsm_ascends_with_seed(self):
         """With seed=51843, the swarm should reach at least layer 4 in 14 cycles."""
         o = NCLMSwarmOrchestrator(n_nodes=7, atoms=32, rounds=3, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(o.run(cycles=14))
+        result = asyncio.run(o.run(cycles=14))
         assert result["final_crsm_layer"] >= 4
 
     def test_ignition_activates(self):
         """Ignition should activate when avg_phi >= threshold and avg_gamma < critical."""
         o = NCLMSwarmOrchestrator(n_nodes=7, atoms=32, rounds=3, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(o.run(cycles=14))
+        result = asyncio.run(o.run(cycles=14))
         # With the seeded random, ignition should be active
         assert result["ignition_active"] is True
 
     def test_node_hashes_unique(self):
         o = NCLMSwarmOrchestrator(n_nodes=7, atoms=32, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.run(cycles=3))
+        asyncio.run(o.run(cycles=3))
         hashes = [n.state_hash() for n in o.nodes.values()]
         # After evolution, nodes should have diverged (unique hashes)
         assert len(set(hashes)) > 1
@@ -514,7 +514,7 @@ class TestFullRun:
 class TestSave:
     def test_save_creates_valid_json(self):
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
 
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
             path = f.name
@@ -535,7 +535,7 @@ class TestSave:
 
     def test_save_node_fields(self):
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
 
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
             path = f.name
@@ -563,7 +563,7 @@ class TestEdgeCases:
         o = NCLMSwarmOrchestrator(n_nodes=1, atoms=16, seed=SEED)
         assert len(o.nodes) == 1
         # Single node has no neighbours (all others are self)
-        result = asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        result = asyncio.run(o.evolve_cycle())
         assert result["total_nodes"] == 1
 
     def test_two_node_mesh(self):
@@ -572,22 +572,22 @@ class TestEdgeCases:
         # Each node should connect to the other
         for nid, neighbours in o.topology.items():
             assert len(neighbours) == 1  # only 1 other node
-        result = asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        result = asyncio.run(o.evolve_cycle())
         assert result["total_nodes"] == 2
 
     def test_minimal_atoms(self):
         """Smallest meaningful atom count."""
         o = NCLMSwarmOrchestrator(n_nodes=3, atoms=4, rounds=1, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        result = asyncio.run(o.evolve_cycle())
         assert result["cycle"] == 1
 
     def test_deterministic_with_seed(self):
         """Same seed -> same results."""
         o1 = NCLMSwarmOrchestrator(n_nodes=5, atoms=32, seed=42)
-        r1 = asyncio.get_event_loop().run_until_complete(o1.run(cycles=3))
+        r1 = asyncio.run(o1.run(cycles=3))
 
         o2 = NCLMSwarmOrchestrator(n_nodes=5, atoms=32, seed=42)
-        r2 = asyncio.get_event_loop().run_until_complete(o2.run(cycles=3))
+        r2 = asyncio.run(o2.run(cycles=3))
 
         assert r1["final_crsm_layer"] == r2["final_crsm_layer"]
         assert r1["phi"] == pytest.approx(r2["phi"])

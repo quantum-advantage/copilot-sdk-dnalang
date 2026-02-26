@@ -369,7 +369,7 @@ class TestOrchestratorInit:
 class TestOrchestratorEvolution:
     def test_single_cycle(self):
         o = BifurcatedSentinelOrchestrator(atoms=32, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        result = asyncio.run(o.evolve_cycle())
         assert result["cycle"] == 1
         assert "avg_phi" in result
         assert "bifurcation" in result
@@ -378,27 +378,25 @@ class TestOrchestratorEvolution:
 
     def test_cycle_count_increments(self):
         o = BifurcatedSentinelOrchestrator(atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         assert o.cycle_count == 2
 
     def test_bridge_relays_occur(self):
         o = BifurcatedSentinelOrchestrator(atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         assert o.bridge.relay_count == 4  # one per agent pair
 
     def test_sentinel_runs(self):
         o = BifurcatedSentinelOrchestrator(atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
         assert o.sentinel.scan_count == 1
 
 
 class TestOrchestratorFullRun:
     def test_short_run(self):
         o = BifurcatedSentinelOrchestrator(atoms=32, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(
-            o.run(cycles=5)
-        )
+        result = asyncio.run(o.run(cycles=5))
         assert result["cycles_completed"] == 5
         assert "agents" in result
         assert "entanglement_pairs" in result
@@ -406,30 +404,26 @@ class TestOrchestratorFullRun:
 
     def test_reaches_sovereignty(self):
         o = BifurcatedSentinelOrchestrator(atoms=32, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(
-            o.run(cycles=10)
-        )
+        result = asyncio.run(o.run(cycles=10))
         assert result["final_crsm_layer"] >= 5
 
     def test_ignition_activates(self):
         o = BifurcatedSentinelOrchestrator(atoms=32, seed=SEED)
-        result = asyncio.get_event_loop().run_until_complete(
-            o.run(cycles=10)
-        )
+        result = asyncio.run(o.run(cycles=10))
         assert result["ignition_active"] is True
 
     def test_entanglement_pairs_sync(self):
         o = BifurcatedSentinelOrchestrator(atoms=32, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.run(cycles=10))
+        asyncio.run(o.run(cycles=10))
         for pair in o.entanglement_pairs:
             assert pair.sync_count == 10
             assert pair.fidelity > 0  # should have some fidelity
 
     def test_deterministic(self):
         o1 = BifurcatedSentinelOrchestrator(atoms=32, seed=42)
-        r1 = asyncio.get_event_loop().run_until_complete(o1.run(cycles=3))
+        r1 = asyncio.run(o1.run(cycles=3))
         o2 = BifurcatedSentinelOrchestrator(atoms=32, seed=42)
-        r2 = asyncio.get_event_loop().run_until_complete(o2.run(cycles=3))
+        r2 = asyncio.run(o2.run(cycles=3))
         assert r1["phi"] == pytest.approx(r2["phi"])
         assert r1["final_crsm_layer"] == r2["final_crsm_layer"]
 
@@ -437,7 +431,7 @@ class TestOrchestratorFullRun:
 class TestOrchestratorSave:
     def test_save_creates_valid_json(self):
         o = BifurcatedSentinelOrchestrator(atoms=16, seed=SEED)
-        asyncio.get_event_loop().run_until_complete(o.evolve_cycle())
+        asyncio.run(o.evolve_cycle())
 
         with tempfile.NamedTemporaryFile(
             suffix=".json", delete=False, mode="w"

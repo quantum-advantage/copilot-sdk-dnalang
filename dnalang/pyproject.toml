@@ -60,6 +60,8 @@ dnalang-sdk = "dnalang_sdk.cli:main"
 Homepage = "https://github.com/quantum-advantage/copilot-sdk-dnalang"
 Repository = "https://github.com/quantum-advantage/copilot-sdk-dnalang"
 Documentation = "https://github.com/quantum-advantage/copilot-sdk-dnalang/tree/main/dnalang/docs"
+Issues = "https://github.com/quantum-advantage/copilot-sdk-dnalang/issues"
+Changelog = "https://github.com/quantum-advantage/copilot-sdk-dnalang/releases"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -70,6 +72,7 @@ dnalang_sdk = ["py.typed", "compiler/*.md"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "integration: integration tests",
     "slow: slow tests",

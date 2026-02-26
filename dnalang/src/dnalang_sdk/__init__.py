@@ -226,6 +226,17 @@ from .code_writer import CodeWriter, MeshnetExecutor, ScimitarElite, IDEIntegrat
 # Hardware: Workload Extractor
 from .hardware import WorkloadExtractor, SubstratePipeline
 
+# Self-Repair: Autonomous error recovery
+from .self_repair import (
+    SelfRepairEngine,
+    ErrorSignature,
+    discover_ibm_token,
+    ensure_ibm_token,
+    export_token,
+    parse_error,
+    with_self_repair,
+)
+
 
 __all__ = [
     # Core
@@ -322,4 +333,8 @@ __all__ = [
     "CodeWriter", "MeshnetExecutor", "ScimitarElite", "IDEIntegration",
     # Hardware
     "WorkloadExtractor", "SubstratePipeline",
+    # Self-Repair
+    "SelfRepairEngine", "ErrorSignature",
+    "discover_ibm_token", "ensure_ibm_token", "export_token",
+    "parse_error", "with_self_repair",
 ]

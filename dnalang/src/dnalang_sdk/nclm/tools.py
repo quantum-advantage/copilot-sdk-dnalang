@@ -17,6 +17,19 @@ import time
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 
+# ── Token Auto-Discovery ──────────────────────────────────────────────────────
+def _ensure_quantum_token() -> str:
+    """Return IBM Quantum token, auto-discovering if needed."""
+    try:
+        from ..self_repair import ensure_ibm_token
+        ok, msg = ensure_ibm_token()
+        if ok:
+            return os.environ.get("IBM_QUANTUM_TOKEN", "")
+    except ImportError:
+        pass
+    return os.environ.get("IBM_QUANTUM_TOKEN", "")
+
+
 # ── CONSTANTS ──────────────────────────────────────────────────────────────────
 
 _HOME = os.path.expanduser("~")
@@ -1590,9 +1603,9 @@ def tool_quantum_backends() -> str:
     if not py:
         return f"{C.R}Error: No Python environment with qiskit-ibm-runtime found{C.E}"
     
-    token = os.environ.get("IBM_QUANTUM_TOKEN", "")
+    token = _ensure_quantum_token()
     if not token:
-        return f"{C.R}Error: IBM_QUANTUM_TOKEN not set{C.E}\n  {C.DIM}export IBM_QUANTUM_TOKEN=your_token{C.E}"
+        return f"{C.R}Error: IBM_QUANTUM_TOKEN not set{C.E}\n  {C.DIM}export IBM_QUANTUM_TOKEN=your_token{C.E}\n  {C.DIM}Or create ~/.dnalang/apikey.json{C.E}"
     
     script = f'''
 import os, json
@@ -1649,9 +1662,9 @@ def tool_quantum_submit(template: str, backend: str = "ibm_fez", shots: int = 40
     if not py:
         return f"{C.R}Error: No Python with qiskit-ibm-runtime found{C.E}"
     
-    token = os.environ.get("IBM_QUANTUM_TOKEN", "")
+    token = _ensure_quantum_token()
     if not token:
-        return f"{C.R}Error: IBM_QUANTUM_TOKEN not set{C.E}"
+        return f"{C.R}Error: IBM_QUANTUM_TOKEN not set{C.E}\n  {C.DIM}Or create ~/.dnalang/apikey.json{C.E}"
     
     if template not in CIRCUIT_TEMPLATES:
         return f"{C.R}Unknown template: {template}{C.E}\n  Available: {', '.join(CIRCUIT_TEMPLATES.keys())}"
@@ -1726,9 +1739,9 @@ def tool_quantum_status(job_id: str) -> str:
     if not py:
         return f"{C.R}Error: No Python with qiskit-ibm-runtime found{C.E}"
     
-    token = os.environ.get("IBM_QUANTUM_TOKEN", "")
+    token = _ensure_quantum_token()
     if not token:
-        return f"{C.R}Error: IBM_QUANTUM_TOKEN not set{C.E}"
+        return f"{C.R}Error: IBM_QUANTUM_TOKEN not set{C.E}\n  {C.DIM}Or create ~/.dnalang/apikey.json{C.E}"
     
     script = f'''
 import os, json

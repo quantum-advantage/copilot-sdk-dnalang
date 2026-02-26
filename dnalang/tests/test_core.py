@@ -34,6 +34,7 @@ async def test_quantum_circuit_creation():
 @pytest.mark.asyncio
 async def test_circuit_execution_simulator():
     """Test circuit execution on simulator."""
+    pytest.importorskip("qiskit_aer", reason="qiskit_aer not installed")
     async with DNALangCopilotClient(
         quantum_config=QuantumConfig(backend="aer_simulator")
     ) as client:

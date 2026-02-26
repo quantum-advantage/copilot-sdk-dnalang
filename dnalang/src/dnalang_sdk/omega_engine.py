@@ -27,7 +27,7 @@ import hashlib
 import math
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum, auto
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -640,7 +640,7 @@ class OmegaRecursiveEngine:
     """
     
     def __init__(self):
-        self.timestamp = datetime.utcnow().isoformat() + "Z"
+        self.timestamp = datetime.now(timezone.utc).isoformat()
         self.recursion_count = 0
         self.max_recursion = 7
         
