@@ -28,9 +28,17 @@ else
 fi
 
 # Step 2: Create launcher script at ~/.local/bin/osiris
-# This launcher auto-detects paths and works after git clone
 LAUNCHER_DIR="$HOME/.local/bin"
 mkdir -p "$LAUNCHER_DIR"
+
+# Remove existing launcher if present (may be root-owned from prior install)
+if [ -f "$LAUNCHER_DIR/osiris" ] && [ ! -w "$LAUNCHER_DIR/osiris" ]; then
+    rm -f "$LAUNCHER_DIR/osiris" 2>/dev/null || {
+        echo "✗ Cannot overwrite $LAUNCHER_DIR/osiris (owned by another user)"
+        echo "  Fix with: rm $LAUNCHER_DIR/osiris"
+        exit 1
+    }
+fi
 
 cat > "$LAUNCHER_DIR/osiris" << LAUNCHER_EOF
 #!/usr/bin/env bash
