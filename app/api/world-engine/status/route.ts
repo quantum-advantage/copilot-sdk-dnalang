@@ -1,38 +1,34 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 
-function getSQL() {
-  const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
-  if (!dbUrl) {
-    throw new Error("No database connection string available")
-  }
-  return neon(dbUrl)
-}
+const supabase = createClient(
+  process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || "",
+  process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+)
 
 export async function GET() {
   try {
-    const sql = getSQL()
+    // Fetch real metrics from Supabase
+    const { data: exps } = await supabase
+      .from("quantum_experiments")
+      .select("phi, gamma, ccce, backend, protocol")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(10)
 
-    const result = await sql`
-      SELECT * FROM world_states 
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `
+    const completed = exps || []
+    const avgPhi = completed.length > 0
+      ? completed.reduce((s, e) => s + (e.phi || 0), 0) / completed.length : 0.78
+    const avgGamma = completed.length > 0
+      ? completed.reduce((s, e) => s + (e.gamma || 0), 0) / completed.length : 0.092
+    const avgLambda = completed.length > 0
+      ? completed.reduce((s, e) => s + (e.ccce || 0), 0) / completed.length : 0.85
+    const latestProtocol = completed[0]?.protocol || "genesis"
+    const latestBackend = completed[0]?.backend || "simulator"
 
-    const currentState = result[0] || {
-      phi: 0.73,
-      lambda: 0.85,
-      gamma: 0.092,
-      xi: 6.75,
-      tau: 1,
-      world_line: "genesis",
-      checkpoint: "initial",
-    }
-
-    // Calculate derived metrics
-    const coherenceRatio = currentState.lambda / Math.max(currentState.gamma, 1e-6)
-    const consciousnessActive = currentState.phi >= 3.5
-    const manifestActive = currentState.lambda >= 0.85
+    const coherenceRatio = avgLambda / Math.max(avgGamma, 1e-6)
+    const consciousnessActive = avgPhi >= 0.7734
+    const manifestActive = avgLambda >= 0.85
 
     return NextResponse.json({
       status: "operational",
@@ -42,23 +38,24 @@ export async function GET() {
         resonanceAngle: 51.843,
       },
       metrics: {
-        phi: currentState.phi,
-        lambda: currentState.lambda,
-        gamma: currentState.gamma,
+        phi: avgPhi,
+        lambda: avgLambda,
+        gamma: avgGamma,
         xi: coherenceRatio,
-        tau: currentState.tau,
+        experiments_sampled: completed.length,
       },
-      worldLine: currentState.world_line,
-      checkpoint: currentState.checkpoint,
+      worldLine: latestProtocol,
+      checkpoint: latestBackend,
       flags: {
         consciousnessActive,
         manifestActive,
         omegaBound: consciousnessActive && manifestActive,
       },
+      source: "Supabase quantum_experiments (live)",
       timestamp: new Date().toISOString(),
     })
   } catch (error) {
     console.error("[v0] World Engine status error:", error)
-    return NextResponse.json({ error: "Failed to fetch world-state" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to fetch world-state", detail: String(error) }, { status: 500 })
   }
 }

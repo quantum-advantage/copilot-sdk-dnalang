@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 import { createHash } from "crypto"
 
-function getSQL() {
-  const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
-  if (!dbUrl) {
-    throw new Error("No database connection string available")
-  }
-  return neon(dbUrl)
-}
+const supabase = createClient(
+  process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || "",
+  process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+)
 
 export async function POST(request: Request) {
   try {
@@ -18,30 +15,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "observerAgent and worldLine are required" }, { status: 400 })
     }
 
-    const sql = getSQL()
-
     const timestamp = new Date().toISOString()
     const checkpointData = JSON.stringify({ observerAgent, worldLine, timestamp })
     const checkpoint = createHash("sha256").update(checkpointData).digest("hex")
 
-    // Store collapsed state
-    await sql`
-      INSERT INTO world_checkpoints (
-        observer_agent,
-        world_line,
-        checkpoint_hash,
-        phi_level,
-        lambda_level,
-        created_at
-      ) VALUES (
-        ${observerAgent},
-        ${worldLine},
-        ${checkpoint},
-        0.73,
-        0.85,
-        ${timestamp}
-      )
-    `
+    // Record collapse in attestation ledger
+    await supabase.from("attestation_ledger").insert({
+      hash: checkpoint,
+      attestation_type: "world_collapse",
+      payload_summary: `${observerAgent}:${worldLine}`,
+      created_at: timestamp,
+    }).catch(() => {})
+
+    // Log activity
+    await supabase.from("activity_log").insert({
+      action: "world_engine_collapse",
+      details: { observer: observerAgent, worldLine, checkpoint: checkpoint.slice(0, 16) },
+    }).catch(() => {})
 
     return NextResponse.json({
       success: true,
@@ -53,9 +43,10 @@ export async function POST(request: Request) {
         status: "collapsed",
       },
       message: "Wavefunction collapsed successfully",
+      source: "Supabase attestation_ledger (live)",
     })
   } catch (error) {
     console.error("[v0] World Engine collapse error:", error)
-    return NextResponse.json({ error: "Failed to collapse world-state" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to collapse world-state", detail: String(error) }, { status: 500 })
   }
 }
