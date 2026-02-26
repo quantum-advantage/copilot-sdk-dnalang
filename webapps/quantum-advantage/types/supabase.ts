@@ -169,3 +169,59 @@ export interface Database {
     }
   }
 }
+
+      // Quantum experiments table
+      quantum_experiments: {
+        Row: {
+          id: number
+          experiment_id: string
+          protocol: string
+          backend: string
+          qubits_used: number
+          shots: number
+          phi: number | null
+          gamma: number | null
+          ccce: number | null
+          chi_pc: number | null
+          job_id: string | null
+          s3_key: string | null
+          integrity_hash: string | null
+          framework: string | null
+          cage_code: string | null
+          status: string
+          raw_metrics: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          experiment_id: string
+          protocol: string
+          backend: string
+          qubits_used: number
+          shots: number
+          phi?: number | null
+          gamma?: number | null
+          ccce?: number | null
+          chi_pc?: number | null
+          job_id?: string | null
+          s3_key?: string | null
+          integrity_hash?: string | null
+          framework?: string | null
+          cage_code?: string | null
+          status?: string
+          raw_metrics?: Json | null
+        }
+        Update: {
+          experiment_id?: string
+          protocol?: string
+          backend?: string
+          qubits_used?: number
+          shots?: number
+          phi?: number | null
+          gamma?: number | null
+          ccce?: number | null
+          chi_pc?: number | null
+          status?: string
+          raw_metrics?: Json | null
+        }
+      }
