@@ -1272,11 +1272,14 @@ def _clean_llm_output(text: str) -> str:
     """Strip 'Permission denied' tool-call blocks from LLM output.
 
     The Copilot CLI sometimes generates embedded $ commands that get
-    blocked by the sandbox.  This post-processor removes those failed
-    tool-call blocks so the user sees a clean response.
+    blocked by the sandbox, and rg/grep searches that hit permission-
+    denied directories.  This post-processor removes all that noise.
     """
     import re
-    # Pattern: optional ✗/● header, $ command, "Permission denied..." line
+    # 1. Strip rg: ... Permission denied lines (ripgrep scanning bad dirs)
+    text = re.sub(r'(?m)^rg: [^\n]*Permission denied[^\n]*\n?', '', text)
+
+    # 2. Strip ✗/● header + $ command + Permission denied blocks
     text = re.sub(
         r'(?m)^[✗●][ \t]+[^\n]*\n'           # ✗ description line
         r'\$[ \t]+[^\n]*\n'                    # $ command line
@@ -1284,14 +1287,23 @@ def _clean_llm_output(text: str) -> str:
         r'Permission denied[^\n]*\n?',         # Permission denied line
         '', text,
     )
-    # Also catch bare $ ... Permission denied pairs
+    # 3. Bare $ ... Permission denied pairs
     text = re.sub(
         r'(?m)^\$[ \t]+[^\n]*\n'
         r'(?:[^\n]*\.\.\.\n)?'
         r'Permission denied[^\n]*\n?',
         '', text,
     )
-    # Collapse runs of blank lines left behind
+    # 4. Glob/explore tool output with permission denied noise
+    text = re.sub(
+        r'(?m)^[✗●][ \t]+Glob[^\n]*\n'
+        r'└[^\n]*Permission denied[^\n]*\n?',
+        '', text,
+    )
+    # 5. Strip lines that are just "Permission denied..." or "os error 13"
+    text = re.sub(r'(?m)^[^\n]*Permission denied \(os error 13\)[^\n]*\n?', '', text)
+
+    # 6. Collapse runs of blank lines left behind
     text = re.sub(r'\n{3,}', '\n\n', text)
     return text.strip()
 

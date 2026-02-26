@@ -1,0 +1,8 @@
+# Skip directories with permission issues
+complete_research_archive/
+.local/share/containers/
+node_modules/
+*.zip
+*.tar.gz
+*.enc
+*.gpg
