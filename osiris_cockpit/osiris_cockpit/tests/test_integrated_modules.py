@@ -107,13 +107,13 @@ class TestPCRBConstants:
         assert PCRBConstants.THETA_LOCK == pytest.approx(51.843, abs=1e-6)
 
     def test_phi_threshold(self):
-        assert PCRBConstants.PHI_THRESHOLD == pytest.approx(7.6901, abs=1e-4)
+        assert PCRBConstants.PHI_THRESHOLD == pytest.approx(0.7734, abs=1e-4)
 
-    def test_gamma_fixed(self):
-        assert PCRBConstants.GAMMA_FIXED == pytest.approx(0.092, abs=1e-6)
+    def test_gamma_critical(self):
+        assert PCRBConstants.GAMMA_CRITICAL == pytest.approx(0.3, abs=1e-6)
 
-    def test_bell_fidelity(self):
-        assert PCRBConstants.BELL_FIDELITY == pytest.approx(0.869, abs=1e-6)
+    def test_chi_pc(self):
+        assert PCRBConstants.CHI_PC == pytest.approx(0.946, abs=1e-6)
 
     def test_pcrb_threshold(self):
         assert PCRBConstants.PCRB_THRESHOLD == pytest.approx(0.15, abs=1e-6)
@@ -442,7 +442,7 @@ class TestUniversalConstants:
         assert UniversalConstants.THETA_LOCK == pytest.approx(51.843, abs=1e-6)
 
     def test_phi_threshold(self):
-        assert UniversalConstants.PHI_THRESHOLD == pytest.approx(7.6901, abs=1e-4)
+        assert UniversalConstants.PHI_THRESHOLD == pytest.approx(0.7734, abs=1e-4)
 
     def test_golden_ratio_inverse(self):
         assert UniversalConstants.PHI_GOLDEN == pytest.approx(0.618033988749895, rel=1e-12)
@@ -640,7 +640,7 @@ class TestQuantumJobResult:
         probs = job.probabilities
         assert sum(probs.values()) == pytest.approx(1.0)
 
-    def test_bell_fidelity(self):
+    def test_chi_pc(self):
         job = QuantumJobResult(
             job_id='test', backend='ibm_brisbane', shots=1000,
             counts={'00': 435, '01': 65, '10': 65, '11': 435},
@@ -648,7 +648,7 @@ class TestQuantumJobResult:
         )
         assert job.bell_fidelity == pytest.approx(0.87)
 
-    def test_bell_fidelity_non_2qubit(self):
+    def test_chi_pc_non_2qubit(self):
         job = QuantumJobResult(
             job_id='test', backend='x', shots=100,
             counts={'000': 50, '111': 50},
@@ -950,7 +950,7 @@ class TestCodeWriterConstants:
     def test_phi_threshold(self):
         assert CW_PHI_THRESHOLD == pytest.approx(0.7734, abs=1e-6)
 
-    def test_gamma_fixed(self):
+    def test_gamma_critical(self):
         assert CW_GAMMA_FIXED == pytest.approx(0.092, abs=1e-6)
 
 

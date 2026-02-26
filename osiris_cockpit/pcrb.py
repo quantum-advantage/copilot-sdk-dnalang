@@ -33,7 +33,7 @@ class Φ:
     GAMMA_CRITICAL: float = 0.3         # Decoherence boundary
     CHI_PC: float = 0.946               # Phase conjugation quality
     EPSILON: float = 1e-10
-    
+
     # PCRB-specific constants
     PCRB_THRESHOLD: float = 0.15      # Trigger repair below this coherence
     PCRB_RECOVERY_RATE: float = 0.85  # Target recovery rate

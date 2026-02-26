@@ -33,7 +33,7 @@ from datetime import datetime
 import hashlib
 
 # Import the substrate preprocessor
-from phase_conjugate_preprocessor import (
+from phase_conjugate import (
     PhaseConjugateSubstratePreprocessor,
     PlanckConstants,
     UniversalConstants,

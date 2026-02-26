@@ -45,11 +45,11 @@ class PlanckConstants:
 class UniversalConstants:
     """DNA-Lang Universal Constants (ΛΦ Framework)."""
     LAMBDA_PHI: float = 2.176435e-8    # Universal Memory Constant (s⁻¹)
-    PHI_THRESHOLD: float = 7.6901      # Consciousness threshold
+    PHI_THRESHOLD: float = 0.7734       # ER=EPR crossing threshold
     PHI_GOLDEN: float = 0.618033988749895  # Golden ratio inverse
     THETA_LOCK: float = 51.843         # Resonance angle (degrees)
-    GAMMA_FIXED: float = 0.092         # Base decoherence rate
-    BELL_FIDELITY: float = 0.869       # Measured Bell state fidelity
+    GAMMA_CRITICAL: float = 0.3        # Decoherence boundary
+    CHI_PC: float = 0.946              # Phase conjugation quality
     
     # Tetrahedral geometry constants
     TETRA_ANGLE: float = 109.4712      # Tetrahedral angle (degrees)
