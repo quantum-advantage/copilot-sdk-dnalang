@@ -20,8 +20,14 @@ try {
   const aiSdk = require("ai")
   generateText = aiSdk.generateText
 
-  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-    // Google Gemini — free tier (15 RPM, no credit card)
+  if (process.env.GROQ_API_KEY) {
+    // Groq — free tier (30 RPM, llama-3.3-70b)
+    const groqSdk = require("@ai-sdk/groq")
+    activeModel = groqSdk.groq("llama-3.3-70b-versatile")
+    llmAvailable = true
+    engineName = "groq-llama-3.3-70b"
+  } else if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    // Google Gemini — free tier (15 RPM)
     const googleSdk = require("@ai-sdk/google")
     activeModel = googleSdk.google("gemini-2.0-flash")
     llmAvailable = true

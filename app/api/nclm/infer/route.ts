@@ -8,7 +8,11 @@ let nclmModel: unknown = null
 try {
   const aiSdk = require("ai")
   generateTextFn = aiSdk.generateText
-  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  if (process.env.GROQ_API_KEY) {
+    const groqSdk = require("@ai-sdk/groq")
+    nclmModel = groqSdk.groq("llama-3.3-70b-versatile")
+    llmAvailable = true
+  } else if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
     const googleSdk = require("@ai-sdk/google")
     nclmModel = googleSdk.google("gemini-2.0-flash")
     llmAvailable = true
