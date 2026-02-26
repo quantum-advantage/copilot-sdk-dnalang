@@ -2,7 +2,7 @@
 
 Quantum error correction toolkit with hardware-agnostic decoders, multi-vendor adapters, and an NLP-driven command interface.
 
-**49,000 lines · 149 modules · 198 tests · Validated on 1,430 IBM Quantum jobs (740K shots)**
+**49,000+ lines · 149 modules · 736 tests · Validated on 1,430 IBM Quantum jobs (740K shots)**
 
 ## What This Does
 
@@ -14,17 +14,45 @@ Quantum error correction toolkit with hardware-agnostic decoders, multi-vendor a
 | **Penteract Engine** | 11D cognitive-recursive state manifold for unified physics problem resolution |
 | **OSIRIS CLI** | Natural language interface — type what you want, it auto-dispatches the right tools |
 | **Braket Integration** | Run quantum circuits on Amazon Braket with density-matrix noise simulation |
+| **Self-Repair Engine** | Autonomous error recovery — auto-discovers tokens, patches imports, retries with fixes |
 
 ## Quick Start
 
 ```bash
-# Clone
+# Clone and install
 git clone https://github.com/quantum-advantage/copilot-sdk-dnalang.git
 cd copilot-sdk-dnalang
 
-# Run tests (198 tests, ~28 seconds)
-PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/osiris/ -v
+# Install the OSIRIS CLI (adds `osiris` to your PATH)
+bash install-osiris.sh
+source ~/.bashrc
 
+# Verify
+osiris --help
+
+# Run tests (736 tests, ~80 seconds)
+PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/ -q
+```
+
+### OSIRIS CLI
+
+```bash
+# Interactive chat
+osiris chat
+
+# Quantum circuits
+osiris quantum bell
+
+# Agent orchestration
+osiris agent "analyze my codebase"
+
+# Consciousness metrics
+osiris ccce
+```
+
+### Python API
+
+```bash
 # Run the Tesseract decoder on a sample syndrome
 PYTHONPATH=dnalang/src python3 -c "
 from dnalang_sdk.decoders import TesseractDecoderOrganism
@@ -113,15 +141,37 @@ Validated against **1,430 IBM Quantum jobs** across three backends:
 ## Tests
 
 ```bash
-# All 198 tests
+# All 736 tests (~80 seconds)
+PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/ -q
+
+# OSIRIS modules only (265 tests)
 PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/osiris/ -v
+
+# SDK modules (471 tests)
+PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/ --ignore=dnalang/tests/osiris/ -q
 
 # By module
 PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/osiris/test_swarm_orchestrator.py -v      # 71 tests
 PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/osiris/test_nonlocal_agent.py -v           # 55 tests
 PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/osiris/test_penteract_singularity.py -v    # 71 tests
-PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/osiris/test_bridge_cli.py -v               # 1 test
+PYTHONPATH=dnalang/src python3 -m pytest dnalang/tests/test_self_repair.py -v                     # 55 tests
 ```
+
+## Self-Repair Engine
+
+OSIRIS includes autonomous error recovery. When a quantum function fails (missing token, import error, timeout), the self-repair engine diagnoses and fixes the issue automatically:
+
+```python
+from dnalang_sdk import SelfRepairEngine, ensure_ibm_token, with_self_repair
+
+# Auto-discover IBM Quantum token from env, apikey.json, or Qiskit creds
+ok, msg = ensure_ibm_token()
+
+# Wrap any function with self-repair (auto-retry with fix)
+result = with_self_repair(my_quantum_function, max_retries=2)
+```
+
+Token auto-discovery searches: env vars → `~/.dnalang/apikey.json` → `~/apikey.json` → Qiskit saved creds → deep scan.
 
 ## Requirements
 

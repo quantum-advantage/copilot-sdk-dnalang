@@ -49,11 +49,26 @@ def _fix_consciousness_state():
 
 
 def patch_and_launch():
-    _HOME = os.path.expanduser("~")
-    sdk_root = os.path.join(_HOME, "Documents", "copilot-sdk-dnalang")
-    dnalang_src = os.path.join(sdk_root, "dnalang", "src")
+    # Auto-detect SDK root from this file's location
+    _this_dir = os.path.dirname(os.path.abspath(__file__))
+    # self_repair.py lives at dnalang/src/dnalang_sdk/osiris_bootstrap.py
+    # so SDK root is 3 levels up
+    dnalang_src = os.path.dirname(_this_dir)  # dnalang/src
+    sdk_root = os.path.dirname(os.path.dirname(dnalang_src))  # repo root
 
-    for p in [dnalang_src, os.path.join(_HOME, "osiris_cockpit")]:
+    # Fallback: check env or known locations
+    if not os.path.isfile(os.path.join(sdk_root, "bin", "osiris")):
+        for candidate in [
+            os.environ.get("DNALANG_SDK_ROOT", ""),
+            os.path.join(os.path.expanduser("~"), "copilot-sdk-dnalang"),
+            os.path.join(os.path.expanduser("~"), "Documents", "copilot-sdk-dnalang"),
+        ]:
+            if candidate and os.path.isfile(os.path.join(candidate, "bin", "osiris")):
+                sdk_root = candidate
+                dnalang_src = os.path.join(sdk_root, "dnalang", "src")
+                break
+
+    for p in [dnalang_src, os.path.join(os.path.expanduser("~"), "osiris_cockpit")]:
         if p not in sys.path:
             sys.path.insert(0, p)
 
