@@ -1,0 +1,173 @@
+{
+  "protocol": "CEHB_v1.0_phase23",
+  "framework": "DNA::}{::lang v51.843",
+  "cage_code": "9HUP5",
+  "backend": "ibm_torino",
+  "num_qubits": 50,
+  "total_shots": 140000,
+  "timestamp": "2026-02-26T07:13:41Z",
+  "hamiltonian_results": {
+    "hamiltonian_delta_0.5": {
+      "job_id": "d6fv056keflc73agpikg",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.450856,
+      "magnetization_std": 0.050732,
+      "hamming_weight_mean": 22.5428,
+      "hamming_weight_std": 2.961,
+      "shannon_entropy": 13.2877
+    },
+    "hamiltonian_delta_1.0": {
+      "job_id": "d6fv05mkeflc73agpimg",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.447312,
+      "magnetization_std": 0.050646,
+      "hamming_weight_mean": 22.3656,
+      "hamming_weight_std": 2.9508,
+      "shannon_entropy": 13.2877
+    },
+    "hamiltonian_delta_1.5": {
+      "job_id": "d6fv060j9bds73cnif10",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.442272,
+      "magnetization_std": 0.062401,
+      "hamming_weight_mean": 22.1136,
+      "hamming_weight_std": 2.9134,
+      "shannon_entropy": 13.2877
+    },
+    "hamiltonian_delta_2.0": {
+      "job_id": "d6fv06gddp9c73cetu90",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.440398,
+      "magnetization_std": 0.082713,
+      "hamming_weight_mean": 22.0199,
+      "hamming_weight_std": 2.8915,
+      "shannon_entropy": 13.2877
+    }
+  },
+  "entanglement_results": {
+    "entanglement_basis_0": {
+      "job_id": "d6fv076keflc73agpipg",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.470814,
+      "magnetization_std": 0.024527,
+      "hamming_weight_mean": 23.5407,
+      "hamming_weight_std": 8.9255,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_1": {
+      "job_id": "d6fv078ddp9c73cetub0",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.483632,
+      "magnetization_std": 0.031856,
+      "hamming_weight_mean": 24.1816,
+      "hamming_weight_std": 4.8117,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_2": {
+      "job_id": "d6fv07oddp9c73cetuc0",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.481016,
+      "magnetization_std": 0.022073,
+      "hamming_weight_mean": 24.0508,
+      "hamming_weight_std": 6.194,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_3": {
+      "job_id": "d6fv088ddp9c73cetue0",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.482182,
+      "magnetization_std": 0.022834,
+      "hamming_weight_mean": 24.1091,
+      "hamming_weight_std": 5.3449,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_4": {
+      "job_id": "d6fv08oj9bds73cnif5g",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.47822,
+      "magnetization_std": 0.023825,
+      "hamming_weight_mean": 23.911,
+      "hamming_weight_std": 6.8711,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_5": {
+      "job_id": "d6fv098ddp9c73cetufg",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.479606,
+      "magnetization_std": 0.032371,
+      "hamming_weight_mean": 23.9803,
+      "hamming_weight_std": 5.7618,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_6": {
+      "job_id": "d6fv09gddp9c73cetuhg",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.47693,
+      "magnetization_std": 0.026109,
+      "hamming_weight_mean": 23.8465,
+      "hamming_weight_std": 6.6941,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_7": {
+      "job_id": "d6fv0a0j9bds73cnif80",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.480366,
+      "magnetization_std": 0.035446,
+      "hamming_weight_mean": 24.0183,
+      "hamming_weight_std": 5.8918,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_8": {
+      "job_id": "d6fv0agj9bds73cnif9g",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.474592,
+      "magnetization_std": 0.02362,
+      "hamming_weight_mean": 23.7296,
+      "hamming_weight_std": 7.5047,
+      "shannon_entropy": 13.2877
+    },
+    "entanglement_basis_9": {
+      "job_id": "d6fv0aukeflc73agpiv0",
+      "total_shots": 10000,
+      "unique": 10000,
+      "n_qubits": 50,
+      "magnetization_mean": 0.471544,
+      "magnetization_std": 0.029993,
+      "hamming_weight_mean": 23.5772,
+      "hamming_weight_std": 8.0408,
+      "shannon_entropy": 13.2877
+    }
+  },
+  "metrics": {
+    "phi": 0.8904,
+    "gamma": 0.01,
+    "ccce": 0.8815
+  },
+  "integrity_hash": "a0aa13754a75a64f3e1ce1344172f2e8b8ad19b98f638e06220090c26a99750b"
+}
