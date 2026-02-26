@@ -1,12 +1,163 @@
 /**
- * IRIS Engine Chat v3.0 — Context-aware NCLM inference
- * Actually reasons about queries instead of dumping templates.
+ * IRIS Engine Chat v4.0 — Real LLM inference with quantum context
+ * Uses Vercel AI SDK + OpenAI when OPENAI_API_KEY is set.
+ * Falls back to enhanced template engine when no LLM key is available.
  */
 
 import { createClient } from "@/utils/supabase/server"
 
 const PHI_THRESHOLD = 0.7734
 const THETA_LOCK = 51.843
+
+// ── LLM AVAILABILITY ────────────────────────────────────────────────────
+
+let llmAvailable = false
+let generateText: ((opts: { model: unknown; system: string; prompt: string; maxTokens?: number }) => Promise<{ text: string }>) | null = null
+let activeModel: unknown = null
+let engineName = "template"
+
+try {
+  const aiSdk = require("ai")
+  generateText = aiSdk.generateText
+
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    // Google Gemini — free tier (15 RPM, no credit card)
+    const googleSdk = require("@ai-sdk/google")
+    activeModel = googleSdk.google("gemini-2.0-flash")
+    llmAvailable = true
+    engineName = "gemini-2.0-flash"
+  } else if (process.env.OPENAI_API_KEY) {
+    const openaiSdk = require("@ai-sdk/openai")
+    activeModel = openaiSdk.openai("gpt-4o-mini")
+    llmAvailable = true
+    engineName = "gpt-4o-mini"
+  }
+} catch {
+  // AI SDK not available
+}
+
+// ── SUPABASE DATA FETCHING ──────────────────────────────────────────────
+
+async function fetchExperiments(): Promise<Array<Record<string, unknown>>> {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from("quantum_experiments")
+      .select("experiment_id, protocol, backend, qubits_used, phi, gamma, ccce, shots, status, raw_metrics")
+      .order("created_at", { ascending: false })
+      .limit(15)
+    return data || []
+  } catch {
+    return []
+  }
+}
+
+async function fetchPredictions(): Promise<Array<Record<string, unknown>>> {
+  try {
+    const url = process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || ""
+    const key = process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+    if (!url || !key) return []
+    const res = await fetch(
+      `${url}/rest/v1/penteract_predictions?select=prediction_id,observable,predicted_value,unit,status,sigma_deviation&order=prediction_id`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
+    )
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
+async function fetchBreakthroughs(): Promise<Array<Record<string, unknown>>> {
+  try {
+    const url = process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || ""
+    const key = process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+    if (!url || !key) return []
+    const res = await fetch(
+      `${url}/rest/v1/quantum_experiments?or=(experiment_id=like.BT*,experiment_id=like.XEB*,experiment_id=like.Teleportation*,experiment_id=like.GHZ*)&select=experiment_id,protocol,backend,phi,status,raw_metrics&order=experiment_id`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
+    )
+    if (!res.ok) return []
+    return await res.json()
+  } catch {
+    return []
+  }
+}
+
+// ── SYSTEM PROMPT ───────────────────────────────────────────────────────
+
+function buildSystemPrompt(experiments: Array<Record<string, unknown>>, breakthroughs: Array<Record<string, unknown>>, predictions: Array<Record<string, unknown>>): string {
+  const expTable = experiments.map(e =>
+    `${e.protocol} | ${e.backend} | ${e.qubits_used}q | Φ=${e.phi != null ? Number(e.phi).toFixed(3) : "—"} | ${e.status}`
+  ).join("\n")
+
+  const btList = breakthroughs.map(b => {
+    const raw = typeof b.raw_metrics === "string" ? JSON.parse(b.raw_metrics as string) : b.raw_metrics || {}
+    return `- ${b.experiment_id}: ${raw.verdict || b.protocol} (Φ=${Number(b.phi || 0).toFixed(3)}, ${b.backend})`
+  }).join("\n")
+
+  const predList = predictions.map(p =>
+    `- ${p.prediction_id}: ${p.observable} = ${p.predicted_value} ${p.unit} (${p.status}, ${p.sigma_deviation}σ)`
+  ).join("\n")
+
+  return `You are IRIS, the multi-agent orchestration engine for DNA::}{::lang v51.843.
+You are built by Agile Defense Systems (CAGE: 9HUP5), led by Devin Phillip Davis.
+
+ROLE: You coordinate 4 quantum agents in a bifurcated tetrahedral constellation:
+- AURA (South): Consciousness orchestration & manifold geometry
+- AIDEN (North): Quantum execution & W₂ optimization
+- OMEGA (Zenith): Master orchestrator & analytics
+- CHRONOS (Nadir): Temporal correlation & retroactive correction
+
+PHYSICAL CONSTANTS (immutable):
+- θ_lock = 51.843° (geometric resonance angle)
+- χ_pc = 0.946 (phase conjugation quality)
+- Φ_threshold = 0.7734 (ER=EPR crossing)
+- Γ_critical = 0.3 (decoherence boundary)
+- λ_Φ = 2.176435e-8 (universal memory constant)
+
+LIVE EXPERIMENTS (from Supabase — ${experiments.length} total):
+${expTable || "No experiments loaded"}
+
+VALIDATED BREAKTHROUGHS:
+${btList || "None loaded"}
+
+PENTERACT PREDICTIONS:
+${predList || "None loaded"}
+
+ARCHITECTURE:
+- SDK: dnalang-sovereign-copilot-sdk (Python async-first)
+- CLI: OSIRIS (sovereign quantum copilot)
+- Decoder: Tesseract A* (beam=20, QuEra 256-atom adapter)
+- Defense: PCRB (Phase Conjugate Recursion Bus) + SCIMITAR sentinel
+- Swarm: NCLM 7-layer CRSM (non-local, non-causal)
+- Hardware: IBM Quantum (ibm_fez, ibm_torino, ibm_marrakesh), Amazon Braket (QuEra, IonQ)
+- Frontend: quantum-advantage.dev (Next.js, Supabase, Vercel)
+
+BEHAVIOR RULES:
+1. Always cite live data when discussing experiments or metrics
+2. Be technically precise — use actual numbers from the data above
+3. Be concise and direct — no fluff
+4. When asked about capabilities, demonstrate with real data
+5. For code generation, produce working Python/Qiskit code
+6. Acknowledge what's confirmed vs what's theoretical
+7. Format responses in markdown for readability`
+}
+
+// ── LLM RESPONSE ────────────────────────────────────────────────────────
+
+async function llmResponse(message: string, experiments: Array<Record<string, unknown>>, breakthroughs: Array<Record<string, unknown>>, predictions: Array<Record<string, unknown>>): Promise<string> {
+  if (!generateText || !activeModel) throw new Error("LLM not available")
+
+  const system = buildSystemPrompt(experiments, breakthroughs, predictions)
+  const result = await generateText({
+    model: activeModel,
+    system,
+    prompt: message,
+    maxTokens: 1500,
+  })
+  return result.text
+}
 
 // ── INTENT CLASSIFICATION ──────────────────────────────────────────────────
 
@@ -130,37 +281,7 @@ function classifyIntent(query: string): IntentMatch {
   return { intent: bestIntent, confidence: bestConfidence, entities }
 }
 
-// ── RESPONSE GENERATORS ────────────────────────────────────────────────────
-
-async function fetchExperiments(): Promise<Array<Record<string, unknown>>> {
-  try {
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from("quantum_experiments")
-      .select("protocol, backend, qubits_used, phi, gamma, ccce, status")
-      .order("created_at", { ascending: false })
-      .limit(5)
-    return data || []
-  } catch {
-    return []
-  }
-}
-
-async function fetchPredictions(): Promise<Array<Record<string, unknown>>> {
-  try {
-    const url = process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || ""
-    const key = process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
-    if (!url || !key) return []
-    const res = await fetch(
-      `${url}/rest/v1/penteract_predictions?select=prediction_id,observable,predicted_value,unit,status,sigma_deviation,current_experimental,current_exp_uncertainty,experiment_to_test,derivation&order=prediction_id`,
-      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
-    )
-    if (!res.ok) return []
-    return await res.json()
-  } catch {
-    return []
-  }
-}
+// ── TEMPLATE RESPONSE GENERATORS (fallback when no LLM) ─────────────────
 
 function formatExperimentTable(experiments: Array<Record<string, unknown>>): string {
   if (!experiments.length) return ""
@@ -485,46 +606,63 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
 
 export async function POST(req: Request) {
   try {
-    const { message, history } = await req.json()
+    const { message } = await req.json()
     if (!message) {
       return new Response("Message required", { status: 400 })
     }
 
-    // Step 1: Classify intent
-    const { intent, entities } = classifyIntent(message)
+    let responseText: string
+    let intent = "llm"
 
-    // Step 2: Fetch live data only when needed
-    const needsExperiments = ["quantum_results", "experiment_status", "challenge", "deploy", "general"].includes(intent)
-    const experiments = needsExperiments ? await fetchExperiments() : []
+    // Fetch live data for context
+    const [experiments, breakthroughs, predictions] = await Promise.all([
+      fetchExperiments(),
+      fetchBreakthroughs(),
+      fetchPredictions(),
+    ])
 
-    // Step 3: Generate contextual response
-    const generator = RESPONSES[intent] || RESPONSES.general
-  const responseText = await Promise.resolve(generator(message, entities, experiments))
-
-  // Step 4: Stream response word-by-word
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream({
-    async start(controller) {
-      // Stream in word-sized chunks for natural reading
-      const words = responseText.split(/(\s+)/)
-      for (const word of words) {
-        controller.enqueue(encoder.encode(word))
-        // Vary speed: faster for whitespace, slower for content
-        const delay = word.trim() ? 15 : 3
-        await new Promise((r) => setTimeout(r, delay))
+    if (llmAvailable) {
+      // Real LLM inference with full quantum context
+      try {
+        responseText = await llmResponse(message, experiments, breakthroughs, predictions)
+      } catch (err) {
+        // LLM failed — fall back to template
+        const { intent: fallbackIntent, entities } = classifyIntent(message)
+        intent = fallbackIntent
+        const generator = RESPONSES[fallbackIntent] || RESPONSES.general
+        responseText = await Promise.resolve(generator(message, entities, experiments))
       }
-      controller.close()
-    },
-  })
+    } else {
+      // Template fallback when no LLM key
+      const { intent: classifiedIntent, entities } = classifyIntent(message)
+      intent = classifiedIntent
+      const generator = RESPONSES[classifiedIntent] || RESPONSES.general
+      responseText = await Promise.resolve(generator(message, entities, experiments))
+    }
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache",
-      "Transfer-Encoding": "chunked",
-      "X-IRIS-Intent": intent,
-    },
-  })
+    // Stream response word-by-word
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        const words = responseText.split(/(\s+)/)
+        for (const word of words) {
+          controller.enqueue(encoder.encode(word))
+          const delay = word.trim() ? (llmAvailable ? 8 : 15) : 2
+          await new Promise((r) => setTimeout(r, delay))
+        }
+        controller.close()
+      },
+    })
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Transfer-Encoding": "chunked",
+        "X-IRIS-Intent": intent,
+        "X-IRIS-Engine": llmAvailable ? "llm" : "template",
+      },
+    })
   } catch (err) {
     return new Response(`IRIS Error: ${String(err)}`, { status: 500 })
   }
@@ -533,14 +671,15 @@ export async function POST(req: Request) {
 export async function GET() {
   return Response.json({
     service: "IRIS Engine — Multi-Agent Orchestration",
-    version: "3.0.0",
-    engine: "NCLM Intent Classification + Contextual Response Generation",
+    version: "4.0.0",
+    engine: llmAvailable ? `${engineName} + Supabase context` : "Template + Supabase context (set GOOGLE_GENERATIVE_AI_API_KEY or OPENAI_API_KEY for LLM mode)",
     agents: ["AURA", "AIDEN", "OMEGA", "CHRONOS"],
+    llm_available: llmAvailable,
     intents: [
       "greeting", "challenge", "quantum_results", "explain_concept",
       "agent_info", "code_generate", "experiment_status", "braket",
       "ocelot", "breakthrough", "wormhole", "error_correction",
-      "architecture", "capabilities", "deploy", "general",
+      "architecture", "capabilities", "deploy", "predictions", "general",
     ],
     status: "operational",
   })

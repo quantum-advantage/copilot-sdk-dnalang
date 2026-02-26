@@ -9,6 +9,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.31",
     "@ai-sdk/openai": "^3.0.30",
     "@ai-sdk/react": "3.0.99",
     "@babel/core": "latest",
