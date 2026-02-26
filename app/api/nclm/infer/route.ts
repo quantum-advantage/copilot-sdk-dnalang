@@ -1,5 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 
+// LLM availability
+let llmAvailable = false
+let generateTextFn: ((opts: { model: unknown; system: string; prompt: string; maxTokens?: number }) => Promise<{ text: string }>) | null = null
+let nclmModel: unknown = null
+
+try {
+  const aiSdk = require("ai")
+  generateTextFn = aiSdk.generateText
+  if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    const googleSdk = require("@ai-sdk/google")
+    nclmModel = googleSdk.google("gemini-2.0-flash")
+    llmAvailable = true
+  } else if (process.env.OPENAI_API_KEY) {
+    const openaiSdk = require("@ai-sdk/openai")
+    nclmModel = openaiSdk.openai("gpt-4o-mini")
+    llmAvailable = true
+  }
+} catch {}
+
 // NC-LM Physics Constants
 const PHI_CRITICAL = 0.7734
 const LAMBDA_DECAY = 2.0
@@ -123,8 +142,40 @@ function hashString(str: string): number {
   return hash
 }
 
-// Simple response generation based on intent
-function generateResponse(prompt: string): string {
+// Simple response generation — LLM when available, keyword-based fallback
+async function generateResponse(prompt: string): Promise<string> {
+  // Try LLM first
+  if (llmAvailable && generateTextFn && nclmModel) {
+    try {
+      const url = process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || ""
+      const key = process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+      let expContext = ""
+      if (url && key) {
+        try {
+          const res = await fetch(
+            `${url}/rest/v1/quantum_experiments?select=protocol,backend,qubits_used,phi,status&order=created_at.desc&limit=10`,
+            { headers: { apikey: key, Authorization: `Bearer ${key}` } }
+          )
+          if (res.ok) {
+            const exps = await res.json()
+            expContext = "\n\nLive experiments:\n" + exps.map((e: Record<string, unknown>) =>
+              `- ${e.protocol} (${e.backend}, ${e.qubits_used}q, Φ=${Number(e.phi || 0).toFixed(3)})`
+            ).join("\n")
+          }
+        } catch {}
+      }
+
+      const result = await generateTextFn({
+        model: nclmModel,
+        system: `You are NCLM (Non-Classical Logic Model), the physics-grounded inference engine for DNA::}{::lang v51.843. You operate on a 6D CRSM manifold with pilot-wave correlations. Constants: θ_lock=51.843°, χ_pc=0.946, Φ_threshold=0.7734, Γ_critical=0.3. Be concise, technical, cite data.${expContext}`,
+        prompt,
+        maxTokens: 800,
+      })
+      return result.text
+    } catch {}
+  }
+
+  // Fallback to keyword-based responses
   const lowerPrompt = prompt.toLowerCase()
   
   if (lowerPrompt.includes("hello") || lowerPrompt.includes("hi")) {
@@ -217,7 +268,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate response
-    const output = generateResponse(prompt)
+    const output = await generateResponse(prompt)
     const inferenceTime = Date.now() - startTime
 
     // Create ledger entry
