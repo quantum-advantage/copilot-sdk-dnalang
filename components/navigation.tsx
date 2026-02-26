@@ -53,6 +53,7 @@ import {
   Microscope,
   Fingerprint,
   Cloud,
+  Telescope,
 } from "lucide-react"
 
 const navGroups = [
@@ -250,6 +251,13 @@ const navGroups = [
         icon: Cloud,
         description: "Amazon Braket × DNA-Lang",
         shortcut: "A B",
+      },
+      {
+        href: "/predictions",
+        label: "Physics Predictions",
+        icon: Telescope,
+        description: "12 falsifiable predictions",
+        shortcut: "A P",
       },
       {
         href: "/clinical-trials",

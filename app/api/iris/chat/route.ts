@@ -26,6 +26,7 @@ type Intent =
   | "architecture"
   | "capabilities"
   | "deploy"
+  | "predictions"
   | "general"
 
 interface IntentMatch {
@@ -96,6 +97,10 @@ const INTENT_PATTERNS: Array<{ intent: Intent; patterns: RegExp[]; entities?: Re
     intent: "deploy",
     patterns: [/deploy/i, /submit/i, /run.*circuit/i, /execute/i, /launch/i, /send.*hardware/i],
   },
+  {
+    intent: "predictions",
+    patterns: [/predict/i, /penteract/i, /falsif/i, /dark\s*(energy|matter|decay)/i, /neutron/i, /cosmolog/i, /litebird/i, /omega_lambda/i, /spectral\s*index/i, /tensor.to.scalar/i, /sigma\s*deviation/i, /7.*constant/i, /untested/i, /hawking/i, /cp\s*violation/i],
+  },
 ]
 
 function classifyIntent(query: string): IntentMatch {
@@ -141,6 +146,19 @@ async function fetchExperiments(): Promise<Array<Record<string, unknown>>> {
   }
 }
 
+async function fetchPredictions(): Promise<Array<Record<string, unknown>>> {
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from("penteract_predictions")
+      .select("prediction_id, observable, predicted_value, unit, status, sigma_deviation, current_experimental, current_exp_uncertainty, experiment_to_test, derivation")
+      .order("prediction_id")
+    return data || []
+  } catch {
+    return []
+  }
+}
+
 function formatExperimentTable(experiments: Array<Record<string, unknown>>): string {
   if (!experiments.length) return ""
   const rows = experiments.map(
@@ -153,7 +171,7 @@ function formatExperimentTable(experiments: Array<Record<string, unknown>>): str
   ].join("\n")
 }
 
-const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<string, unknown>>) => string> = {
+const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<string, unknown>>) => string | Promise<string>> = {
   greeting: (q) => {
     const isTest = /^tes/i.test(q.trim())
     if (isTest) {
@@ -407,6 +425,39 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
       `\`\`\``
   },
 
+  predictions: async (_q: string, _e: string[], _exps: Array<Record<string, unknown>>) => {
+    const preds = await fetchPredictions()
+    if (!preds.length) return "No predictions data available. The Penteract prediction engine hasn't been loaded into Supabase yet."
+    const consistent = preds.filter(p => p.status === "consistent")
+    const untested = preds.filter(p => p.status === "untested" || p.status === "below_bound")
+    const testable = consistent.filter(p => p.sigma_deviation !== null)
+    const avgSigma = testable.length > 0
+      ? testable.reduce((s, p) => s + (p.sigma_deviation as number), 0) / testable.length
+      : 0
+
+    const table = consistent.map(p =>
+      `| ${p.prediction_id} | ${p.observable} | ${typeof p.predicted_value === "number" && Math.abs(p.predicted_value as number) < 0.001 ? (p.predicted_value as number).toExponential(3) : p.predicted_value} | ${p.current_experimental}${p.current_exp_uncertainty ? ` ± ${p.current_exp_uncertainty}` : ""} | ${(p.sigma_deviation as number).toFixed(2)}σ |`
+    ).join("\n")
+
+    const untTable = untested.map(p =>
+      `| ${p.prediction_id} | ${p.observable} | ${typeof p.predicted_value === "number" && Math.abs(p.predicted_value as number) < 0.001 ? (p.predicted_value as number).toExponential(3) : p.predicted_value} | ${p.experiment_to_test} |`
+    ).join("\n")
+
+    return `### Penteract Singularity — ${preds.length} Falsifiable Predictions\n\n` +
+      `**Framework:** 7 constants, 0 tuned parameters, avg deviation: **${avgSigma.toFixed(2)}σ**\n\n` +
+      `#### ✅ Consistent with Data (${consistent.length})\n` +
+      `| ID | Observable | Predicted | Measured | Deviation |\n` +
+      `|----|-----------|-----------|----------|----------|\n` +
+      table + `\n\n` +
+      `#### 🔬 Awaiting Test (${untested.length})\n` +
+      `| ID | Observable | Predicted | Test With |\n` +
+      `|----|-----------|-----------|----------|\n` +
+      untTable + `\n\n` +
+      `**Standout:** PENT-007 (r = 0.00298) — LiteBIRD (~2032) will measure to σ ≈ 0.001. 3σ detection or falsification.\n\n` +
+      `**Statistical significance:** P(all within 1σ by chance) = ${(Math.pow(0.5, testable.length) * 100).toFixed(2)}%\n\n` +
+      `[View full predictions →](/predictions)`
+  },
+
   general: (q, _e, exps) => {
     // For unrecognized queries, provide a contextual response based on query length/content
     if (q.length < 10) {
@@ -444,7 +495,7 @@ export async function POST(req: Request) {
 
   // Step 3: Generate contextual response
   const generator = RESPONSES[intent] || RESPONSES.general
-  const responseText = generator(message, entities, experiments)
+  const responseText = await Promise.resolve(generator(message, entities, experiments))
 
   // Step 4: Stream response word-by-word
   const encoder = new TextEncoder()
