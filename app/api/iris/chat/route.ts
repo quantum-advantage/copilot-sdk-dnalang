@@ -148,12 +148,15 @@ async function fetchExperiments(): Promise<Array<Record<string, unknown>>> {
 
 async function fetchPredictions(): Promise<Array<Record<string, unknown>>> {
   try {
-    const supabase = await createClient()
-    const { data } = await supabase
-      .from("penteract_predictions")
-      .select("prediction_id, observable, predicted_value, unit, status, sigma_deviation, current_experimental, current_exp_uncertainty, experiment_to_test, derivation")
-      .order("prediction_id")
-    return data || []
+    const url = process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || ""
+    const key = process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+    if (!url || !key) return []
+    const res = await fetch(
+      `${url}/rest/v1/penteract_predictions?select=prediction_id,observable,predicted_value,unit,status,sigma_deviation,current_experimental,current_exp_uncertainty,experiment_to_test,derivation&order=prediction_id`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` }, next: { revalidate: 60 } }
+    )
+    if (!res.ok) return []
+    return await res.json()
   } catch {
     return []
   }
@@ -481,20 +484,21 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
 // ── MAIN HANDLER ───────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
-  const { message, history } = await req.json()
-  if (!message) {
-    return new Response("Message required", { status: 400 })
-  }
+  try {
+    const { message, history } = await req.json()
+    if (!message) {
+      return new Response("Message required", { status: 400 })
+    }
 
-  // Step 1: Classify intent
-  const { intent, entities } = classifyIntent(message)
+    // Step 1: Classify intent
+    const { intent, entities } = classifyIntent(message)
 
-  // Step 2: Fetch live data only when needed
-  const needsExperiments = ["quantum_results", "experiment_status", "challenge", "deploy", "general"].includes(intent)
-  const experiments = needsExperiments ? await fetchExperiments() : []
+    // Step 2: Fetch live data only when needed
+    const needsExperiments = ["quantum_results", "experiment_status", "challenge", "deploy", "general"].includes(intent)
+    const experiments = needsExperiments ? await fetchExperiments() : []
 
-  // Step 3: Generate contextual response
-  const generator = RESPONSES[intent] || RESPONSES.general
+    // Step 3: Generate contextual response
+    const generator = RESPONSES[intent] || RESPONSES.general
   const responseText = await Promise.resolve(generator(message, entities, experiments))
 
   // Step 4: Stream response word-by-word
@@ -521,6 +525,9 @@ export async function POST(req: Request) {
       "X-IRIS-Intent": intent,
     },
   })
+  } catch (err) {
+    return new Response(`IRIS Error: ${String(err)}`, { status: 500 })
+  }
 }
 
 export async function GET() {
