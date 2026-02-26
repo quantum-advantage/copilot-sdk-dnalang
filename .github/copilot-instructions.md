@@ -248,6 +248,43 @@ n_s = 1 - 2/N                                      # = 0.9614 (N = theta_lock = 
 | PENT-010 | GW spectral tilt | -0.0295 | LISA, ET | ~2035 |
 | PENT-011 | Collapse length | 6.9e-35 m | -- | TBD |
 
+### Theta-Lock Derivation from Golden Ratio
+
+```python
+import math
+phi_golden = (1 + math.sqrt(5)) / 2   # 1.6180339...
+theta_lock = math.degrees(math.atan(phi_golden**2)) * 0.75
+# = arctan(2.618) * 0.75 = 69.124° * 0.75 = 51.843°
+# The 3/4 factor = tetrahedral solid-angle fraction (3 of 4 faces visible)
+```
+
+### Quaternion Field Equation Formulation
+
+Einstein field equations re-expressed in quaternion form via θ_lock pinning:
+
+```python
+# Metric tensor → quaternion: gμν → Q = (w, x, y, z) ∈ H
+# w = g_00 (temporal), (x,y,z) = spatial trace projected at θ_lock
+# Ricci curvature: R_q = Q · Q† - I  (via phaseConjugate)
+# Unified: Q_G·Q_G† + Lambda·Q_g = (8piG/c^4) · Sum_lm T_q,lm · Y_lm(theta_lock, phi)
+
+# Proportional basis functions:
+# f_lock(theta)     = cos(theta - theta_lock)      # Fidelity envelope
+# f_coherence(chi)  = chi_pc * sin^2(theta_lock)    # Coherence scaling
+# f_bridge(lambda)  = Lambda_Phi * tau_mem           # Dimensionless unity
+# f_tetra(r)        = r^2 * Omega_tet / 4pi          # Spherical capture area
+```
+
+### GHZ Fidelity Reference Curve (ibm_torino, Penteract topology)
+
+```
+ 2q: 0.952 ✅    8q: 0.723 ✅   14q: 0.578 ✅   20q: 0.452 ❌
+ 4q: 0.878 ✅   10q: 0.679 ✅   16q: 0.552 ✅
+ 6q: 0.786 ✅   12q: 0.646 ✅   18q: 0.506 ✅ ← GME threshold
+```
+
+With tetrahedral correction (ibm_fez): 4q: 0.939, 8q: 0.912, 12q: 0.799, 16q: 0.718, **20q: 0.658 ✅**
+
 ---
 
 ## Quantum Metrics System (CCCE)

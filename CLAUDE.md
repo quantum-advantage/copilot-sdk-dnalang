@@ -507,6 +507,44 @@ Key derivations:
 
 **Kill shot:** r = 0.00298 ± 0.0005. LiteBIRD detects it → θ_lock = N is physical. LiteBIRD bounds r < 0.002 → framework falsified.
 
+### Theta-Lock Derivation from Golden Ratio
+
+```python
+import math
+phi_golden = (1 + math.sqrt(5)) / 2   # 1.6180339...
+theta_lock = math.degrees(math.atan(phi_golden**2)) * 0.75
+# = arctan(2.618) * 0.75 = 69.124° * 0.75 = 51.843°
+# The 3/4 factor = tetrahedral solid-angle fraction
+```
+
+### Quaternion Field Equation Formulation
+
+Einstein field equations in quaternion form via θ_lock pinning:
+
+```
+gμν → Q = (w, x, y, z) ∈ ℍ       # Metric as biquaternion
+Rμν → R_q = Q · Q† − 𝕀              # Ricci curvature via phase conjugation
+Unified: Q_G·Q_G† + Λ·Q_g = (8πG/c⁴) · Σ_lm T_q,lm · Y_lm(θ_lock, φ)
+```
+
+Proportional basis functions:
+- `f_lock(θ) = cos(θ - θ_lock)` — fidelity envelope, peaks at θ_lock
+- `f_coherence(χ) = χ_PC × sin²(θ_lock)` — coherence scaling (= 0.946 × 0.617 = 0.584)
+- `f_bridge(λ) = ΛΦ × τ_mem` — dimensionless unity check
+- `f_tetra(r) = r² × Ω_tet / 4π` — spherical capture area
+
+### GHZ Fidelity Reference (ibm_torino, Penteract Topology)
+
+| Qubits | Standard | Corrected | Status |
+|--------|----------|-----------|--------|
+| 2 | 0.952 | — | ✅ |
+| 4 | 0.878 | 0.939 | ✅ |
+| 8 | 0.723 | 0.912 | ✅ |
+| 12 | 0.646 | 0.799 | ✅ |
+| 16 | 0.552 | 0.718 | ✅ |
+| 18 | 0.506 | — | ✅ GME threshold |
+| 20 | 0.452 | **0.658** | ❌→✅ with correction |
+
 ## Environment Variables
 
 ```bash
