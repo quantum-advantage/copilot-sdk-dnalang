@@ -101,43 +101,31 @@ export default function BreakthroughsPage() {
 
       {/* Breakthrough Cards */}
       <div className="max-w-6xl mx-auto px-6 py-10">
+        {/* Zenodo-Published Breakthroughs */}
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+            Zenodo-Published Discoveries
+          </h2>
+          <p className="text-xs text-zinc-500 mb-4">Permanently archived with citable DOIs</p>
+        </div>
         <div className="grid gap-6">
-          {breakthroughs.map((bt) => (
-            <div
-              key={bt.id}
-              className="border border-zinc-800 rounded-xl bg-zinc-950/50 overflow-hidden hover:border-cyan-800/50 transition-colors"
-            >
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-cyan-400 font-mono text-sm font-bold">BT-{bt.id}</span>
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-800">
-                        {bt.status}
-                      </span>
-                    </div>
-                    <h2 className="text-xl font-semibold text-white">{bt.title}</h2>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-mono font-bold text-cyan-300">{bt.value}</div>
-                    <div className="text-xs text-zinc-500">{bt.significance}</div>
-                  </div>
-                </div>
+          {breakthroughs.filter(bt => bt.title.includes("Black Hole") || bt.title.includes("Geometric Resonance") || bt.title.includes("Phase Conjugate") || bt.title.includes("Consciousness") || bt.title.includes("Topology")).map((bt) => (
+            <BreakthroughCard key={bt.id} bt={bt} />
+          ))}
+        </div>
 
-                <p className="text-zinc-400 text-sm leading-relaxed mb-4">{bt.description}</p>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <Stat label="Φ (Phi)" value={bt.phi.toFixed(4)} highlight={bt.phi >= 0.7734} />
-                  <Stat label="Backend" value={bt.backend} />
-                  <Stat label="Qubits" value={String(bt.qubits)} />
-                  <Stat
-                    label="DOI"
-                    value={bt.doi.replace("10.5281/zenodo.", "z/")}
-                    href={`https://doi.org/${bt.doi}`}
-                  />
-                </div>
-              </div>
-            </div>
+        {/* Hardware-Confirmed Results */}
+        <div className="mt-12 mb-8">
+          <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            Hardware-Confirmed Quantum Advantages
+          </h2>
+          <p className="text-xs text-zinc-500 mb-4">Validated on IBM Quantum processors — ibm_fez &amp; ibm_torino</p>
+        </div>
+        <div className="grid gap-6">
+          {breakthroughs.filter(bt => bt.title.includes("XEB") || bt.title.includes("Teleportation") || bt.title.includes("GHZ") || bt.title.includes("Scrambling")).map((bt) => (
+            <BreakthroughCard key={bt.id} bt={bt} />
           ))}
         </div>
 
@@ -191,6 +179,41 @@ export default function BreakthroughsPage() {
             All data is cryptographically attested via SHA-256 chain hashes and stored in
             AWS DynamoDB + Supabase. Framework: DNA::{"}{"}::lang v51.843 | CAGE: 9HUP5
           </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BreakthroughCard({ bt }: { bt: Breakthrough }) {
+  return (
+    <div className="border border-zinc-800 rounded-xl bg-zinc-950/50 overflow-hidden hover:border-cyan-800/50 transition-colors">
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <span className="text-cyan-400 font-mono text-sm font-bold">BT-{bt.id}</span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-800">
+                {bt.status}
+              </span>
+            </div>
+            <h2 className="text-xl font-semibold text-white">{bt.title}</h2>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-mono font-bold text-cyan-300">{bt.value}</div>
+            <div className="text-xs text-zinc-500">{bt.significance}</div>
+          </div>
+        </div>
+        <p className="text-zinc-400 text-sm leading-relaxed mb-4">{bt.description}</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Stat label="Φ (Phi)" value={bt.phi.toFixed(4)} highlight={bt.phi >= 0.7734} />
+          <Stat label="Backend" value={bt.backend} />
+          <Stat label="Qubits" value={String(bt.qubits)} />
+          <Stat
+            label="DOI"
+            value={bt.doi.replace("10.5281/zenodo.", "z/")}
+            href={`https://doi.org/${bt.doi}`}
+          />
         </div>
       </div>
     </div>
