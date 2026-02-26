@@ -14,6 +14,7 @@ interface Breakthrough {
   status: string
   doi: string
   description: string
+  [key: string]: unknown
 }
 
 interface ZenodoRelease {
@@ -30,9 +31,21 @@ interface BreakthroughData {
   source: string
 }
 
+type FilterCategory = "all" | "published" | "hardware" | "advantage"
+
+function categorize(bt: Breakthrough): FilterCategory[] {
+  const cats: FilterCategory[] = []
+  if (bt.doi) cats.push("published")
+  if (bt.backend && bt.backend !== "simulator") cats.push("hardware")
+  const advKeys = ["xeb", "teleportation", "ghz", "scrambling", "advantage"]
+  if (advKeys.some(k => bt.title.toLowerCase().includes(k))) cats.push("advantage")
+  return cats
+}
+
 export default function BreakthroughsPage() {
   const [data, setData] = useState<BreakthroughData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<FilterCategory>("all")
 
   useEffect(() => {
     fetch("/api/breakthroughs")
@@ -63,6 +76,21 @@ export default function BreakthroughsPage() {
 
   const { breakthroughs, zenodo } = data
 
+  const filtered = filter === "all"
+    ? breakthroughs
+    : breakthroughs.filter(bt => categorize(bt).includes(filter))
+
+  const avgPhi = breakthroughs.reduce((s, b) => s + (b.phi || 0), 0) / breakthroughs.length
+  const hwCount = breakthroughs.filter(b => b.backend && b.backend !== "simulator").length
+  const maxQubits = Math.max(...breakthroughs.map(b => b.qubits || 0))
+
+  const filters: { key: FilterCategory; label: string; count: number }[] = [
+    { key: "all", label: "All", count: breakthroughs.length },
+    { key: "published", label: "DOI Published", count: breakthroughs.filter(b => b.doi).length },
+    { key: "hardware", label: "Hardware", count: hwCount },
+    { key: "advantage", label: "Quantum Advantage", count: breakthroughs.filter(b => categorize(b).includes("advantage")).length },
+  ]
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
@@ -79,6 +107,27 @@ export default function BreakthroughsPage() {
             Hardware-validated discoveries on IBM Quantum processors. Each breakthrough
             is permanently archived on Zenodo with a citable DOI.
           </p>
+
+          {/* Aggregate Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg px-4 py-3">
+              <div className="text-2xl font-mono font-bold text-cyan-300">{breakthroughs.length}</div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Discoveries</div>
+            </div>
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg px-4 py-3">
+              <div className="text-2xl font-mono font-bold text-emerald-300">{avgPhi.toFixed(4)}</div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Avg Φ</div>
+            </div>
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg px-4 py-3">
+              <div className="text-2xl font-mono font-bold text-amber-300">{maxQubits}</div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Max Qubits</div>
+            </div>
+            <div className="bg-zinc-900/60 border border-zinc-800 rounded-lg px-4 py-3">
+              <div className="text-2xl font-mono font-bold text-purple-300">{hwCount}/{breakthroughs.length}</div>
+              <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Hardware-Proven</div>
+            </div>
+          </div>
+
           <div className="flex gap-4 mt-6">
             <a
               href={zenodo.v1_1.url}
@@ -101,33 +150,35 @@ export default function BreakthroughsPage() {
 
       {/* Breakthrough Cards */}
       <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Zenodo-Published Breakthroughs */}
-        <div className="mb-8">
-          <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-            Zenodo-Published Discoveries
-          </h2>
-          <p className="text-xs text-zinc-500 mb-4">Permanently archived with citable DOIs</p>
+        {/* Filter Tabs */}
+        <div className="flex gap-2 mb-8 flex-wrap">
+          {filters.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-mono transition-colors ${
+                filter === f.key
+                  ? "bg-cyan-900/50 text-cyan-300 border border-cyan-700"
+                  : "bg-zinc-900/50 text-zinc-400 border border-zinc-800 hover:border-zinc-600"
+              }`}
+            >
+              {f.label} <span className="text-xs opacity-60">({f.count})</span>
+            </button>
+          ))}
         </div>
+
+        {/* Cards */}
         <div className="grid gap-6">
-          {breakthroughs.filter(bt => bt.title.includes("Black Hole") || bt.title.includes("Geometric Resonance") || bt.title.includes("Phase Conjugate") || bt.title.includes("Consciousness") || bt.title.includes("Topology")).map((bt) => (
+          {filtered.map((bt) => (
             <BreakthroughCard key={bt.id} bt={bt} />
           ))}
         </div>
 
-        {/* Hardware-Confirmed Results */}
-        <div className="mt-12 mb-8">
-          <h2 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-            Hardware-Confirmed Quantum Advantages
-          </h2>
-          <p className="text-xs text-zinc-500 mb-4">Validated on IBM Quantum processors — ibm_fez &amp; ibm_torino</p>
-        </div>
-        <div className="grid gap-6">
-          {breakthroughs.filter(bt => bt.title.includes("XEB") || bt.title.includes("Teleportation") || bt.title.includes("GHZ") || bt.title.includes("Scrambling")).map((bt) => (
-            <BreakthroughCard key={bt.id} bt={bt} />
-          ))}
-        </div>
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-zinc-500 font-mono">
+            No breakthroughs match this filter.
+          </div>
+        )}
 
         {/* Universal Constants */}
         <div className="mt-12 border border-amber-900/50 rounded-xl bg-amber-950/10 p-6">
@@ -186,16 +237,29 @@ export default function BreakthroughsPage() {
 }
 
 function BreakthroughCard({ bt }: { bt: Breakthrough }) {
+  const isHardware = bt.backend && bt.backend !== "simulator"
+  const aboveThreshold = bt.phi >= 0.7734
+
   return (
-    <div className="border border-zinc-800 rounded-xl bg-zinc-950/50 overflow-hidden hover:border-cyan-800/50 transition-colors">
+    <div className="border border-zinc-800 rounded-xl bg-zinc-950/50 overflow-hidden hover:border-cyan-800/50 transition-colors group">
       <div className="p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center gap-3 mb-1 flex-wrap">
               <span className="text-cyan-400 font-mono text-sm font-bold">BT-{bt.id}</span>
               <span className="px-2 py-0.5 text-xs rounded-full bg-emerald-900/50 text-emerald-300 border border-emerald-800">
                 {bt.status}
               </span>
+              {isHardware && (
+                <span className="px-2 py-0.5 text-xs rounded-full bg-purple-900/40 text-purple-300 border border-purple-800/50">
+                  ⚛ Hardware
+                </span>
+              )}
+              {aboveThreshold && (
+                <span className="px-2 py-0.5 text-xs rounded-full bg-amber-900/40 text-amber-300 border border-amber-800/50">
+                  Φ ≥ 0.7734
+                </span>
+              )}
             </div>
             <h2 className="text-xl font-semibold text-white">{bt.title}</h2>
           </div>

@@ -54,6 +54,7 @@ import {
   Fingerprint,
   Cloud,
   Telescope,
+  Server,
 } from "lucide-react"
 
 const navGroups = [
@@ -251,6 +252,13 @@ const navGroups = [
         icon: Cloud,
         description: "Amazon Braket × DNA-Lang",
         shortcut: "A B",
+      },
+      {
+        href: "/aws-integration",
+        label: "AWS Infrastructure",
+        icon: Server,
+        description: "Lambda, DynamoDB, S3 — Live Health",
+        shortcut: "A W",
       },
       {
         href: "/predictions",
