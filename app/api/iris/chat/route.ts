@@ -90,16 +90,16 @@ const INTENT_PATTERNS: Array<{ intent: Intent; patterns: RegExp[]; entities?: Re
     patterns: [/architect/i, /stack/i, /system/i, /infrastr/i, /pipeline/i, /overview/i, /how.*work/i],
   },
   {
+    intent: "predictions",
+    patterns: [/predict/i, /penteract/i, /falsif/i, /dark\s*(energy|matter|decay)/i, /neutron/i, /cosmolog/i, /litebird/i, /omega_lambda/i, /spectral\s*index/i, /tensor.to.scalar/i, /sigma\s*deviation/i, /7.*constant/i, /untested/i, /hawking/i, /cp\s*violation/i, /pent-\d/i],
+  },
+  {
     intent: "capabilities",
     patterns: [/capabilit/i, /feature/i, /help/i, /menu/i, /what.*do/i, /command/i, /option/i],
   },
   {
     intent: "deploy",
     patterns: [/deploy/i, /submit/i, /run.*circuit/i, /execute/i, /launch/i, /send.*hardware/i],
-  },
-  {
-    intent: "predictions",
-    patterns: [/predict/i, /penteract/i, /falsif/i, /dark\s*(energy|matter|decay)/i, /neutron/i, /cosmolog/i, /litebird/i, /omega_lambda/i, /spectral\s*index/i, /tensor.to.scalar/i, /sigma\s*deviation/i, /7.*constant/i, /untested/i, /hawking/i, /cp\s*violation/i],
   },
 ]
 
