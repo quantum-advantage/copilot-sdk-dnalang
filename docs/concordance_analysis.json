@@ -1,0 +1,17 @@
+{
+  "framework": "DNA::}{::lang v51.843",
+  "analysis": "concordance",
+  "n_predictions_total": 6,
+  "n_predictions_independent": 4,
+  "avg_sigma_all": 0.62,
+  "avg_sigma_independent": 0.6,
+  "chi2": 1.5558,
+  "chi2_dof": 4,
+  "chi2_pvalue": 0.1833,
+  "effective_params": 4,
+  "effective_dof": 0,
+  "n18_crossing_correct": true,
+  "naive_5sigma_claim_valid": false,
+  "strongest_argument": "n=18 out-of-sample prediction",
+  "honest_verdict": "The naive '5.2\u03c3' claim is incorrect \u2014 it overcounts predictions (4 independent, not 7) and ignores look-elsewhere effects. With 4 independent predictions from 4 effective parameters, the system has 0 degrees of freedom \u2014 concordance is a consistency check, not a statistical test. \u03c7\u00b2=1.56 with 4 DoF places results at the 18th percentile \u2014 good but not extraordinary. HOWEVER: the n=18 out-of-sample prediction, the sensitivity fragility, and the geometric identity (sin(\u03b8_lock)\u2248\u03c0/4) are genuinely significant independent of concordance statistics."
+}
