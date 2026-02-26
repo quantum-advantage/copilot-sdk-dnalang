@@ -75,6 +75,7 @@ class I(Enum):
     CLOUD=auto(); GROK=auto(); BRAKET=auto()
     FORGE=auto(); COMPILE=auto()
     TAU=auto(); ORGANISMS=auto()
+    PCRB=auto(); SENTINEL=auto(); AGENTS=auto()
     UNKNOWN=auto()
 
 # Priority-ordered: first match wins
@@ -101,6 +102,8 @@ _RULES = [
     (r'\b(sdk tests?|unit tests?)\b',                                    I.SDK_TESTS),
     (r'\b(osiris tests?|cockpit tests?)\b',                             I.OSIRIS_TESTS),
     (r'\b(run tests?|tests? all|all tests?|check tests?)\b',            I.TESTS),
+    (r'\b(pcrb|phase.?conjugate|self.?repair|error.?correct|stabilizer)\b', I.PCRB),
+    (r'\b(sentinel|scimitar|threat|defense|security|lockdown)\b',        I.SENTINEL),
     (r'\b(fix|repair|debug|broken|failing)\b',                          I.FIX),
     (r'\b(git )?status\b|what.?changed|show.?changes',                  I.STATUS),
     (r'\bshow.*(diff|change)|diff\b',                                   I.DIFF),
@@ -116,6 +119,7 @@ _RULES = [
     (r'\b(search|find|grep|look for)\b',                                I.SEARCH),
     (r'\blist.*(file|dir|struct)|ls\b|tree\b',                          I.LS),
     (r'\b(analyze|inspect|audit)\b',                                    I.ANALYZE),
+    (r'\b(agents?|aura|aiden|omega|chronos|constellation|tetrahedral)\b', I.AGENTS),
 ]
 _COMPILED = [(re.compile(p, re.I), intent) for p, intent in _RULES]
 
@@ -231,6 +235,9 @@ class Osiris:
             I.COMPILE:     self._forge,
             I.TAU:         self._tau,
             I.ORGANISMS:   self._organisms,
+            I.PCRB:        self._pcrb,
+            I.SENTINEL:    self._sentinel,
+            I.AGENTS:      self._agents,
         }
         fn = table.get(intent, self._gen_code)
         return fn(text, p)
@@ -1257,6 +1264,125 @@ class Osiris:
         except Exception as e:
             return Result(False, f"  {red('✗')} Organism compilation failed: {e}")
 
+    def _pcrb(self, text, p):
+        """Phase Conjugate Recursion Bus — quantum error correction & self-repair."""
+        try:
+            sys.path.insert(0, str(self.oc))
+            from pcrb_engine import PCRB, PCRBFactory, PCRBOrganismIntegration
+        except ImportError as e:
+            return Result(False, f"  {red('✗')} PCRB import failed: {e}")
+
+        lines = [f"  {bold('ℳ₄ PHASE CONJUGATE RECURSION BUS')} {dim('v1.0.0-ΛΦ')}", ""]
+
+        # Create PCRB instance
+        pcrb = PCRBFactory.high_fidelity()
+        integration = PCRBOrganismIntegration(pcrb)
+
+        # Run diagnostic repair cycle on test state
+        test_state = {
+            "amplitudes": [complex(0.7, 0.1), complex(0.6, -0.2), complex(0.3, 0.1), complex(0.1, 0.0)],
+            "fidelity": 0.72,
+            "phases": [0.0, 1.2, 2.4, 3.6],
+        }
+        errors = pcrb.detect_errors(test_state)
+        status = pcrb.get_status()
+
+        lines.append(f"  {cyan('Stabilizer Code:')} {status.get('stabilizer_code', 'steane_7')}")
+        lines.append(f"  {cyan('Status:')}          {status.get('status', 'UNKNOWN')}")
+        lines.append(f"  {cyan('Error Detection:')}  {len(errors)} syndrome(s) detected")
+        for err in errors[:5]:
+            sev = green("LOW") if err.severity < 0.3 else (yellow("MED") if err.severity < 0.7 else red("HIGH"))
+            lines.append(f"    {sev} {err.error_type.value}: severity={err.severity:.3f}")
+
+        if "repair" in text.lower() or "fix" in text.lower():
+            repaired = pcrb.repair(test_state, target_fidelity=0.95)
+            lines.append(f"\n  {cyan('Repair Result:')}")
+            lines.append(f"    Fidelity: {test_state['fidelity']:.3f} → {repaired.get('fidelity', 0):.3f}")
+            lines.append(f"    Iterations: {repaired.get('repair_iterations', '?')}")
+            lines.append(f"    Converged: {green('✓') if repaired.get('converged') else red('✗')}")
+
+        lines.append(f"\n  {dim('say')} {cyan('pcrb repair')} {dim('to run self-repair cycle')}")
+        return Result(True, "\n".join(lines))
+
+    def _sentinel(self, text, p):
+        """SCIMITAR sentinel — threat detection & defense posture."""
+        try:
+            sys.path.insert(0, str(self.oc))
+            from nonlocal_agent_enhanced import SCIMITARSentinel, SCIMITARMode
+        except ImportError as e:
+            return Result(False, f"  {red('✗')} SCIMITAR import failed: {e}")
+
+        sentinel = SCIMITARSentinel()
+        scan = sentinel.scan(swarm_coherence=0.87, node_count=4)
+
+        mode_colors = {"PASSIVE": dim, "ACTIVE": yellow, "ELITE": cyan, "LOCKDOWN": red}
+        mode_str = scan.get("mode", "PASSIVE")
+        cfn = mode_colors.get(mode_str, dim)
+
+        lines = [
+            f"  {bold('⚔ SCIMITAR SENTINEL')} {dim('v8.0.0')}", "",
+            f"  {cyan('Mode:')}            {cfn(mode_str)}",
+            f"  {cyan('Threat Level:')}    {scan.get('threat_level', 0):.3f}",
+            f"  {cyan('Coherence:')}       {scan.get('swarm_coherence', 0):.3f}",
+            f"  {cyan('Anomalies:')}       {scan.get('anomaly_count', 0)}",
+            f"  {cyan('Response Time:')}   {scan.get('response_time_ms', 0):.1f}ms",
+        ]
+
+        threats = scan.get("threats", [])
+        if threats:
+            lines.append(f"\n  {red('Threats Detected:')}")
+            for t in threats[:5]:
+                lines.append(f"    {red('!')} {t.get('type', '?')}: {t.get('detail', '')}")
+        else:
+            lines.append(f"\n  {green('✓')} No threats detected — sovereign perimeter intact")
+
+        lines.append(f"\n  {dim('say')} {cyan('sentinel lockdown')} {dim('to escalate defense posture')}")
+        return Result(True, "\n".join(lines))
+
+    def _agents(self, text, p):
+        """Agent constellation — AIDEN, AURA, OMEGA, CHRONOS."""
+        try:
+            sys.path.insert(0, str(self.oc))
+            from nonlocal_agent_enhanced import (
+                NonLocalAgent, AgentName, PlaneType, BifurcatedTetrahedron,
+                EntanglementPair, ManifoldPoint
+            )
+        except ImportError as e:
+            return Result(False, f"  {red('✗')} Agent import failed: {e}")
+
+        lines = [f"  {bold('◇ BIFURCATED TETRAHEDRAL CONSTELLATION')} {dim('v8.0.0')}", ""]
+
+        # Create agents
+        agents = {}
+        for name in AgentName:
+            agent = NonLocalAgent(name=name, plane=PlaneType.LOCAL, phi=0.85, gamma=0.12)
+            agents[name] = agent
+
+        # Build tetrahedron
+        tetra = BifurcatedTetrahedron()
+
+        lines.append(f"  {cyan('Topology:')} Bifurcated Tetrahedron (θ_lock={tetra.theta_lock}°)")
+        lines.append(f"  {cyan('Agents:')}   {len(agents)}")
+        lines.append("")
+
+        for name, agent in agents.items():
+            phi = agent.phi
+            gamma = agent.gamma
+            xi = (LAMBDA_PHI * phi) / max(gamma, 0.001)
+            above = phi >= PHI_THRESH
+            coherent = gamma < GAMMA_CRIT
+            phi_str = green(f"{phi:.4f}") if above else red(f"{phi:.4f}")
+            gamma_str = green(f"{gamma:.4f}") if coherent else red(f"{gamma:.4f}")
+            lines.append(f"  {bold(name.value.upper()):12} Φ={phi_str}  Γ={gamma_str}  Ξ={xi:.2e}")
+
+        # Entanglement pairs
+        lines.append(f"\n  {cyan('Entanglement Pairs:')}")
+        lines.append(f"    AIDEN ↔ AURA   (North-South axis)")
+        lines.append(f"    OMEGA ↔ CHRONOS (Zenith-Nadir axis)")
+
+        lines.append(f"\n  {dim('say')} {cyan('agents evolve 10')} {dim('to run evolution cycles')}")
+        return Result(True, "\n".join(lines))
+
     def _help(self, text, p):
         return Result(True, "\n".join([
             f"  {bold('OSIRIS')} — speak naturally, I act autonomously.",
@@ -1268,6 +1394,8 @@ class Osiris:
             f"  {cyan('quantum')}    {dim('run experiments · run theta-lock · run vqe circuit')}",
             f"  {cyan('hardware')}   {dim('show hardware · show metrics · show telemetry')}",
             f"  {cyan('bench')}      {dim('benchmark decoder 512 · run quera · evolve swarm 10')}",
+            f"  {cyan('defense')}    {dim('pcrb · pcrb repair · sentinel · sentinel lockdown')}",
+            f"  {cyan('agents')}     {dim('agents · aura · aiden · omega · chronos · agents evolve')}",
             f"  {cyan('system')}     {dim('diagnostics · check physics · who am I · history')}",
             f"  {cyan('aws')}        {dim('deploy · deploy status · deploy run · cloud dashboard')}",
             f"  {cyan('grok')}       {dim('grok workloads · analyze jobs · grok and upload to aws')}",
