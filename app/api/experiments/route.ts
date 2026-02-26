@@ -31,7 +31,8 @@ export async function GET() {
         total: experiments.length,
         experiments: experiments.map((e: any) => ({
           id: e.id,
-          protocol_name: e.protocol_name,
+          experiment_id: e.experiment_id,
+          protocol_name: e.protocol || e.experiment_id,
           backend: e.backend,
           qubits_used: e.qubits_used,
           shots: e.shots,
@@ -41,8 +42,8 @@ export async function GET() {
           chi_pc: e.chi_pc,
           status: e.status,
           created_at: e.created_at,
-          proof_hash: e.proof_hash,
-          raw_results: e.raw_results,
+          proof_hash: e.integrity_hash,
+          job_id: e.job_id,
         })),
         aggregate: {
           avg_phi: avgPhi,
