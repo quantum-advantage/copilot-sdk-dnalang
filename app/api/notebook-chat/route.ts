@@ -20,22 +20,40 @@ function getModel() {
 export const maxDuration = 60
 
 export async function POST(req: Request) {
-  const model = getModel()
-  if (!model) {
-    return new Response("No LLM API key configured", { status: 503 })
-  }
+  try {
+    const model = getModel()
+    if (!model) {
+      return new Response("No LLM API key configured", { status: 503 })
+    }
 
-  const { messages } = await req.json()
+    const body = await req.json()
+    const rawMessages = body.messages || []
 
-  // Normalize messages to simple {role, content} format
-  const normalizedMessages = (messages || []).map((m: { role: string; content: string }) => ({
-    role: m.role === "assistant" || m.role === "system" ? m.role : "user",
-    content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-  }))
+    // Normalize messages to simple {role, content} format
+    // useChat sends parts-based messages; extract text content
+    const normalizedMessages = rawMessages.map((m: Record<string, unknown>) => {
+      let content = ""
+      if (typeof m.content === "string") {
+        content = m.content
+      } else if (Array.isArray(m.parts)) {
+        content = (m.parts as Array<Record<string, unknown>>)
+          .filter((p) => p.type === "text")
+          .map((p) => String(p.text || ""))
+          .join("")
+      } else if (typeof m.text === "string") {
+        content = m.text as string
+      } else {
+        content = JSON.stringify(m.content || m.text || "")
+      }
+      return {
+        role: m.role === "assistant" || m.role === "system" ? m.role : "user",
+        content,
+      }
+    })
 
-  const result = streamText({
-    model,
-    system: `You are AURA, the sovereign AI development assistant for the DNA-Lang quantum computing platform.
+    const result = streamText({
+      model,
+      system: `You are AURA, the sovereign AI development assistant for the DNA-Lang quantum computing platform.
 
 You have deep knowledge of:
 - **DNA-Lang**: A biological computing language that uses codons, organisms, and evolutionary paradigms for quantum circuit design
@@ -65,4 +83,12 @@ Be concise, precise, and technical. Use code blocks with language tags. Referenc
   })
 
   return result.toDataStreamResponse()
+  } catch (error: unknown) {
+    console.error("notebook-chat error:", error)
+    const msg = error instanceof Error ? error.message : "Unknown error"
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    })
+  }
 }
