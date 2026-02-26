@@ -394,7 +394,7 @@ class MeshnetExecutor:
         try:
             result = subprocess.run(['adb', 'devices'], capture_output=True, timeout=5)
             return result.returncode == 0
-        except:
+        except (FileNotFoundError, OSError):
             return False
 
     def execute_local(
@@ -554,7 +554,7 @@ class ScimitarElite:
             # Check for ckb-next daemon
             result = subprocess.run(['pgrep', 'ckb-next'], capture_output=True)
             return result.returncode == 0
-        except:
+        except (FileNotFoundError, OSError):
             return False
 
     def set_button_macro(self, button: int, action: str) -> Tuple[bool, str]:

@@ -15,11 +15,14 @@ Usage:
 """
 
 import json
+import logging
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Set
 from pathlib import Path
 import asyncio
+
+logger = logging.getLogger(__name__)
 
 # DNALang constants
 LAMBDA_PHI = 2.176435e-8  # s⁻¹ - Cosmic coherence rate

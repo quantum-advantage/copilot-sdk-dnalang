@@ -1,10 +1,13 @@
 """Consciousness scaling measurement and analysis."""
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy import stats
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass

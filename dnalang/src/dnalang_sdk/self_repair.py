@@ -12,6 +12,7 @@ import re
 import json
 import logging
 import subprocess
+import sys
 import traceback
 from pathlib import Path
 from typing import Optional, Dict, List, Tuple, Any
@@ -353,7 +354,6 @@ class SelfRepairEngine:
                 if site_pkg:
                     path = str(site_pkg[0])
                     if path not in sys.path:
-                        import sys
                         sys.path.insert(0, path)
                     self._log(f"{_GR}✓{_R} Added {venv_name} to path")
                     return True, f"Added {venv_name}/site-packages to path"

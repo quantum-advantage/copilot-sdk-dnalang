@@ -454,7 +454,7 @@ class BackendCalibration:
                 try:
                     error = props.gate_error(gate, pair)
                     errors.append(error)
-                except:
+                except Exception:
                     pass
         
         return np.mean(errors) if errors else 0.01

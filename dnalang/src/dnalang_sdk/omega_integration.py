@@ -19,6 +19,7 @@ DFARS 15.6 Compliant | SDVOSB
 
 import asyncio
 import json
+import logging
 import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
@@ -26,6 +27,8 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 from pathlib import Path
 import math
+
+logger = logging.getLogger(__name__)
 
 # Physical constants (zero fitting parameters)
 PHI = 1.618033988749895           # Golden Ratio

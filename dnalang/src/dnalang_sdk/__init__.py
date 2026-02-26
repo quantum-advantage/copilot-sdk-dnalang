@@ -25,6 +25,11 @@ __author__ = "Devin Phillip Davis / Agile Defense Systems"
 __license__ = "MIT"
 __framework__ = "DNA::}{::lang v51.843"
 
+# Library logging best practice: add NullHandler so apps without
+# logging config don't see "No handlers could be found" warnings.
+import logging as _logging
+_logging.getLogger(__name__).addHandler(_logging.NullHandler())
+
 # ═══════════════════════════════════════════════════════════════════════
 # Core Client & Config
 # ═══════════════════════════════════════════════════════════════════════
