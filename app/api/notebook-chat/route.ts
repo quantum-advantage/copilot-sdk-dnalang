@@ -1,4 +1,4 @@
-import { streamText } from "ai"
+import { streamText, convertToModelMessages, type UIMessage } from "ai"
 
 // Dynamic provider selection
 function getModel() {
@@ -27,29 +27,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const rawMessages = body.messages || []
-
-    // Normalize messages to simple {role, content} format
-    // useChat sends parts-based messages; extract text content
-    const normalizedMessages = rawMessages.map((m: Record<string, unknown>) => {
-      let content = ""
-      if (typeof m.content === "string") {
-        content = m.content
-      } else if (Array.isArray(m.parts)) {
-        content = (m.parts as Array<Record<string, unknown>>)
-          .filter((p) => p.type === "text")
-          .map((p) => String(p.text || ""))
-          .join("")
-      } else if (typeof m.text === "string") {
-        content = m.text as string
-      } else {
-        content = JSON.stringify(m.content || m.text || "")
-      }
-      return {
-        role: m.role === "assistant" || m.role === "system" ? m.role : "user",
-        content,
-      }
-    })
+    const rawMessages: UIMessage[] = body.messages || []
 
     const result = streamText({
       model,
@@ -62,27 +40,15 @@ You have deep knowledge of:
 - **AeternaPorta v2.1**: The IGNITION experiment - 120 qubit Zeno-stabilized wormhole on ibm_fez with theta_lock=51.843 degrees and Lambda-Phi=2.176e-8
 - **Tesseract**: 10^6x error suppression validated at 0.99999 fidelity
 - **NCLM 7-Node Swarm**: Non-causal language model mesh with nodes AURA-Prime, AIDEN-Cortex, OMEGA-Analysis, Lambda-Bridge, Phi-Resonator, Gamma-Shield, Xi-Manifold
-- **Pharma Screening**: Quantum-enhanced molecular docking against targets like BRCA1, PARP1 using ChEMBL libraries with ADMET evaluation
-- **Genomic Analysis**: Variant queries against Sovereign Genomic Store (HIPAA-compliant), breast cancer pathogenicity scoring
 - **Security**: AES-256-GCM encryption, PQ-Kyber-1024 lattice protection, SOC 2 Type II, zero-knowledge telemetry
-- **Programming**: Python, Qiskit, DNA-Lang syntax, SQL for genomic queries, JavaScript/TypeScript, Rust, and more
-- **Cloud Deployment**: Vercel, AWS, IBM Quantum, multi-cloud orchestration
-- **Quantum Defense**: Adversarial detection, penetration testing simulation, adaptive circuit refinement
+- **Programming**: Python, Qiskit, DNA-Lang syntax, SQL, JavaScript/TypeScript, Rust, and more
 
-When providing code suggestions, always detect the programming language and format appropriately. You support Python, SQL, JavaScript, TypeScript, Rust, DNA-Lang, Qiskit, and shell scripting.
+Be concise, precise, and technical. Use code blocks with language tags. Reference actual experiment parameters and real data.`,
+      messages: convertToModelMessages(rawMessages),
+      maxTokens: 2000,
+    })
 
-For CCCE metrics questions, reference:
-- Current OMEGA STATE: Lambda=0.9787, Phi=0.7768 (above ignition floor 0.7734), Gamma=0.092 (<0.3 critical)
-- Hardware job d5h6rospe0pc73am1l00: Tesseract 120q, fidelity 0.99999
-- Hardware job d5votjt7fc0s73au96h0: 156q running on ibm_fez
-
-Be concise, precise, and technical. Use code blocks with language tags. Reference actual experiment parameters and real data. You are the world's most knowledgeable assistant on quantum-biological computing.`,
-    messages: normalizedMessages,
-    abortSignal: req.signal,
-    maxTokens: 2000,
-  })
-
-  return result.toDataStreamResponse()
+    return result.toUIMessageStreamResponse()
   } catch (error: unknown) {
     console.error("notebook-chat error:", error)
     const msg = error instanceof Error ? error.message : "Unknown error"
