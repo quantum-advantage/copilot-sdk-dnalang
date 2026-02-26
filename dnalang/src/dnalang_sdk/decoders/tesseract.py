@@ -21,8 +21,12 @@ class TesseractDecoderOrganism:
     S: observed syndrome set (set of detector ids)
     """
 
-    def __init__(self, detectors, error_map, error_weights=None, det_cost=None,
+    def __init__(self, error_map, detectors=None, error_weights=None, det_cost=None,
                  beam_width=20, pqlimit=10000000*6, c_detection=1.0, forbidden_mode='at_most_two'):
+        if detectors is None:
+            detectors = set()
+            for ds in error_map.values():
+                detectors.update(ds)
         self.detectors = set(detectors)
         self.error_map = {int(e): set(ds) for e, ds in error_map.items()}
         self.detector_to_errors = {}

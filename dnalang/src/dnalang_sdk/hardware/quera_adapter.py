@@ -36,7 +36,7 @@ class QuEraCorrelatedAdapter:
                 pqlimit=pqlimit,
                 forbidden_mode=forbidden_mode,
             )
-            logger.info(f"QuEraCorrelatedAdapter initialized: atoms={self.atoms} rounds={self.rounds}")
+            logger.debug(f"QuEraCorrelatedAdapter initialized: atoms={self.atoms} rounds={self.rounds}")
         except Exception:
             logger.exception('Failed to initialize QuEraCorrelatedAdapter')
             raise
@@ -99,6 +99,26 @@ class QuEraCorrelatedAdapter:
 
     def decode_merged(self, merged_syndrome, beam=None, pqlimit=None):
         return self.decoder.decode(merged_syndrome, beam=beam, pqlimit=pqlimit)
+
+    def run_dry(self, per_detector_noise=0.02):
+        """Run a complete dry-run: generate syndromes, merge, decode. Returns result dict."""
+        S_rounds, logical_errors, S_true = self.generate_round_syndromes(
+            per_detector_noise=per_detector_noise)
+        merged = self.correlated_merge_rounds(S_rounds)
+        try:
+            decode_result = self.decode_merged(merged)
+        except Exception:
+            logger.exception('Decoder failed during dry run')
+            decode_result = {'error': 'decoder_failed'}
+        return {
+            'atoms': self.atoms,
+            'rounds': self.rounds,
+            'logical_errors': sorted(logical_errors),
+            'S_true': sorted(S_true),
+            'merged': sorted(merged),
+            'decoded': decode_result,
+            'timestamp': time.time(),
+        }
 
 
 def load_config():
