@@ -98,6 +98,14 @@ def patch_and_launch():
 
     except Exception as e:
         print(f"⚠ Physics tools patch: {e}", file=sys.stderr)
+        # Attempt self-repair: clear caches, re-check syntax
+        try:
+            from dnalang_sdk.self_repair import OsirisInferenceEngine
+            engine = OsirisInferenceEngine()
+            for msg in engine.resolve_on_boot():
+                print(f"  {msg}", file=sys.stderr)
+        except Exception:
+            pass
 
     # Launch the real OSIRIS CLI
     osiris_bin = os.path.join(sdk_root, "bin", "osiris")

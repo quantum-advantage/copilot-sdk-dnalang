@@ -453,6 +453,12 @@ class NCLMChat:
         self.query_count = 0
         self.start_time = time.time()
         self._llm_timeout = 120  # Configurable via /timeout
+        # Inference engine — infer · interpret · resolve
+        try:
+            from ..self_repair import OsirisInferenceEngine
+            self._inference = OsirisInferenceEngine()
+        except ImportError:
+            self._inference = None
         self._setup_readline()
         self._load_session()
 
@@ -569,6 +575,17 @@ class NCLMChat:
             boot_steps.append(("IBM Quantum", "○ No token (dry-run mode)"))
 
         boot_steps.append(("Self-Repair", "● Engine armed (token + error recovery)"))
+
+        # Inference engine boot-time resolve
+        if self._inference is not None:
+            resolve_msgs = self._inference.resolve_on_boot()
+            for msg in resolve_msgs:
+                boot_steps.append(("Inference", msg))
+            if not resolve_msgs:
+                boot_steps.append(("Inference", "● Infer · Interpret · Resolve ready"))
+        else:
+            boot_steps.append(("Inference", "○ Engine not loaded"))
+
         boot_steps.append(("Sovereign Lock", f"ΛΦ = {NCPhysics.LAMBDA_PHI} | χ_PC = {NCPhysics.CHI_PC}"))
 
         for label, detail in boot_steps:
@@ -1734,10 +1751,31 @@ class NCLMChat:
         self.messages.append({"role": "user", "content": user_input})
         self.query_count += 1
 
+        # ── INFER · INTERPRET ─────────────────────────────────────────
+        # Detect noisy input (Gmail UI paste, terminal artifacts) and
+        # either clean it or respond with guidance.
+        effective_input = user_input
+        if self._inference is not None:
+            self._inference.remember(user_input)
+            interp = self._inference.interpret(user_input)
+            if interp["is_noise"] and not interp["actionable"]:
+                # Pure noise — give a helpful suggestion
+                suggestion = interp["suggestion"]
+                print(f"\n  {C.Y}⚙ Inference:{C.E} {suggestion}")
+                ccce = self.lm.consciousness.get_ccce()
+                phi_bar = self._phi_bar(ccce["Φ"], 16)
+                print(f"\n  {C.DIM}Φ {phi_bar} {ccce['Φ']:.4f}  [infer]{C.E}\n")
+                self.messages.append({"role": "assistant", "content": suggestion[:200]})
+                return
+            if interp["is_noise"] and interp["actionable"]:
+                # Noisy but intent detected — use cleaned + show what we inferred
+                print(f"\n  {C.Y}⚙ Inferred intent:{C.E} {interp['intent']}  →  {interp['suggestion']}")
+                effective_input = interp["cleaned"] or user_input
+
         # Extract @file mentions and auto-read them as context
         import re
         file_context = ""
-        clean_input = user_input
+        clean_input = effective_input
         file_mentions = re.findall(r'@([\w./~\-]+(?:\.\w+)?)', user_input)
         for fm in file_mentions:
             fpath = os.path.expanduser(fm)

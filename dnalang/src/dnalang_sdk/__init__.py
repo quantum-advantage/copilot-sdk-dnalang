@@ -235,6 +235,7 @@ from .hardware import WorkloadExtractor, SubstratePipeline
 from .self_repair import (
     SelfRepairEngine,
     ErrorSignature,
+    OsirisInferenceEngine,
     discover_ibm_token,
     ensure_ibm_token,
     export_token,
@@ -339,7 +340,7 @@ __all__ = [
     # Hardware
     "WorkloadExtractor", "SubstratePipeline",
     # Self-Repair
-    "SelfRepairEngine", "ErrorSignature",
+    "SelfRepairEngine", "ErrorSignature", "OsirisInferenceEngine",
     "discover_ibm_token", "ensure_ibm_token", "export_token",
     "parse_error", "with_self_repair",
 ]

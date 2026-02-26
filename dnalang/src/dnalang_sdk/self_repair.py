@@ -1,8 +1,11 @@
 """
-OSIRIS Self-Repair Engine — Autonomous error recovery and token discovery.
+OSIRIS Self-Repair & Inference Engine — Infer · Interpret · Resolve.
 
 When OSIRIS encounters an error, instead of printing it and stopping, this
-module analyzes the error, applies surgical fixes, and retries.
+module analyzes the error, applies surgical fixes, and retries.  When
+user input is noisy (Gmail UI artifacts, terminal paste debris, incomplete
+commands), the OsirisInferenceEngine extracts actionable intent and either
+cleans the input or auto-resolves the underlying issue.
 
 DNA::}{::lang v51.843 | Agile Defense Systems | CAGE 9HUP5
 """
@@ -611,3 +614,342 @@ def with_self_repair(
             raise
 
     raise last_error if last_error else RuntimeError("Self-repair exhausted")
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  OSIRIS INFERENCE ENGINE — infer · interpret · resolve
+# ═══════════════════════════════════════════════════════════════════════
+
+# Noise patterns that indicate pasted UI artifacts rather than real queries
+_NOISE_PATTERNS: List[Tuple[str, str]] = [
+    # Gmail / email UI
+    (r"^(Inbox|Starred|Sent|Drafts|Spam|Trash|All Mail)\s*$", "gmail_nav"),
+    (r"^\d+\s+of\s+\d+", "gmail_counter"),
+    (r"^(Skip to content|Using .* with screen readers)", "accessibility"),
+    (r"^(RE:|FW:|Fwd:)\s*$", "email_prefix_only"),
+    (r"^Conversation opened\.\s*\d+\s*unread", "gmail_thread"),
+    # Terminal copy-paste artifacts
+    (r"^[┌└├│─╼╾]+", "terminal_box"),
+    (r"^\$\s*$", "empty_prompt"),
+    (r"^bash:\s+\S+:\s+command not found", "bash_error"),
+    (r"^bash:\s+\S+:\s+No such file", "bash_error"),
+    (r"^\[sudo\]\s+password", "sudo_prompt"),
+    (r"^Permission denied", "permission"),
+    # Webpage fragments
+    (r"^(Home|About|Contact|Login|Sign [Uu]p|Settings)\s*$", "nav_link"),
+    (r"^(Loading|Please wait|Redirecting)\.*$", "loading"),
+]
+
+# Intent extraction: map noisy fragments to likely user goals
+_INTENT_HINTS: Dict[str, List[str]] = {
+    "aws": ["deploy", "upload", "s3", "braket", "ec2", "lambda", "cloud"],
+    "quantum": ["circuit", "bell", "entangle", "fez", "torino", "backend", "ibm"],
+    "fix": ["error", "bug", "broken", "fail", "crash", "exception", "traceback"],
+    "deploy": ["pypi", "upload", "publish", "push", "release", "docker"],
+    "research": ["paper", "result", "experiment", "data", "breakthrough"],
+    "email": ["RE:", "FW:", "meeting", "reply", "send", "draft", "outreach"],
+    "code": ["function", "class", "module", "import", "test", "lint"],
+}
+
+
+class OsirisInferenceEngine:
+    """
+    Infer · Interpret · Resolve engine for OSIRIS.
+
+    When user input is noisy (pasted Gmail UI, terminal artifacts, incomplete
+    commands), this engine:
+      1. INFERS whether the input is noise vs. signal
+      2. INTERPRETS the likely intent from context clues
+      3. RESOLVES by cleaning input, suggesting actions, or auto-fixing
+    """
+
+    def __init__(self) -> None:
+        self._compiled: List[Tuple[re.Pattern, str]] = [
+            (re.compile(pat, re.IGNORECASE), cat)
+            for pat, cat in _NOISE_PATTERNS
+        ]
+        self._history: List[str] = []
+
+    # ── INFER ─────────────────────────────────────────────────────────
+
+    def is_noise(self, text: str) -> bool:
+        """Detect whether input is UI artifact noise rather than a real query."""
+        text = text.strip()
+        if not text:
+            return True
+        for regex, _cat in self._compiled:
+            if regex.search(text):
+                return True
+        # Very short single-word inputs that match nav elements
+        if len(text.split()) == 1 and text.lower() in {
+            "inbox", "starred", "sent", "drafts", "spam", "trash",
+            "home", "about", "login", "settings", "skip", "loading",
+        }:
+            return True
+        return False
+
+    def classify_noise(self, text: str) -> Optional[str]:
+        """Return the noise category, or None if it's real input."""
+        text = text.strip()
+        for regex, cat in self._compiled:
+            if regex.search(text):
+                return cat
+        return None
+
+    # ── INTERPRET ─────────────────────────────────────────────────────
+
+    def extract_intent(self, text: str) -> Optional[str]:
+        """
+        Extract the likely user intent from noisy or partial input.
+
+        Uses keyword matching against known intent categories and recent
+        conversation history to infer what the user is trying to do.
+        """
+        lower = text.lower()
+
+        # Direct intent extraction from text content
+        for intent, keywords in _INTENT_HINTS.items():
+            if any(kw in lower for kw in keywords):
+                return intent
+
+        # Check if it looks like a subject line with useful content
+        for prefix in ("re:", "fw:", "fwd:"):
+            if lower.startswith(prefix):
+                subject = text[len(prefix):].strip()
+                if subject:
+                    return self.extract_intent(subject)
+
+        # Check recent history for context
+        for prev in reversed(self._history[-5:]):
+            for intent, keywords in _INTENT_HINTS.items():
+                if any(kw in prev.lower() for kw in keywords):
+                    return intent
+
+        return None
+
+    def interpret(self, text: str) -> Dict[str, Any]:
+        """
+        Full interpretation of user input.
+
+        Returns dict with keys: is_noise, noise_category, cleaned, intent,
+        suggestion, actionable.
+        """
+        noise_cat = self.classify_noise(text)
+        intent = self.extract_intent(text)
+        cleaned = self._clean_input(text)
+
+        if noise_cat and not intent:
+            return {
+                "is_noise": True,
+                "noise_category": noise_cat,
+                "cleaned": cleaned,
+                "intent": None,
+                "suggestion": self._suggest_for_noise(noise_cat),
+                "actionable": False,
+            }
+
+        if noise_cat and intent:
+            return {
+                "is_noise": True,
+                "noise_category": noise_cat,
+                "cleaned": cleaned,
+                "intent": intent,
+                "suggestion": self._suggest_for_intent(intent),
+                "actionable": True,
+            }
+
+        return {
+            "is_noise": False,
+            "noise_category": None,
+            "cleaned": cleaned,
+            "intent": intent,
+            "suggestion": "",
+            "actionable": True,
+        }
+
+    def remember(self, text: str) -> None:
+        """Record input to conversation history for context tracking."""
+        self._history.append(text)
+        if len(self._history) > 20:
+            self._history = self._history[-20:]
+
+    # ── RESOLVE ───────────────────────────────────────────────────────
+
+    def resolve_import_error(self, module_path: str) -> Tuple[bool, str]:
+        """
+        Attempt to resolve a module import error by:
+          1. Clearing stale __pycache__
+          2. Checking for syntax errors
+        """
+        # 1. Clear pycache for the module
+        mod_dir = os.path.dirname(os.path.abspath(module_path))
+        cache_dir = os.path.join(mod_dir, "__pycache__")
+        if os.path.isdir(cache_dir):
+            mod_name = os.path.splitext(os.path.basename(module_path))[0]
+            cleared = 0
+            for f in os.listdir(cache_dir):
+                if f.startswith(mod_name) and f.endswith(".pyc"):
+                    try:
+                        os.remove(os.path.join(cache_dir, f))
+                        cleared += 1
+                    except OSError:
+                        pass
+            if cleared:
+                logger.info("Cleared %d stale .pyc for %s", cleared, mod_name)
+
+        # 2. Try syntax check
+        try:
+            with open(module_path, 'r') as fh:
+                source = fh.read()
+            compile(source, module_path, 'exec')
+            return True, f"Syntax OK after cache clear: {module_path}"
+        except SyntaxError as e:
+            return False, f"Syntax error at {module_path}:{e.lineno}: {e.msg}"
+
+    def resolve_permission_error(self, path: str) -> Tuple[bool, str]:
+        """Suggest fix for permission issues (root-owned files)."""
+        expanded = os.path.expanduser(path)
+
+        if os.path.exists(expanded):
+            st = os.stat(expanded)
+            if st.st_uid != os.getuid():
+                parent = os.path.dirname(expanded)
+                if os.access(parent, os.W_OK):
+                    return False, (
+                        f"File {path} is owned by root. Fix with:\n"
+                        f"  cp {path} /tmp/_fix && rm {path} && "
+                        f"cp /tmp/_fix {path}"
+                    )
+                return False, f"{path} is root-owned and dir is not writable"
+
+        return False, f"Path {path} does not exist or is inaccessible"
+
+    def resolve_on_boot(self) -> List[str]:
+        """
+        Run at OSIRIS boot time. Checks for and resolves:
+          1. Stale __pycache__ from broken builds
+          2. Missing IBM Quantum token
+          3. Broken module imports
+        Returns list of resolution messages.
+        """
+        messages: List[str] = []
+
+        # 1. Ensure IBM Quantum token
+        if ensure_ibm_token():
+            messages.append("✓ IBM Quantum token auto-discovered")
+
+        # 2. Clear stale pycache
+        sdk_src = os.path.dirname(os.path.abspath(__file__))
+        stale = 0
+        for root, _dirs, files in os.walk(sdk_src):
+            if "__pycache__" not in root:
+                continue
+            for fname in files:
+                if not fname.endswith(".pyc"):
+                    continue
+                pyc = os.path.join(root, fname)
+                mod = os.path.join(
+                    os.path.dirname(root),
+                    fname.split(".")[0] + ".py",
+                )
+                if os.path.exists(mod):
+                    if os.path.getmtime(pyc) < os.path.getmtime(mod):
+                        try:
+                            os.remove(pyc)
+                            stale += 1
+                        except OSError:
+                            pass
+        if stale:
+            messages.append(f"✓ Cleared {stale} stale .pyc files")
+
+        # 3. Verify critical modules
+        for mod_name in (
+            "dnalang_sdk.code_writer",
+            "dnalang_sdk.physics_tools",
+            "dnalang_sdk.nclm.tools",
+        ):
+            try:
+                __import__(mod_name)
+            except SyntaxError as e:
+                mod_obj = sys.modules.get(mod_name)
+                mod_file = getattr(mod_obj, "__file__", None) if mod_obj else None
+                if mod_file:
+                    self.resolve_import_error(mod_file)
+                    messages.append(f"⚕ Repaired: {mod_name} ({e.msg})")
+            except ImportError:
+                pass  # Optional deps
+
+        return messages
+
+    # ── PRIVATE ───────────────────────────────────────────────────────
+
+    def _clean_input(self, text: str) -> str:
+        """Remove noise artifacts, preserving meaningful content."""
+        lines = text.strip().splitlines()
+        cleaned: List[str] = []
+        for line in lines:
+            line = line.strip()
+            if self.classify_noise(line) and not self.extract_intent(line):
+                continue
+            # Strip terminal prompt prefixes
+            line = re.sub(r'^[┌└├│─╼╾\[\]✗]+\s*', '', line)
+            line = re.sub(r'^\$\s+', '', line)
+            if line:
+                cleaned.append(line)
+        return "\n".join(cleaned) if cleaned else text.strip()
+
+    _NOISE_SUGGESTIONS: Dict[str, str] = {
+        "gmail_nav": (
+            "Looks like Gmail navigation was pasted. "
+            "To share email content, open the email and copy the body text."
+        ),
+        "gmail_counter": (
+            "That's a Gmail message counter. "
+            "Open the specific email and paste its body text."
+        ),
+        "accessibility": (
+            "That's a webpage accessibility header. "
+            "Copy the actual content you want me to work with."
+        ),
+        "email_prefix_only": (
+            "Got an email subject prefix but no content. "
+            "Paste the full email body or tell me what you need."
+        ),
+        "gmail_thread": (
+            "That's a Gmail thread notification. "
+            "Open the email and paste the content you want me to act on."
+        ),
+        "terminal_box": (
+            "Detected terminal UI artifacts. "
+            "Paste the actual command output or error message."
+        ),
+        "bash_error": "I see a shell error. Let me try to resolve it.",
+        "sudo_prompt": (
+            "sudo requires a password. Most operations work without sudo. "
+            "Try the command without sudo."
+        ),
+        "permission": "Permission denied. Let me check for alternatives.",
+        "nav_link": "That looks like a navigation link, not a command.",
+        "loading": "That's a loading indicator from a webpage.",
+    }
+
+    _INTENT_ACTIONS: Dict[str, str] = {
+        "aws": "AWS intent detected. I can deploy, upload to S3, or configure Braket.",
+        "quantum": "Quantum task detected. I can run circuits, check backends, or analyze results.",
+        "fix": "Error detected. Analyzing and attempting auto-repair.",
+        "deploy": "Deployment intent detected. I can package for PyPI, AWS, or Docker.",
+        "research": "Research query detected. I can analyze experiments or generate reports.",
+        "email": "Email-related task. Paste the email body so I can help.",
+        "code": "Code task detected. Tell me what to create, fix, or analyze.",
+    }
+
+    def _suggest_for_noise(self, category: str) -> str:
+        return self._NOISE_SUGGESTIONS.get(
+            category,
+            "Input appears to be UI artifacts. What would you like me to do?",
+        )
+
+    def _suggest_for_intent(self, intent: str) -> str:
+        return self._INTENT_ACTIONS.get(
+            intent, f"Detected intent: {intent}. How should I proceed?"
+        )

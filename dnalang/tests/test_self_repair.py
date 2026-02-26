@@ -1,8 +1,6 @@
 """
-Tests for dnalang_sdk.self_repair — autonomous error recovery and token discovery.
-
-Tests token discovery, error classification, fix strategies, and the
-with_self_repair wrapper.
+Tests for dnalang_sdk.self_repair — autonomous error recovery, token discovery,
+and the OsirisInferenceEngine (infer · interpret · resolve).
 """
 
 import os
@@ -19,6 +17,7 @@ from dnalang_sdk.self_repair import (
     parse_error,
     ErrorSignature,
     SelfRepairEngine,
+    OsirisInferenceEngine,
     with_self_repair,
     _TOKEN_ENV_VARS,
     _TOKEN_SEARCH_PATHS,
@@ -524,3 +523,279 @@ class TestWithSelfRepair:
 
         with pytest.raises(ValueError):
             with_self_repair(fail, max_retries=1)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  OSIRIS INFERENCE ENGINE TESTS
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestInferenceEngineInit:
+    def test_creates_instance(self):
+        engine = OsirisInferenceEngine()
+        assert engine is not None
+
+    def test_compiled_patterns_populated(self):
+        engine = OsirisInferenceEngine()
+        assert len(engine._compiled) > 0
+
+    def test_history_starts_empty(self):
+        engine = OsirisInferenceEngine()
+        assert engine._history == []
+
+
+class TestInferenceIsNoise:
+    @pytest.fixture
+    def engine(self):
+        return OsirisInferenceEngine()
+
+    def test_empty_is_noise(self, engine):
+        assert engine.is_noise("") is True
+
+    def test_whitespace_is_noise(self, engine):
+        assert engine.is_noise("   ") is True
+
+    def test_inbox_is_noise(self, engine):
+        assert engine.is_noise("Inbox") is True
+
+    def test_starred_is_noise(self, engine):
+        assert engine.is_noise("Starred") is True
+
+    def test_gmail_counter_is_noise(self, engine):
+        assert engine.is_noise("43 of 2,706") is True
+
+    def test_skip_to_content_is_noise(self, engine):
+        assert engine.is_noise("Skip to content") is True
+
+    def test_screen_reader_is_noise(self, engine):
+        assert engine.is_noise("Using Gmail with screen readers") is True
+
+    def test_email_prefix_only_is_noise(self, engine):
+        assert engine.is_noise("RE:") is True
+
+    def test_conversation_opened_is_noise(self, engine):
+        assert engine.is_noise("Conversation opened. 1 unread message.") is True
+
+    def test_terminal_box_is_noise(self, engine):
+        assert engine.is_noise("┌─[devinpd@parrot]─[~]") is True
+
+    def test_empty_prompt_is_noise(self, engine):
+        assert engine.is_noise("$") is True
+
+    def test_bash_not_found_is_noise(self, engine):
+        assert engine.is_noise("bash: xyzzy: command not found") is True
+
+    def test_sudo_prompt_is_noise(self, engine):
+        assert engine.is_noise("[sudo] password for devinpd:") is True
+
+    def test_permission_denied_is_noise(self, engine):
+        assert engine.is_noise("Permission denied") is True
+
+    def test_loading_is_noise(self, engine):
+        assert engine.is_noise("Loading...") is True
+
+    def test_nav_link_is_noise(self, engine):
+        assert engine.is_noise("Settings") is True
+
+    def test_real_query_not_noise(self, engine):
+        assert engine.is_noise("deploy the quantum circuit to ibm_fez") is False
+
+    def test_help_request_not_noise(self, engine):
+        assert engine.is_noise("how do I run the tesseract decoder?") is False
+
+    def test_code_request_not_noise(self, engine):
+        assert engine.is_noise("write a function to compute phi") is False
+
+
+class TestInferenceClassifyNoise:
+    @pytest.fixture
+    def engine(self):
+        return OsirisInferenceEngine()
+
+    def test_inbox_classified(self, engine):
+        assert engine.classify_noise("Inbox") == "gmail_nav"
+
+    def test_counter_classified(self, engine):
+        assert engine.classify_noise("43 of 2706") == "gmail_counter"
+
+    def test_accessibility_classified(self, engine):
+        assert engine.classify_noise("Skip to content") == "accessibility"
+
+    def test_terminal_classified(self, engine):
+        assert engine.classify_noise("└──╼ $osiris") == "terminal_box"
+
+    def test_bash_error_classified(self, engine):
+        assert engine.classify_noise("bash: foo: command not found") == "bash_error"
+
+    def test_real_input_returns_none(self, engine):
+        assert engine.classify_noise("run quantum experiment") is None
+
+
+class TestInferenceExtractIntent:
+    @pytest.fixture
+    def engine(self):
+        return OsirisInferenceEngine()
+
+    def test_aws_intent(self, engine):
+        assert engine.extract_intent("deploy to s3") == "aws"
+
+    def test_quantum_intent(self, engine):
+        assert engine.extract_intent("run bell circuit on ibm_fez") == "quantum"
+
+    def test_fix_intent(self, engine):
+        assert engine.extract_intent("there's an error in the module") == "fix"
+
+    def test_deploy_intent(self, engine):
+        assert engine.extract_intent("publish to pypi") == "deploy"
+
+    def test_research_intent(self, engine):
+        assert engine.extract_intent("show experiment results") == "research"
+
+    def test_email_intent(self, engine):
+        assert engine.extract_intent("RE: Your AWS Meeting") == "email"
+
+    def test_code_intent(self, engine):
+        assert engine.extract_intent("write a function") == "code"
+
+    def test_no_intent(self, engine):
+        assert engine.extract_intent("hello there") is None
+
+    def test_email_subject_extraction(self, engine):
+        # "RE: experiment data" → should extract "research" from "data"
+        result = engine.extract_intent("RE: experiment data")
+        assert result is not None
+
+    def test_history_context(self, engine):
+        engine.remember("deploy to AWS s3")
+        # Now a vague follow-up should pick up AWS intent from history
+        result = engine.extract_intent("do it now")
+        assert result == "aws"
+
+
+class TestInferenceInterpret:
+    @pytest.fixture
+    def engine(self):
+        return OsirisInferenceEngine()
+
+    def test_pure_noise_not_actionable(self, engine):
+        result = engine.interpret("Inbox")
+        assert result["is_noise"] is True
+        assert result["actionable"] is False
+        assert result["noise_category"] == "gmail_nav"
+        assert result["suggestion"] != ""
+
+    def test_noise_with_intent_actionable(self, engine):
+        result = engine.interpret("bash: deploy: command not found")
+        assert result["is_noise"] is True
+        assert result["actionable"] is True
+        assert result["intent"] is not None  # could be "deploy" or "fix"
+
+    def test_clean_input_actionable(self, engine):
+        result = engine.interpret("run the tesseract decoder")
+        assert result["is_noise"] is False
+        assert result["actionable"] is True
+
+    def test_cleaned_field_present(self, engine):
+        result = engine.interpret("some text")
+        assert "cleaned" in result
+
+
+class TestInferenceRemember:
+    def test_remember_stores(self):
+        engine = OsirisInferenceEngine()
+        engine.remember("first message")
+        engine.remember("second message")
+        assert len(engine._history) == 2
+
+    def test_remember_caps_at_20(self):
+        engine = OsirisInferenceEngine()
+        for i in range(25):
+            engine.remember(f"msg {i}")
+        assert len(engine._history) == 20
+        assert engine._history[0] == "msg 5"
+
+
+class TestInferenceCleanInput:
+    @pytest.fixture
+    def engine(self):
+        return OsirisInferenceEngine()
+
+    def test_strips_terminal_prefix(self, engine):
+        cleaned = engine._clean_input("└──╼ $run quantum circuit")
+        # The terminal prefix should be stripped
+        assert "run quantum circuit" in cleaned
+
+    def test_strips_noise_lines(self, engine):
+        text = "Inbox\nrun quantum circuit\nLoading..."
+        cleaned = engine._clean_input(text)
+        assert "run quantum circuit" in cleaned
+        assert "Inbox" not in cleaned
+
+    def test_preserves_meaningful_content(self, engine):
+        text = "deploy the SDK to production"
+        assert engine._clean_input(text) == text
+
+
+class TestInferenceResolve:
+    def test_resolve_import_error_syntax_ok(self):
+        engine = OsirisInferenceEngine()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write("x = 1\n")
+            f.flush()
+            ok, msg = engine.resolve_import_error(f.name)
+        os.unlink(f.name)
+        assert ok is True
+        assert "Syntax OK" in msg
+
+    def test_resolve_import_error_syntax_bad(self):
+        engine = OsirisInferenceEngine()
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write("def foo(\n")
+            f.flush()
+            ok, msg = engine.resolve_import_error(f.name)
+        os.unlink(f.name)
+        assert ok is False
+        assert "Syntax error" in msg
+
+    def test_resolve_permission_nonexistent(self):
+        engine = OsirisInferenceEngine()
+        ok, msg = engine.resolve_permission_error("/nonexistent/path/foo.py")
+        assert ok is False
+
+    def test_resolve_on_boot_returns_list(self):
+        engine = OsirisInferenceEngine()
+        msgs = engine.resolve_on_boot()
+        assert isinstance(msgs, list)
+
+
+class TestInferenceSuggestions:
+    @pytest.fixture
+    def engine(self):
+        return OsirisInferenceEngine()
+
+    def test_noise_suggestions_all_categories(self, engine):
+        for cat in ("gmail_nav", "gmail_counter", "accessibility",
+                     "email_prefix_only", "gmail_thread", "terminal_box",
+                     "bash_error", "sudo_prompt", "permission",
+                     "nav_link", "loading"):
+            suggestion = engine._suggest_for_noise(cat)
+            assert len(suggestion) > 10
+
+    def test_noise_suggestion_unknown_category(self, engine):
+        suggestion = engine._suggest_for_noise("unknown_cat")
+        assert "UI artifacts" in suggestion
+
+    def test_intent_actions_all_intents(self, engine):
+        for intent in ("aws", "quantum", "fix", "deploy", "research", "email", "code"):
+            action = engine._suggest_for_intent(intent)
+            assert len(action) > 10
+
+    def test_intent_action_unknown(self, engine):
+        action = engine._suggest_for_intent("mystery")
+        assert "mystery" in action
+
+
+class TestInferenceExport:
+    def test_importable_from_init(self):
+        from dnalang_sdk import OsirisInferenceEngine
+        engine = OsirisInferenceEngine()
+        assert engine is not None
