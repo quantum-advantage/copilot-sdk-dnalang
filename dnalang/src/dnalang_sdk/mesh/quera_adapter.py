@@ -14,7 +14,10 @@ import time
 import logging
 
 # Import the lightweight Tesseract decoder implemented in this repo
-from tesseract_resonator import TesseractDecoderOrganism, TesseractResonatorOrganism
+try:
+    from .tesseract import TesseractDecoderOrganism, TesseractResonatorOrganism
+except ImportError:
+    from tesseract_resonator import TesseractDecoderOrganism, TesseractResonatorOrganism
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

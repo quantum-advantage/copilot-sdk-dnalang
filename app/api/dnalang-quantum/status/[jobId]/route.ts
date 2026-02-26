@@ -1,37 +1,47 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
+
+const supabase = createClient(
+  process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || "",
+  process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+)
 
 export async function GET(request: NextRequest, { params }: { params: { jobId: string } }) {
   try {
     const { jobId } = params
 
-    // In a real implementation, this would query the database
-    // For now, return mock data
-    const mockJob = {
-      jobId,
-      organismId: "organism-001",
-      geneId: "FIDELITY_CHECK",
-      status: "completed",
-      backend: "ibm_brisbane",
-      submittedAt: new Date(Date.now() - 10000).toISOString(),
-      completedAt: new Date().toISOString(),
-      result: {
-        counts: {
-          "00": 512,
-          "01": 12,
-          "10": 8,
-          "11": 492,
-        },
-        shots: 1024,
-        fidelity: 0.9234,
-        w1Distance: 0.0766,
-        executionTime: 8.5,
-        quantumCoherence: 0.8772,
-      },
+    // Query real job from Supabase
+    const { data: job, error } = await supabase
+      .from("quantum_jobs")
+      .select("*")
+      .eq("job_id", jobId)
+      .maybeSingle()
+
+    if (error) {
+      console.error("[Quantum] Job query error:", error)
+      return NextResponse.json({ error: "Database query failed", detail: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(mockJob)
+    if (!job) {
+      return NextResponse.json({ error: `Job ${jobId} not found` }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      jobId: job.job_id,
+      organismId: job.metadata?.organism_id || null,
+      geneId: job.metadata?.gene_id || null,
+      status: job.status,
+      backend: job.backend,
+      submittedAt: job.submitted_at,
+      completedAt: job.completed_at,
+      result: job.result || null,
+      qubits: job.qubits,
+      shots: job.shots,
+      protocol: job.protocol,
+      source: "Supabase quantum_jobs (live)",
+    })
   } catch (error) {
-    console.error("[v0] Error getting job status:", error)
-    return NextResponse.json({ error: "Failed to get job status" }, { status: 500 })
+    console.error("[Quantum] Error getting job status:", error)
+    return NextResponse.json({ error: "Failed to get job status", detail: String(error) }, { status: 500 })
   }
 }

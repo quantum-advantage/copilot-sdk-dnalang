@@ -1,63 +1,49 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
+import { createClient } from "@supabase/supabase-js"
 
-function getSQL() {
-  const dbUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
-  if (!dbUrl) {
-    throw new Error("No database connection string available")
-  }
-  return neon(dbUrl)
-}
+const supabase = createClient(
+  process.env.DNA_SUPABASE_URL || process.env.NEXT_PUBLIC_DNA_SUPABASE_URL || "",
+  process.env.DNA_SUPABASE_SERVICE_ROLE_KEY || process.env.DNA_SUPABASE_ANON_KEY || ""
+)
 
 export async function POST(request: NextRequest) {
   try {
     const { timeRange, metrics, aggregation } = await request.json()
 
-    const sql = getSQL()
+    // Fetch real experiment data from Supabase as time-series
+    const { data: experiments, error } = await supabase
+      .from("quantum_experiments")
+      .select("phi, gamma, ccce, chi_pc, shots, created_at, backend, qubits_used")
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(200)
 
-    // Build dynamic query based on parameters
-    const query = `
-      SELECT 
-        time_bucket('${aggregation || "1 minute"}', timestamp) AS time,
-        AVG(lambda) as lambda,
-        AVG(phi) as phi,
-        AVG(gamma) as gamma,
-        AVG(coherence) as coherence,
-        AVG(qbyte_rate) as qbyte_rate
-      FROM telemetry_data
-      WHERE timestamp >= NOW() - INTERVAL '${timeRange || "1 hour"}'
-      GROUP BY time
-      ORDER BY time DESC
-      LIMIT 1000
-    `
+    if (error) throw error
 
-    const results = await sql(query)
-
-    return NextResponse.json({
-      data: results,
-      count: results.length,
-      timeRange,
-      aggregation,
-    })
-  } catch (error) {
-    console.error("[v0] Data query error:", error)
-
-    // Return mock data for development
-    const mockData = Array.from({ length: 50 }, (_, i) => ({
-      time: new Date(Date.now() - i * 60000).toISOString(),
-      lambda: 0.85 + Math.random() * 0.1,
-      phi: 2.176435e-8 * (1 + Math.random() * 0.2),
-      gamma: 0.05 + Math.random() * 0.05,
-      coherence: 0.92 + Math.random() * 0.06,
-      qbyte_rate: 1200 + Math.random() * 400,
+    // Transform experiments into telemetry-style time series
+    const data = (experiments || []).map(exp => ({
+      time: exp.created_at,
+      lambda: exp.chi_pc || 0.946,
+      phi: exp.phi || 0,
+      gamma: exp.gamma || 0,
+      coherence: exp.ccce || 0,
+      qbyte_rate: exp.shots || 0,
+      backend: exp.backend,
+      qubits: exp.qubits_used,
     }))
 
     return NextResponse.json({
-      data: mockData,
-      count: mockData.length,
-      timeRange: "1 hour",
-      aggregation: "1 minute",
-      mock: true,
+      data,
+      count: data.length,
+      timeRange: timeRange || "all",
+      aggregation: aggregation || "per-experiment",
+      source: "Supabase quantum_experiments (live)",
     })
+  } catch (error) {
+    console.error("[Data] Query error:", error)
+    return NextResponse.json(
+      { error: "Failed to query experiment data", detail: String(error), data: [], count: 0 },
+      { status: 500 }
+    )
   }
 }

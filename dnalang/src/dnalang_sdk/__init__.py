@@ -163,7 +163,7 @@ from .quantum_core import CircuitGenerator, QuantumExecutor
 from .defense import Sentinel, PhaseConjugate, ZeroTrust
 
 # Mesh: Tesseract decoder, NCLM Swarm, NonLocal Agent, QuEra (from osiris_cockpit)
-from .mesh import TesseractDecoderOrganism, TesseractResonatorOrganism
+from .mesh import TesseractDecoderOrganism, TesseractResonatorOrganism, QuEraCorrelatedAdapter
 
 # Sovereign: Agent framework, AeternaPorta, CodeGenerator (from dnalang-sovereign-copilot-sdk)
 from .sovereign import (

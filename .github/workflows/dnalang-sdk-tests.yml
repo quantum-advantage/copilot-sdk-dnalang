@@ -1,0 +1,48 @@
+name: "DNALang SDK Tests"
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'dnalang/**'
+      - '.github/workflows/dnalang-sdk-tests.yml'
+  pull_request:
+    paths:
+      - 'dnalang/**'
+      - '.github/workflows/dnalang-sdk-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: "DNALang SDK Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK dependencies
+        run: |
+          pip install numpy scipy pytest pytest-asyncio
+          pip install -e dnalang/ 2>/dev/null || true
+
+      - name: Run DNALang unit tests
+        working-directory: .
+        run: PYTHONPATH=dnalang/src python -m pytest dnalang/tests/ -q --tb=short
+
+      - name: Validate examples syntax
+        working-directory: .
+        run: |
+          for f in dnalang/examples/*.py; do
+            python -m py_compile "$f" && echo "✓ $f"
+          done
+
+      - name: Lint SDK core
+        run: |
+          pip install flake8
+          flake8 dnalang/src/dnalang_sdk/ --max-line-length=120 --extend-ignore=E402,E501,W503,E741 --count --statistics || true

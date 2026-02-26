@@ -4,10 +4,12 @@ These modules are dependency-free and can run without Qiskit.
 """
 
 from .tesseract import TesseractDecoderOrganism, TesseractResonatorOrganism
+from .quera_adapter import QuEraCorrelatedAdapter
 
 __all__ = [
     'TesseractDecoderOrganism',
     'TesseractResonatorOrganism',
+    'QuEraCorrelatedAdapter',
 ]
 
 # Lazy imports for heavier modules
@@ -18,7 +20,3 @@ def get_nonlocal_agent():
 def get_swarm_orchestrator():
     from .swarm_orchestrator import NCLMSwarmOrchestrator
     return NCLMSwarmOrchestrator
-
-def get_quera_adapter():
-    from .quera_adapter import QuEraCorrelatedAdapter
-    return QuEraCorrelatedAdapter
