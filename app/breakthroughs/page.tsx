@@ -189,7 +189,7 @@ export default function BreakthroughsPage() {
           </div>
           <p className="text-xs text-zinc-600 mt-4">
             All data is cryptographically attested via SHA-256 chain hashes and stored in
-            AWS DynamoDB + Supabase. Framework: DNA::}{`::lang v51.843`} | CAGE: 9HUP5
+            AWS DynamoDB + Supabase. Framework: DNA::{"}{"}::lang v51.843 | CAGE: 9HUP5
           </p>
         </div>
       </div>
