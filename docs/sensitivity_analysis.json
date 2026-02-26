@@ -1,0 +1,158 @@
+{
+  "framework": "DNA::}{::lang v51.843",
+  "analysis": "sensitivity_robustness",
+  "constants": {
+    "theta_lock": 51.843,
+    "phi": 0.7734,
+    "gamma": 0.3,
+    "chi_pc": 0.946,
+    "lambda_phi": 2.176435e-08,
+    "zeno_freq": 1250000.0,
+    "drive_amp": 0.7734
+  },
+  "baseline_predictions": {
+    "PENT-001": 0.012738396670221985,
+    "PENT-001a": 889.733781844026,
+    "PENT-002": 0.6816064840693125,
+    "PENT-003": 0.31839351593068754,
+    "PENT-004": -1.0139799999999999,
+    "PENT-006": 0.9614219856104006,
+    "PENT-007": 0.0029765263884882712,
+    "PENT-008": 9.162045187705684e-24,
+    "PENT-009": 0.007259142415283541
+  },
+  "baseline_sigmas": {
+    "PENT-001": 0.6394655567406616,
+    "PENT-001a": 0.866890922012999,
+    "PENT-002": 0.4237693055736326,
+    "PENT-003": 0.4237693055736326,
+    "PENT-004": 0.5340000000000049,
+    "PENT-006": 0.8280986641903291
+  },
+  "fragility_scores": {
+    "theta_lock": 0.027142559233572183,
+    "phi": 0.09988049632064704,
+    "gamma": 0.10740689602531216,
+    "chi_pc": 0.473973197899438,
+    "lambda_phi": 0.0,
+    "zeno_freq": 0.0,
+    "drive_amp": 0.0
+  },
+  "critical_perturbation_pct": {
+    "theta_lock": -1,
+    "phi": 10.0,
+    "gamma": 10.0,
+    "chi_pc": 2.0,
+    "lambda_phi": -1,
+    "zeno_freq": -1,
+    "drive_amp": -1
+  },
+  "effective_dof": 3,
+  "jacobian": {
+    "PENT-001": {
+      "theta_lock": 0.0001746840491516492,
+      "phi": 0.0,
+      "gamma": 0.0424613222331736,
+      "chi_pc": -0.2358962346193358,
+      "lambda_phi": 0.0,
+      "zeno_freq": 0.0,
+      "drive_amp": 0.0
+    },
+    "PENT-001a": {
+      "theta_lock": 0.15742767694009524,
+      "phi": 0.0,
+      "gamma": 38.266729613193704,
+      "chi_pc": -212.5929421397364,
+      "lambda_phi": 0.0,
+      "zeno_freq": 0.0,
+      "drive_amp": 0.0
+    },
+    "PENT-002": {
+      "theta_lock": 0.0,
+      "phi": 0.2463140635196519,
+      "gamma": -0.6349976559386998,
+      "chi_pc": 0.7205142537336554,
+      "lambda_phi": 0.0,
+      "zeno_freq": 0.0,
+      "drive_amp": 0.0
+    },
+    "PENT-003": {
+      "theta_lock": 0.0,
+      "phi": -0.2463140635196519,
+      "gamma": 0.6349976559386998,
+      "chi_pc": -0.7205142537336554,
+      "lambda_phi": 0.0,
+      "zeno_freq": 0.0,
+      "drive_amp": 0.0
+    },
+    "PENT-004": {
+      "theta_lock": 0.0,
+      "phi": 0.29999999998779747,
+      "gamma": -0.22659999987517665,
+      "chi_pc": -0.9999999998844032,
+      "lambda_phi": 0.0,
+      "zeno_freq": 0.0,
+      "drive_amp": 0.0
+    },
+    "PENT-006": {
+      "theta_lock": 0.0007441315972090417,
+      "phi": 0.0,
+      "gamma": 0.0,
+      "chi_pc": 0.0,
+      "lambda_phi": 0.0,
+      "zeno_freq": 0.0,
+      "drive_amp": 0.0
+    }
+  },
+  "constant_archaeology": [
+    {
+      "operation": "sin(lambda_phi=2.176435e-08)",
+      "op_type": "trig",
+      "result": 2.1764349999999998e-08,
+      "matches": "Planck mass [kg]",
+      "known_value": 2.176434e-08,
+      "deviation_pct": 0.0
+    },
+    {
+      "operation": "sin(theta_lock=51.843\u00b0)",
+      "op_type": "trig",
+      "result": 0.7863207821124676,
+      "matches": "arctan(1) [\u03c0/4]",
+      "known_value": 0.7853981633974483,
+      "deviation_pct": 0.1175
+    },
+    {
+      "operation": "chi_pc+lambda_phi",
+      "op_type": "sum",
+      "result": 0.9460000217643499,
+      "matches": "\u03b8_lock/\u03b8_tet",
+      "known_value": 0.9471532238616185,
+      "deviation_pct": 0.1218
+    },
+    {
+      "operation": "|chi_pc-lambda_phi|",
+      "op_type": "diff",
+      "result": 0.94599997823565,
+      "matches": "\u03b8_lock/\u03b8_tet",
+      "known_value": 0.9471532238616185,
+      "deviation_pct": 0.1218
+    },
+    {
+      "operation": "theta_lock/chi_pc",
+      "op_type": "ratio",
+      "result": 54.80232558139536,
+      "matches": "\u03b8_tet [54.7356\u00b0]",
+      "known_value": 54.7356,
+      "deviation_pct": 0.1219
+    },
+    {
+      "operation": "chi_pc/gamma",
+      "op_type": "ratio",
+      "result": 3.1533333333333333,
+      "matches": "\u03c0",
+      "known_value": 3.141592653589793,
+      "deviation_pct": 0.3737
+    }
+  ],
+  "n_perturbations_tested": 84
+}
