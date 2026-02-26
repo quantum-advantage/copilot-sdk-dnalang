@@ -125,7 +125,7 @@ export async function GET() {
     }
 
     const hwIds = Object.keys(BREAKTHROUGH_META).filter(k => !k.startsWith("BT"))
-    const orFilter = `experiment_id=like.BT*,experiment_id=in.(${hwIds.join(",")})`
+    const orFilter = `experiment_id.like.BT*,experiment_id.in.(${hwIds.join(",")})`
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/quantum_experiments?or=(${orFilter})&select=experiment_id,protocol,backend,qubits_used,phi,gamma,ccce,chi_pc,status,integrity_hash,raw_metrics,created_at&order=experiment_id`,
       {
