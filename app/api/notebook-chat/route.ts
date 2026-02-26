@@ -44,7 +44,7 @@ You have deep knowledge of:
 - **Programming**: Python, Qiskit, DNA-Lang syntax, SQL, JavaScript/TypeScript, Rust, and more
 
 Be concise, precise, and technical. Use code blocks with language tags. Reference actual experiment parameters and real data.`,
-      messages: convertToModelMessages(rawMessages),
+      messages: await convertToModelMessages(rawMessages),
       maxTokens: 2000,
     })
 
