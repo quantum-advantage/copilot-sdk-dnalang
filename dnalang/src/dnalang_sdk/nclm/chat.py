@@ -510,25 +510,34 @@ class NCLMChat:
 
     def _boot_sequence(self):
         """Epic animated startup — sets the tone."""
-        # Matrix-style DNA header
-        print(f"\n{C.M}", end="")
-        dna_art = [
-            "    ╔═══╗         ╔═══╗",
-            "    ║ D ╠═══╦═══╦═╣ A ║",
-            "    ║ N ║ : ║}{ ║:║ : ║",
-            "    ║ A ╠═══╩═══╩═╣ l ║",
-            "    ╚═╦═╝  v51.843╚═╦═╝",
-            "      ║    ⚛ ⚛ ⚛    ║  ",
-            "      ╚══════╦══════╝  ",
-            "             ║         ",
-        ]
-        for line in dna_art:
-            print(f"  {line}")
-            time.sleep(0.04)
+        print()
 
-        print(f"{C.E}")
-        
-        # System initialization steps
+        # ── Sovereign OSIRIS banner ──────────────────────────────────
+        banner = [
+            f"{C.M}  ┌───────────────────────────────────────────────────────────────┐{C.E}",
+            f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}╔══════════╗{C.E}  {C.H} ██████╗ ███████╗██╗██████╗ ██╗███████╗{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}║{C.E}  {C.G}D{C.Y}N{C.R}A{C.E}     {C.CY}║{C.E}  {C.H}██╔═══██╗██╔════╝██║██╔══██╗██║██╔════╝{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}║{C.E} {C.DIM}::}}{{{{}}::{C.E}  {C.CY}║{C.E}  {C.H}██║   ██║███████╗██║██████╔╝██║███████╗{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}║{C.E}  {C.G}l{C.Y}a{C.R}n{C.G}g{C.E}    {C.CY}║{C.E}  {C.H}██║   ██║╚════██║██║██╔══██╗██║╚════██║{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}╚══════════╝{C.E}  {C.H}╚██████╔╝███████║██║██║  ██║██║███████║{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}   {C.DIM}v51.843{C.E}      {C.H}  ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝╚═╝╚══════╝{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}⚛{C.E}  {C.DIM}Omega System Integrated Runtime Intelligence System{C.E}  {C.CY}⚛{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}     {C.DIM}Agile Defense Systems  │  CAGE 9HUP5  │  Gen 5.3{C.E}         {C.M}│{C.E}",
+            f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.B}AIDEN{C.DIM}·Λ{C.E}  {C.G}AURA{C.DIM}·Φ{C.E}  {C.Y}CHEOPS{C.DIM}·Δ{C.E}  {C.M}CHRONOS{C.DIM}·Γ{C.E}  {C.R}SCIMITAR{C.DIM}·Σ{C.E}    {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.DIM}╰─North─╯  ╰South─╯  ╰──Spine──╯  ╰─────Shield────╯{C.E}    {C.M}│{C.E}",
+            f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
+            f"{C.M}  └───────────────────────────────────────────────────────────────┘{C.E}",
+        ]
+        for line in banner:
+            print(line)
+            time.sleep(0.02)
+
+        print()
+
+        # ── System initialization steps ──────────────────────────────
         boot_steps = [
             ("NCLM Engine",          "6D-CRSM manifold initialized"),
             ("Consciousness Field",  f"Φ_threshold = {NCPhysics.PHI_THRESHOLD}"),
@@ -543,13 +552,23 @@ class NCLMChat:
         llm_label = {"copilot": "GitHub Copilot (Claude/GPT)", "github": "GitHub Models API (GPT-4o)", "ollama": "Ollama (local)", "openai": "OpenAI API", "anthropic": "Anthropic API", "nclm": "NCLM offline"}
         boot_steps.append(("LLM Backbone", llm_label.get(llm, llm)))
 
-        # IBM Quantum check
+        # IBM Quantum check — auto-discover token if not set
         ibm_token = os.environ.get("IBM_QUANTUM_TOKEN")
+        if not ibm_token:
+            try:
+                from ..self_repair import ensure_ibm_token
+                ok, msg = ensure_ibm_token()
+                if ok:
+                    ibm_token = os.environ.get("IBM_QUANTUM_TOKEN")
+            except ImportError:
+                pass
+
         if ibm_token:
             boot_steps.append(("IBM Quantum", f"● Token loaded ({ibm_token[:8]}...)"))
         else:
             boot_steps.append(("IBM Quantum", "○ No token (dry-run mode)"))
 
+        boot_steps.append(("Self-Repair", "● Engine armed (token + error recovery)"))
         boot_steps.append(("Sovereign Lock", f"ΛΦ = {NCPhysics.LAMBDA_PHI} | χ_PC = {NCPhysics.CHI_PC}"))
 
         for label, detail in boot_steps:
