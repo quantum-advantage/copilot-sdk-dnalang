@@ -407,7 +407,53 @@ def phase_8_competitive():
         print(f"    {feat:35s} {dna_c}{dna:12s}{RESET} {ibm_c}{ibm:12s}{RESET} {g_c}{google:12s}{RESET} {a_c}{aws:12s}{RESET}")
 
 
-def phase_9_call_to_action():
+def phase_9_predictions():
+    section("PHASE 9 — Falsifiable Physics Predictions")
+
+    print(f"    {BOLD}Penteract Singularity v11.0{RESET}")
+    print(f"    {DIM}7 constants, 0 tuned parameters, avg deviation: 0.66σ{RESET}")
+    print()
+
+    # Fetch from live API if available
+    predictions = None
+    if "--no-cloud" not in sys.argv:
+        try:
+            import urllib.request
+            req = urllib.request.Request("https://quantum-advantage.dev/api/predictions")
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                predictions = json.loads(resp.read())
+        except Exception:
+            pass
+
+    if predictions:
+        s = predictions["summary"]
+        print(f"    {GREEN}✓{RESET} Live Supabase data: {BOLD}{s['total_predictions']}{RESET} predictions")
+        print(f"      {GREEN}{s['consistent']}{RESET} consistent  |  {RED}{s['tension']}{RESET} tension  |  {YELLOW}{s['untested_or_below_bound']}{RESET} awaiting test")
+        print()
+        print(f"    {'ID':12s} {'Observable':40s} {'Predicted':12s} {'Measured':18s} {'σ':6s}")
+        print(f"    {'─' * 12} {'─' * 40} {'─' * 12} {'─' * 18} {'─' * 6}")
+        for p in predictions.get("predictions", []):
+            pid = p["prediction_id"]
+            obs = p["observable"][:39]
+            pv = p["predicted_value"]
+            pv_s = f"{pv:.4g}" if isinstance(pv, (int, float)) else str(pv)
+            ce = p.get("current_experimental")
+            ce_s = f"{ce:.4g}" if ce else "—"
+            sd = p.get("sigma_deviation")
+            sd_s = f"{sd:.2f}σ" if sd else "—"
+            color = GREEN if p["status"] == "consistent" else (YELLOW if p["status"] == "below_bound" else BLUE)
+            print(f"    {color}{pid:12s}{RESET} {obs:40s} {pv_s:12s} {ce_s:18s} {sd_s:6s}")
+        print()
+        sig = predictions.get("significance", {})
+        print(f"    {BOLD}Significance:{RESET} {sig.get('description', 'N/A')}")
+        print(f"    {YELLOW}Make-or-break:{RESET} {sig.get('nearest_hard_test', 'LiteBIRD ~2032')}")
+    else:
+        print(f"    {YELLOW}Offline mode{RESET} — showing cached prediction summary")
+        print(f"    12 predictions: 7 consistent (avg 0.66σ), 0 tension, 5 untested")
+        print(f"    Standout: PENT-007 (r = 0.00298) — LiteBIRD will test at 3σ")
+
+
+def phase_10_call_to_action():
     print()
     print(f"  {CYAN}{'═' * 64}{RESET}")
     print(f"""
@@ -475,7 +521,10 @@ def main():
     phase_8_competitive()
     pause("", 2)
 
-    phase_9_call_to_action()
+    phase_9_predictions()
+    pause("", 2)
+
+    phase_10_call_to_action()
 
 
 if __name__ == "__main__":
