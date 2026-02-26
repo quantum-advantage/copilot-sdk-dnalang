@@ -439,7 +439,7 @@ const RESPONSES: Record<Intent, (q: string, ents: string[], exps: Array<Record<s
       : 0
 
     const table = consistent.map(p =>
-      `| ${p.prediction_id} | ${p.observable} | ${typeof p.predicted_value === "number" && Math.abs(p.predicted_value as number) < 0.001 ? (p.predicted_value as number).toExponential(3) : p.predicted_value} | ${p.current_experimental}${p.current_exp_uncertainty ? ` ± ${p.current_exp_uncertainty}` : ""} | ${(p.sigma_deviation as number).toFixed(2)}σ |`
+      `| ${p.prediction_id} | ${p.observable} | ${typeof p.predicted_value === "number" && Math.abs(p.predicted_value as number) < 0.001 ? (p.predicted_value as number).toExponential(3) : p.predicted_value} | ${p.current_experimental != null ? p.current_experimental : "—"}${p.current_exp_uncertainty ? ` ± ${p.current_exp_uncertainty}` : ""} | ${p.sigma_deviation != null ? (p.sigma_deviation as number).toFixed(2) + "σ" : "—"} |`
     ).join("\n")
 
     const untTable = untested.map(p =>
