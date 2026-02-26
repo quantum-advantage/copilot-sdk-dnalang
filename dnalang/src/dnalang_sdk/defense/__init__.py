@@ -1,6 +1,23 @@
-"""DNA-Lang Defense — Sentinel, Phase Conjugate, Zero Trust."""
-from .sentinel import Sentinel
-from .phase_conjugate import PhaseConjugate
-from .zero_trust import ZeroTrust
+"""Defense subsystem — Phase conjugation, PCRB, sentinel, zero-trust."""
 
-__all__ = ['Sentinel', 'PhaseConjugate', 'ZeroTrust']
+from .phase_conjugate import (
+    SphericalTetrahedron,
+    PhaseConjugateHowitzer,
+    PlanckConstants,
+    UniversalConstants,
+)
+from .pcrb_engine import (
+    StabilizerCode,
+    PhaseConjugateMirror,
+    RecursionBus,
+    PCRB,
+)
+from .sentinel import SCIMITARSentinel
+from .zero_trust import ZeroTrustVerifier
+
+__all__ = [
+    "SphericalTetrahedron", "PhaseConjugateHowitzer",
+    "PlanckConstants", "UniversalConstants",
+    "StabilizerCode", "PhaseConjugateMirror", "RecursionBus", "PCRB",
+    "SCIMITARSentinel", "ZeroTrustVerifier",
+]

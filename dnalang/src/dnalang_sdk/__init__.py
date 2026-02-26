@@ -16,7 +16,7 @@ Quantum-native SDK extension for GitHub Copilot CLI with support for:
 Framework: DNA::}{::lang v51.843  |  CAGE 9HUP5  |  Agile Defense Systems
 """
 
-__version__ = "5.2.0"
+__version__ = "5.3.0"
 __author__ = "Devin Phillip Davis / Agile Defense Systems"
 __license__ = "MIT"
 __framework__ = "DNA::}{::lang v51.843"
@@ -357,4 +357,59 @@ __all__ = [
     "NCLMChat",
     "NCLMResponseGenerator",
     "run_chat",
+]
+
+# ═══════════════════════════════════════════════════════════════════════
+# Gen 5.3 — DNA-Lang Compiler v2, Omega Engine, Code Writer
+# ═══════════════════════════════════════════════════════════════════════
+
+# Compiler: Full Lexer→Parser→IR→Runtime→Evolution→Ledger pipeline
+from .compiler import (
+    DNALangParser, DNALangLexer, TokenType,
+    DNAIR, IRNode,
+    DNAEvolver,
+    DNARuntime,
+    DNALedger,
+)
+
+# Omega Recursive Engine: 7-layer intent deduction
+from .omega_engine import OmegaMetrics, IntentDeducer as OmegaIntentDeducer
+
+# Code Writer: Cockpit code generation + meshnet execution
+from .code_writer import CodeWriter, MeshnetExecutor, ScimitarElite, IDEIntegration
+
+# CRSM Penteract (updated): 5D singularity protocol with 46-problem solver
+from .crsm import (
+    PenteractShell, PenteractState, PhysicsProblem,
+    ResolutionResult, OsirisPenteract,
+)
+
+# Defense PCRB (new): Phase Conjugate Recursion Bus
+from .defense import (
+    StabilizerCode, PhaseConjugateMirror, RecursionBus, PCRB,
+    SphericalTetrahedron, PhaseConjugateHowitzer,
+)
+
+# Hardware (updated): Workload extraction
+from .hardware import WorkloadExtractor, SubstratePipeline
+
+__all__ += [
+    # Compiler
+    "DNALangParser", "DNALangLexer", "TokenType",
+    "DNAIR", "IRNode",
+    "DNAEvolver",
+    "DNARuntime",
+    "DNALedger",
+    # Omega Engine
+    "OmegaMetrics", "OmegaIntentDeducer",
+    # Code Writer
+    "CodeWriter", "MeshnetExecutor", "ScimitarElite", "IDEIntegration",
+    # Penteract (updated)
+    "PenteractShell", "PenteractState", "PhysicsProblem",
+    "ResolutionResult", "OsirisPenteract",
+    # PCRB
+    "StabilizerCode", "PhaseConjugateMirror", "RecursionBus", "PCRB",
+    "SphericalTetrahedron", "PhaseConjugateHowitzer",
+    # Hardware
+    "WorkloadExtractor", "SubstratePipeline",
 ]

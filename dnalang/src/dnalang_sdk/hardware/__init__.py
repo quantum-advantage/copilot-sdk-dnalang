@@ -1,4 +1,9 @@
-"""Hardware adapters for quantum backends (QuEra, IonQ, Rigetti, IQM)."""
-from .quera_adapter import QuEraCorrelatedAdapter
+"""Hardware subsystem — QuEra adapter, workload extraction."""
 
-__all__ = ["QuEraCorrelatedAdapter"]
+from .quera_adapter import QuEraCorrelatedAdapter
+from .workload_extractor import WorkloadExtractor, SubstratePipeline
+
+__all__ = [
+    "QuEraCorrelatedAdapter",
+    "WorkloadExtractor", "SubstratePipeline",
+]

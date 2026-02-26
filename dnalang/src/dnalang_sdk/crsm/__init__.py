@@ -1,15 +1,20 @@
-"""11D-CRSM (Cognitive-Recursive State Manifold) modules.
+"""CRSM subsystem — 11D Cognitive-Recursive State Manifold."""
 
-Provides the unified CRSM physics stack:
-- swarm_orchestrator: 7-layer NCLM swarm evolution
-- nonlocal_agent: Bifurcated tetrahedral agent constellation
-- penteract: 11D unified AURA+AIDEN engine (46 physics problems)
-- tau_phase_analyzer: τ-phase validation against real hardware data
-"""
+from .penteract import (
+    PenteractShell,
+    PenteractState,
+    PhysicsProblem,
+    ResolutionResult,
+    OsirisPenteract,
+)
+from .swarm_orchestrator import SwarmNode, NCLMSwarmOrchestrator
+from .nonlocal_agent import NonLocalAgentOrchestrator
+from .tau_phase_analyzer import TauPhaseAnalyzer
 
 __all__ = [
-    "NCLMSwarmOrchestrator",
+    "PenteractShell", "PenteractState", "PhysicsProblem",
+    "ResolutionResult", "OsirisPenteract",
+    "SwarmNode", "NCLMSwarmOrchestrator",
     "NonLocalAgentOrchestrator",
-    "PenteractSingularity",
     "TauPhaseAnalyzer",
 ]
