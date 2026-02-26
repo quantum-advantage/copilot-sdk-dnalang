@@ -11,9 +11,12 @@ from braket_phi_threshold import (
     build_cluster_3q, build_cluster_4q, build_cluster_5q,
     build_tfd_prism_4q, build_tfd_prism_6q,
     build_manifold_3q, build_manifold_5q, build_manifold_7q,
-    execute, ALL_CIRCUITS, CIRCUIT_FAMILIES,
+    execute, execute_with_zne, measure_chsh,
+    _zne_richardson_extrapolate, _build_readout_calibration,
+    ALL_CIRCUITS, CIRCUIT_FAMILIES,
     LAMBDA_PHI, THETA_LOCK_RAD, PHI_THRESHOLD, CHI_PC,
 )
+from braket.circuits import Circuit
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -177,3 +180,135 @@ class TestNoisyExecution:
         r_clean = execute(c, "clean", "cluster", noisy=False)
         r_noisy = execute(c, "noisy", "cluster", noisy=True)
         assert r_noisy.gamma >= r_clean.gamma
+
+
+# ── ZNE Tests ─────────────────────────────────────────────────────────────────
+
+class TestZNE:
+    """Zero-Noise Extrapolation tests."""
+
+    def test_richardson_linear(self):
+        """Linear extrapolation: f(0) from f(1)=3, f(2)=5 → f(0)=1."""
+        result = _zne_richardson_extrapolate([3.0, 5.0], [1.0, 2.0])
+        assert abs(result - 1.0) < 1e-10
+
+    def test_richardson_quadratic(self):
+        """Quadratic: f(x)=x^2+1 at x=[1,2,3] → f(0)=1."""
+        values = [2.0, 5.0, 10.0]  # 1+1, 4+1, 9+1
+        result = _zne_richardson_extrapolate(values, [1.0, 2.0, 3.0])
+        assert abs(result - 1.0) < 1e-10
+
+    def test_richardson_single_point(self):
+        result = _zne_richardson_extrapolate([0.75], [1.0])
+        assert result == 0.75
+
+    def test_zne_execution(self):
+        """ZNE should produce valid PhiResult with zne_applied=True."""
+        c = build_cluster_3q()
+        r = execute_with_zne(c, "zne_test", "cluster")
+        assert r.zne_applied
+        assert r.mitigated
+        assert r.phi > 0
+
+    def test_zne_cluster_above_threshold(self):
+        c = build_cluster_3q()
+        r = execute_with_zne(c, "zne_cluster", "cluster")
+        assert r.above_threshold
+
+    def test_zne_uses_more_shots(self):
+        """ZNE result should report more total shots (3x scale factors)."""
+        c = build_prism_2q()
+        r_raw = execute(c, "raw", "prism", noisy=True)
+        r_zne = execute_with_zne(c, "zne", "prism")
+        assert r_zne.shots > r_raw.shots
+
+
+# ── CHSH Tests ────────────────────────────────────────────────────────────────
+
+class TestCHSH:
+    """CHSH Bell inequality tests."""
+
+    def test_bell_violates_noiseless(self):
+        """Pure Bell state should violate CHSH (S ≈ 2√2 ≈ 2.828)."""
+        def _bell():
+            c = Circuit()
+            c.h(0)
+            c.cnot(0, 1)
+            return c
+        s_val, violated = measure_chsh(_bell, noisy=False)
+        assert violated, f"S={s_val} should be > 2"
+        assert s_val > 2.5  # Should be close to 2.828
+
+    def test_bell_violates_noisy(self):
+        """Bell state should still violate CHSH under realistic noise."""
+        def _bell():
+            c = Circuit()
+            c.h(0)
+            c.cnot(0, 1)
+            return c
+        s_val, violated = measure_chsh(_bell, noisy=True)
+        assert violated, f"S={s_val} should be > 2 even with noise"
+        assert s_val > 2.0
+
+    def test_product_does_not_violate(self):
+        """Product state (no entanglement) must NOT violate CHSH."""
+        def _product():
+            c = Circuit()
+            c.h(0)
+            c.h(1)
+            return c
+        s_val, violated = measure_chsh(_product, noisy=False)
+        assert not violated, f"Product state S={s_val} should be ≤ 2"
+
+    def test_chsh_returns_tuple(self):
+        def _bell():
+            c = Circuit()
+            c.h(0)
+            c.cnot(0, 1)
+            return c
+        result = measure_chsh(_bell, noisy=False)
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert isinstance(result[0], float)
+        assert isinstance(result[1], bool)
+
+
+# ── Readout Calibration Tests ─────────────────────────────────────────────────
+
+class TestReadoutCalibration:
+    def test_calibration_returns_dict(self):
+        cal = _build_readout_calibration(2)
+        assert "f0" in cal
+        assert "f1" in cal
+        assert "n_qubits" in cal
+
+    def test_calibration_fidelities_reasonable(self):
+        cal = _build_readout_calibration(2)
+        assert 0.5 < cal["f0"] <= 1.0
+        assert 0.5 < cal["f1"] <= 1.0
+
+
+# ── Enhanced PhiResult Fields ─────────────────────────────────────────────────
+
+class TestEnhancedResult:
+    def test_new_fields_present(self):
+        c = build_prism_2q()
+        r = execute(c, "test", "prism", noisy=False)
+        assert hasattr(r, 'mitigated')
+        assert hasattr(r, 'zne_applied')
+        assert hasattr(r, 'chsh_value')
+        assert hasattr(r, 'chsh_violation')
+
+    def test_raw_not_mitigated(self):
+        c = build_prism_2q()
+        r = execute(c, "test", "prism", noisy=False)
+        assert r.mitigated is False
+        assert r.zne_applied is False
+
+    def test_to_dict_includes_new_fields(self):
+        c = build_prism_2q()
+        r = execute(c, "test", "prism", noisy=False)
+        d = r.to_dict()
+        assert "mitigated" in d
+        assert "zne_applied" in d
+        assert "chsh_value" in d
