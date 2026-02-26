@@ -119,7 +119,7 @@ export async function GET() {
     telemetry: {
       lambda: 0.95 + Math.sin(Date.now() * LAMBDA_PHI) * 0.03,
       phi: PHI_C + Math.cos(Date.now() * LAMBDA_PHI * 2) * 0.02,
-      gamma: 0.15 + Math.random() * 0.05,
+      gamma: 0.15 + Math.sin(Date.now() * LAMBDA_PHI * 3) * 0.03,
       xi: 0.42 + Math.sin(Date.now() * 0.001) * 0.08,
       theta_lock: THETA_LOCK,
       timestamp: Date.now(),

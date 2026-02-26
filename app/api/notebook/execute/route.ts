@@ -61,14 +61,16 @@ function executeDNACell(code: string) {
 }
 
 function executePythonCell(code: string) {
-  // Evaluate simple Python expressions
   const h = hashCode(code)
 
   // Detect what the code is trying to do
   if (code.includes("import numpy") || code.includes("np.")) {
     const shape = code.match(/shape.*?(\d+)/)?.[1] || "10"
+    const n = Math.min(parseInt(shape), 6)
+    // Deterministic values from code hash instead of Math.random()
+    const vals = Array.from({ length: n }, (_, i) => ((hashCode(code + i) % 20000) / 10000 - 1).toFixed(4))
     return {
-      output: `array([${Array.from({ length: Math.min(parseInt(shape), 6) }, () => (Math.random() * 2 - 1).toFixed(4)).join(", ")}${parseInt(shape) > 6 ? ", ..." : ""}])\nshape: (${shape},)\ndtype: float64`,
+      output: `array([${vals.join(", ")}${parseInt(shape) > 6 ? ", ..." : ""}])\nshape: (${shape},)\ndtype: float64`,
       metrics: {},
     }
   }
