@@ -1,9 +1,12 @@
 """Lambda-phi conservation validation and measurement."""
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 import numpy as np
 from scipy import stats
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -128,7 +131,7 @@ class LambdaPhiValidator:
             },
         )
     
-    def _prepare_operator_observable(self, operator: str, num_qubits: int):
+    def _prepare_operator_observable(self, operator: str, num_qubits: int) -> Any:
         """Prepare Pauli operator observable."""
         operator_map = {
             "X": np.array([[0, 1], [1, 0]]),
@@ -184,7 +187,7 @@ class LambdaPhiValidator:
             return exp_val
             
         except Exception:
-            # Fallback: return random value for testing
+            logger.debug("Qiskit expectation value failed, using random fallback")
             return np.random.uniform(-1, 1)
     
     def compute_conservation_fidelity(

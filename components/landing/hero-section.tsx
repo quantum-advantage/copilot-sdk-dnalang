@@ -89,8 +89,8 @@ export function HeroSection() {
           </h1>
 
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto text-pretty leading-relaxed">
-            5 validated breakthroughs. 27+ IBM Quantum experiments. 256-atom QuEra decoding.
-            Multi-agent orchestration with OSIRIS Gen 5.2 runtime — zero tokens, zero telemetry.
+            9 validated breakthroughs. 30 IBM Quantum experiments. 2.1M+ shots. 256-atom QuEra decoding.
+            Amazon Braket integration. Multi-agent orchestration with OSIRIS Gen 5.2 — zero tokens, zero telemetry.
           </p>
 
           {/* CTA Buttons - Primary hierarchy */}

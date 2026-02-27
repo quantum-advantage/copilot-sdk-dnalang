@@ -2,10 +2,13 @@
 
 import asyncio
 import json
+import logging
 import os
 import subprocess
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 from .config import QuantumConfig, LambdaPhiConfig, ConsciousnessConfig
 from .quantum import QuantumCircuit, QuantumBackend, QuantumResult
@@ -79,9 +82,9 @@ class DNALangCopilotClient:
         self._nclm_provider: Optional[NCLMModelProvider] = None
         if self.copilot_config.use_nclm and is_nclm_available():
             self._nclm_provider = NCLMModelProvider(self.nclm_config)
-            print(f"✓ NCLM Model Provider initialized (λφ={self.nclm_config.lambda_decay})")
+            logger.info("NCLM Model Provider initialized (λφ=%s)", self.nclm_config.lambda_decay)
         elif self.copilot_config.use_nclm:
-            print("Warning: NCLM requested but not available. Falling back to Copilot CLI.")
+            logger.warning("NCLM requested but not available. Falling back to Copilot CLI.")
         
         # Initialize Intent-Deduction Engine if enabled
         self.intent_engine: Optional[IntentDeductionEngine] = None
@@ -91,7 +94,7 @@ class DNALangCopilotClient:
                 enable_nclm=self.copilot_config.use_nclm,
                 nclm_model=self._nclm_provider
             )
-            print("✓ Intent-Deduction Engine initialized")
+            logger.info("Intent-Deduction Engine initialized")
         
         # Initialize Gemini provider if enabled
         self._gemini_provider: Optional[GeminiModelProvider] = None
@@ -100,19 +103,19 @@ class DNALangCopilotClient:
             self._gemini_provider = GeminiModelProvider(
                 config=GeminiConfig(api_key=gemini_api_key)
             )
-            print(f"✓ Gemini Model Provider initialized (model={self._gemini_provider.config.model})")
+            logger.info("Gemini Model Provider initialized (model=%s)", self._gemini_provider.config.model)
 
     
-    async def __aenter__(self):
+    async def __aenter__(self) -> "DNALangClient":
         """Async context manager entry."""
         await self.start()
         return self
     
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.close()
     
-    async def start(self):
+    async def start(self) -> None:
         """Start Copilot CLI in server mode."""
         if self.copilot_config.server_mode and not self._cli_process:
             cmd = [self.copilot_config.cli_path, "server"]
@@ -130,10 +133,9 @@ class DNALangCopilotClient:
                 )
                 await asyncio.sleep(2)
             except FileNotFoundError:
-                print(f"Warning: Copilot CLI not found at '{self.copilot_config.cli_path}'")
-                print("Running in standalone mode without Copilot integration.")
+                logger.warning("Copilot CLI not found at '%s'. Running in standalone mode.", self.copilot_config.cli_path)
     
-    async def close(self):
+    async def close(self) -> None:
         """Close Copilot CLI connection."""
         if self._cli_process:
             self._cli_process.terminate()

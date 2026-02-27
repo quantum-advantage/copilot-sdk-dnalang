@@ -13,6 +13,7 @@ Framework: DNA::}{::lang v51.843
 """
 
 import json
+import logging
 import os
 import sys
 import glob
@@ -22,6 +23,8 @@ import re
 from datetime import datetime
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 # ── Constants ──
 PHI_GOLDEN = (1 + math.sqrt(5)) / 2

@@ -1,8 +1,11 @@
 """Quantum circuit execution and backend management."""
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 import json
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -14,33 +17,33 @@ class QuantumCircuit:
     name: Optional[str] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
     
-    def add_gate(self, gate_type: str, **kwargs):
+    def add_gate(self, gate_type: str, **kwargs: Any) -> "QuantumCircuit":
         """Add a gate to the circuit."""
         gate = {"type": gate_type, **kwargs}
         self.gates.append(gate)
         return self
     
-    def h(self, target: int):
+    def h(self, target: int) -> "QuantumCircuit":
         """Add Hadamard gate."""
         return self.add_gate("h", target=target)
     
-    def x(self, target: int):
+    def x(self, target: int) -> "QuantumCircuit":
         """Add Pauli-X gate."""
         return self.add_gate("x", target=target)
     
-    def y(self, target: int):
+    def y(self, target: int) -> "QuantumCircuit":
         """Add Pauli-Y gate."""
         return self.add_gate("y", target=target)
     
-    def z(self, target: int):
+    def z(self, target: int) -> "QuantumCircuit":
         """Add Pauli-Z gate."""
         return self.add_gate("z", target=target)
     
-    def cx(self, control: int, target: int):
+    def cx(self, control: int, target: int) -> "QuantumCircuit":
         """Add CNOT gate."""
         return self.add_gate("cx", control=control, target=target)
     
-    def to_qiskit(self):
+    def to_qiskit(self) -> Any:
         """Convert to Qiskit QuantumCircuit (requires qiskit)."""
         try:
             from qiskit import QuantumCircuit as QiskitCircuit
@@ -160,6 +163,7 @@ class QuantumBackend:
             )
             
         except Exception as e:
+            logger.error("Quantum execution failed on %s: %s", backend, e)
             execution_time = time.time() - start_time
             return QuantumResult(
                 counts={},

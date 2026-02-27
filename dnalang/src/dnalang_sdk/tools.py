@@ -1,6 +1,9 @@
 """Tool registry and custom tools for Copilot integration."""
 
+import logging
 from typing import Any, Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 class ToolRegistry:
@@ -11,17 +14,17 @@ class ToolRegistry:
         self._tools = {}
         self._register_default_tools()
     
-    def _register_default_tools(self):
+    def _register_default_tools(self) -> None:
         """Register default DNALang tools."""
         self.register_tool(QuantumExecutionTool())
         self.register_tool(LambdaPhiValidationTool())
         self.register_tool(ConsciousnessScalingTool())
     
-    def register_tool(self, tool):
+    def register_tool(self, tool: Any) -> None:
         """Register a tool."""
         self._tools[tool.name] = tool
     
-    def get_tool(self, name: str):
+    def get_tool(self, name: str) -> Any:
         """Get tool by name."""
         return self._tools.get(name)
     

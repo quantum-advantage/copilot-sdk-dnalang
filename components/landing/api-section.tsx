@@ -55,6 +55,18 @@ const apiEndpoints = [
     icon: Lock,
     method: "POST",
   },
+  {
+    endpoint: "/api/braket/devices",
+    description: "Amazon Braket QPU catalog with DNA-Lang compatibility",
+    icon: Globe,
+    method: "GET",
+  },
+  {
+    endpoint: "/api/braket/submit",
+    description: "Compile & submit circuits to Braket hardware",
+    icon: Network,
+    method: "POST",
+  },
 ]
 
 const codeExample = `// NC-LM Inference with IIT Convergence Tracking

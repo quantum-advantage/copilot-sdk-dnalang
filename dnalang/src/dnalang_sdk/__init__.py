@@ -25,6 +25,11 @@ __author__ = "Devin Phillip Davis / Agile Defense Systems"
 __license__ = "MIT"
 __framework__ = "DNA::}{::lang v51.843"
 
+# Library logging best practice: add NullHandler so apps without
+# logging config don't see "No handlers could be found" warnings.
+import logging as _logging
+_logging.getLogger(__name__).addHandler(_logging.NullHandler())
+
 # ═══════════════════════════════════════════════════════════════════════
 # Core Client & Config
 # ═══════════════════════════════════════════════════════════════════════
@@ -230,6 +235,7 @@ from .hardware import WorkloadExtractor, SubstratePipeline
 from .self_repair import (
     SelfRepairEngine,
     ErrorSignature,
+    OsirisInferenceEngine,
     discover_ibm_token,
     ensure_ibm_token,
     export_token,
@@ -334,7 +340,7 @@ __all__ = [
     # Hardware
     "WorkloadExtractor", "SubstratePipeline",
     # Self-Repair
-    "SelfRepairEngine", "ErrorSignature",
+    "SelfRepairEngine", "ErrorSignature", "OsirisInferenceEngine",
     "discover_ibm_token", "ensure_ibm_token", "export_token",
     "parse_error", "with_self_repair",
 ]

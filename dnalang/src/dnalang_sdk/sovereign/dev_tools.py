@@ -247,7 +247,7 @@ class DeveloperTools:
                     try:
                         with open(file_path, 'r') as f:
                             structure["lines_of_code"] += len(f.readlines())
-                    except:
+                    except (OSError, UnicodeDecodeError):
                         pass
                 elif file.endswith(('.js', '.ts', '.jsx', '.tsx')):
                     structure["files"]["javascript"] += 1
