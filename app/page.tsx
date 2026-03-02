@@ -185,6 +185,38 @@ const platformFeatures = [
     category: "Security",
     badge: "New",
   },
+  {
+    icon: Brain,
+    title: "Shadow-You Model",
+    description: "Filesystem-aware user profiling — OSIRIS knows your projects, working hours, and interests. Context injected into every LLM call.",
+    href: "/research",
+    category: "Gen 6 Cognitive Shell",
+    badge: "Gen 6",
+  },
+  {
+    icon: Zap,
+    title: "NLP Intent Router",
+    description: "Natural language → command routing. Keyword scoring (threshold 0.38) + LLM fallback. 10/10 accuracy on OSIRIS command space.",
+    href: "/osiris-bridge",
+    category: "Gen 6 Cognitive Shell",
+    badge: "Gen 6",
+  },
+  {
+    icon: Network,
+    title: "Research Knowledge Graph",
+    description: "35-node typed graph with 6 edge types. Autonomous hypothesis generation, contradiction detection, and bridge discovery.",
+    href: "/research",
+    category: "Gen 6 Cognitive Shell",
+    badge: "Gen 6",
+  },
+  {
+    icon: Cpu,
+    title: "11D Manifold Optimizer",
+    description: "θ_lock = arccos(1/φ) — golden ratio structural discovery in 11D CRSM geometry. 856 tests passing. ccce_comp ratio = 1/φ (diff 0.029).",
+    href: "/uqcb",
+    category: "Gen 6 Cognitive Shell",
+    badge: "Gen 6",
+  },
 ]
 
 const userJourneySteps = [

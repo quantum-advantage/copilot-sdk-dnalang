@@ -403,6 +403,37 @@ bridge.sync_manifold();`)
                 Export Directive
               </Button>
             </div>
+
+            {/* Gen 6 Cognitive Shell Info Panel */}
+            <div className="glass rounded-xl p-4 border border-primary/20">
+              <h3 className="text-xs font-semibold mb-3 flex items-center gap-2 text-primary">
+                <Brain className="h-3 w-3" />
+                Gen 6 Cognitive Shell
+              </h3>
+              <div className="space-y-2 text-[10px]">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-muted-foreground">Intent Router</span>
+                  <span className="font-mono text-right text-primary">"check my experiments"<br/>→ research status (0.85)</span>
+                </div>
+                <div className="border-t border-border/30 pt-2 flex items-start justify-between gap-2">
+                  <span className="text-muted-foreground">Shadow-You</span>
+                  <span className="text-secondary text-right">User profile active —<br/>projects tracked</span>
+                </div>
+                <div className="border-t border-border/30 pt-2 flex items-start justify-between gap-2">
+                  <span className="text-muted-foreground">Research Graph</span>
+                  <Link href="/research" className="text-accent hover:underline text-right">
+                    35 nodes · 42 edges →
+                  </Link>
+                </div>
+                <div className="border-t border-border/30 pt-2 flex items-start justify-between gap-2">
+                  <span className="text-muted-foreground">θ_RESONANCE</span>
+                  <span className="font-mono text-right">
+                    {THETA_RESONANCE}° = arccos(1/φ)<br/>
+                    <span className="text-primary">cos={Math.cos((THETA_RESONANCE * Math.PI) / 180).toFixed(4)}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Center Panel - Command Sphere & NLP */}

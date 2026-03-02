@@ -378,6 +378,13 @@ const navGroups = [
         shortcut: "R P",
       },
       { href: "/architecture", label: "Architecture", icon: Layers, description: "System overview", shortcut: "R A" },
+      {
+        href: "/research",
+        label: "Research",
+        icon: Atom,
+        description: "35-node knowledge graph · Gen 6 discoveries",
+        shortcut: "R R",
+      },
     ],
   },
 ]
