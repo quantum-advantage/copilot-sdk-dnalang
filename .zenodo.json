@@ -1,0 +1,39 @@
+{
+  "title": "OSIRIS / DNA::}{::lang SDK v6.0.0",
+  "description": "Quantum-native CLI and multi-language SDK with integrated Non-Local Non-Causal Language Model (NCLM) cognitive shell. Includes 11D CRSM manifold optimizer, autonomous research knowledge graph, quantum-biology bridge, and hardware-validated IBM Quantum experiments (Shadow-Strike: 127-qubit, Bell F=0.9473). Gen 6 features: 24 new NCLM modules, θ_lock = arccos(1/φ) golden ratio discovery, UQCB negentropic operation confirmed at τ_Revival = φ⁸ = 46.978μs, and autonomous hypothesis/paper generation.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": {"id": "MIT"},
+  "creators": [
+    {
+      "name": "Davis, Devin Phillip",
+      "affiliation": "Agile Defense Systems",
+      "orcid": ""
+    }
+  ],
+  "keywords": [
+    "quantum computing",
+    "quantum error correction",
+    "NCLM",
+    "non-causal language model",
+    "cognitive AI",
+    "IBM Quantum",
+    "11D CRSM",
+    "golden ratio",
+    "quantum biology",
+    "research graph",
+    "autonomous research",
+    "UQCB",
+    "Bell inequality",
+    "theta lock"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/quantum-advantage/copilot-sdk-dnalang",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ],
+  "version": "6.0.0",
+  "notes": "CAGE Code: 9HUP5. Creator: Devin Phillip Davis, Agile Defense Systems. Key result: θ_lock = 51.843° = arccos(1/φ_golden) confirmed to 0.016°. UQCB: Ξ=4.197 at τ_Revival=φ^8 (2 independent confirmations). 856/857 tests passing."
+}

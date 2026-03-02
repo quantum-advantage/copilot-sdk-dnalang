@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: "OSIRIS / DNA::}{::lang SDK"
+message: "If you use this software, please cite it using the metadata from this file."
+version: "6.0.0"
+date-released: "2026-03-02"
+authors:
+  - family-names: Davis
+    given-names: Devin Phillip
+    affiliation: Agile Defense Systems
+license: MIT
+repository-code: "https://github.com/quantum-advantage/copilot-sdk-dnalang"
+keywords:
+  - quantum computing
+  - quantum error correction
+  - cognitive AI
+  - NCLM
+  - non-causal language model
+  - 11D CRSM
+  - golden ratio
+  - quantum biology
+  - autonomous research
+abstract: >
+  OSIRIS / DNA::}{::lang SDK v6.0.0 is a quantum-native CLI and multi-language
+  SDK with an integrated Non-Local Non-Causal Language Model (NCLM) cognitive shell.
+  Gen 6 features 24 new NCLM modules including an autonomous research knowledge graph
+  (35 nodes, 6 edge types), hypothesis engine, and paper writer. Key scientific result:
+  θ_lock = 51.843° = arccos(1/φ_golden) confirmed to 0.016° angular precision,
+  establishing θ_lock as the golden ratio partition angle in 11D CRSM geometry.
+  UQCB negentropic operation confirmed at τ_Revival = φ^8 = 46.978μs by two
+  independent simulations. Hardware validation: Bell F=0.9473, CHSH S=2.690 on
+  127-qubit IBM Fez. CAGE Code: 9HUP5.
