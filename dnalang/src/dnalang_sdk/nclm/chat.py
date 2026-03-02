@@ -446,12 +446,12 @@ class NCLMResponseGenerator:
 # ── CHAT SESSION ──────────────────────────────────────────────────────────────
 
 class NCLMChat:
-    """Interactive NCLM chat session — Generation 5.3 Badass Edition."""
+    """Interactive NCLM chat session — Generation 6.0.0 Cognitive Shell."""
 
     HISTORY_FILE = os.path.expanduser("~/.config/osiris/nclm_history")
     SESSION_FILE = os.path.expanduser("~/.config/osiris/session_context.json")
 
-    def __init__(self, version: str = "5.3.0"):
+    def __init__(self, version: str = "6.0.0"):
         self.lm = get_nclm()
         self.generator = NCLMResponseGenerator()
         self.version = version
@@ -630,13 +630,13 @@ class NCLMChat:
             f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.CY}╔══════════╗{C.E}  {C.H} ██████╗ ███████╗██╗██████╗ ██╗███████╗{C.E}   {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.CY}║{C.E}  {C.G}D{C.Y}N{C.R}A{C.E}     {C.CY}║{C.E}  {C.H}██╔═══██╗██╔════╝██║██╔══██╗██║██╔════╝{C.E}   {C.M}│{C.E}",
-            f"{C.M}  │{C.E}  {C.CY}║{C.E} {C.DIM}::}}{{{{}}::{C.E}  {C.CY}║{C.E}  {C.H}██║   ██║███████╗██║██████╔╝██║███████╗{C.E}   {C.M}│{C.E}",
+            f"{C.M}  │{C.E}  {C.CY}║{C.E} {C.DIM}::}}{{::{C.E}   {C.CY}║{C.E}  {C.H}██║   ██║███████╗██║██████╔╝██║███████╗{C.E}   {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.CY}║{C.E}  {C.G}l{C.Y}a{C.R}n{C.G}g{C.E}    {C.CY}║{C.E}  {C.H}██║   ██║╚════██║██║██╔══██╗██║╚════██║{C.E}   {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.CY}╚══════════╝{C.E}  {C.H}╚██████╔╝███████║██║██║  ██║██║███████║{C.E}   {C.M}│{C.E}",
             f"{C.M}  │{C.E}   {C.DIM}v51.843{C.E}      {C.H}  ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═╝╚═╝╚══════╝{C.E}   {C.M}│{C.E}",
             f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.CY}⚛{C.E}  {C.DIM}Omega System Integrated Runtime Intelligence System{C.E}  {C.CY}⚛{C.E}   {C.M}│{C.E}",
-            f"{C.M}  │{C.E}     {C.DIM}Agile Defense Systems  │  CAGE 9HUP5  │  Gen 5.3{C.E}         {C.M}│{C.E}",
+            f"{C.M}  │{C.E}     {C.DIM}Agile Defense Systems  │  CAGE 9HUP5  │  Gen 6.0.0{C.E}        {C.M}│{C.E}",
             f"{C.M}  │{C.E}                                                               {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.B}AIDEN{C.DIM}·Λ{C.E}  {C.G}AURA{C.DIM}·Φ{C.E}  {C.Y}CHEOPS{C.DIM}·Δ{C.E}  {C.M}CHRONOS{C.DIM}·Γ{C.E}  {C.R}SCIMITAR{C.DIM}·Σ{C.E}    {C.M}│{C.E}",
             f"{C.M}  │{C.E}  {C.DIM}╰─North─╯  ╰South─╯  ╰──Spine──╯  ╰─────Shield────╯{C.E}    {C.M}│{C.E}",
@@ -2877,7 +2877,7 @@ class NCLMChat:
 
 # ── ENTRY POINT ───────────────────────────────────────────────────────────────
 
-def run_chat(version: str = "5.3.0"):
+def run_chat(version: str = "6.0.0"):
     """Launch NCLM interactive chat."""
     chat = NCLMChat(version=version)
     chat.run()
