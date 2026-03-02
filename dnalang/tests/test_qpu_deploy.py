@@ -9,6 +9,7 @@ import os
 import pytest
 import numpy as np
 
+pytest.importorskip("braket", reason="amazon-braket-sdk not installed")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'examples'))
 from braket_qpu_deploy import (
     LAMBDA_PHI, THETA_LOCK_DEG, THETA_LOCK_RAD, PHI_THRESHOLD,

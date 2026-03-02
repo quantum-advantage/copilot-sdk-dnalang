@@ -12,13 +12,29 @@ from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 
 # Import NCLM (adjust path as needed)
-sys.path.insert(0, '/home/devinpd/Desktop')
+_nclm_search_paths = [
+    os.path.expanduser('~/Desktop'),
+    os.path.expanduser('~'),
+    os.path.expanduser('~/Documents'),
+    '/home/devinpd/Desktop',
+]
+for _p in _nclm_search_paths:
+    if _p not in sys.path and os.path.isdir(_p):
+        sys.path.insert(0, _p)
 try:
     from osiris_nclm_complete import NonCausalLM, get_noncausal_lm, NCPhysics
     NCLM_AVAILABLE = True
 except ImportError:
     NCLM_AVAILABLE = False
-    print("Warning: NCLM not found. Install osiris_nclm_complete.py to use NCLM provider.")
+
+    class NonCausalLM:  # stub so type annotations don't raise NameError
+        pass
+
+    def get_noncausal_lm(*args, **kwargs):
+        raise RuntimeError("NCLM not available: install osiris_nclm_complete.py")
+
+    class NCPhysics:
+        THETA_LOCK = 51.843
 
 
 @dataclass

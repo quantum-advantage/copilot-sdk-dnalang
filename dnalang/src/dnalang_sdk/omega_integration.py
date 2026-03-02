@@ -20,7 +20,10 @@ DFARS 15.6 Compliant | SDVOSB
 import asyncio
 import json
 import logging
+import os
 import time
+import urllib.request
+import urllib.error
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass, field, asdict
@@ -361,23 +364,119 @@ class OmegaMasterIntegration:
         files: List[str]
     ) -> Dict[str, Any]:
         """
-        Publish research to Zenodo.
-        
+        Publish research to Zenodo via REST API.
+
         Args:
-            metadata: Publication metadata
-            files: List of files to publish
-        
+            metadata: Publication metadata dict with keys:
+                        title, description, creators (list of {name, orcid}),
+                        keywords (list), upload_type, license
+            files:    List of local file paths to upload
+
         Returns:
-            Publication result
+            Dict with status, doi, record_id, deposit_url
         """
+        token = os.environ.get("ZENODO_TOKEN", "")
+        if not token:
+            return {"status": "error", "error": "ZENODO_TOKEN not set"}
+
+        base = "https://zenodo.org/api"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+        def _api(method: str, url: str, body: bytes = None,
+                 extra_headers: dict = None) -> dict:
+            h = dict(headers)
+            if extra_headers:
+                h.update(extra_headers)
+            req = urllib.request.Request(url, data=body, headers=h, method=method)
+            try:
+                with urllib.request.urlopen(req, timeout=60) as r:
+                    raw = r.read()
+                    return json.loads(raw) if raw else {}
+            except urllib.error.HTTPError as e:
+                msg = e.read().decode(errors="replace")
+                return {"_error": f"HTTP {e.code}: {msg[:300]}"}
+            except Exception as e:
+                return {"_error": str(e)}
+
+        # ── 1. Create empty deposition ──────────────────────────────────────
+        dep = _api("POST", f"{base}/deposit/depositions", body=b"{}")
+        if "_error" in dep:
+            return {"status": "error", "error": dep["_error"], "step": "create"}
+
+        dep_id = dep["id"]
+        bucket_url = dep["links"]["bucket"]
+
+        # ── 2. Upload files via bucket API ──────────────────────────────────
+        uploaded = []
+        for fpath in (files or []):
+            fpath = os.path.expanduser(fpath)
+            if not os.path.isfile(fpath):
+                continue
+            fname = os.path.basename(fpath)
+            with open(fpath, "rb") as fh:
+                data = fh.read()
+            up_headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/octet-stream",
+            }
+            up_req = urllib.request.Request(
+                f"{bucket_url}/{fname}", data=data,
+                headers=up_headers, method="PUT",
+            )
+            try:
+                with urllib.request.urlopen(up_req, timeout=120) as r:
+                    uploaded.append(fname)
+            except Exception as e:
+                logger.warning("Zenodo file upload failed for %s: %s", fname, e)
+
+        # ── 3. Set metadata ─────────────────────────────────────────────────
+        creators = metadata.get("creators") or [
+            {"name": "Davis, Devin Phillip",
+             "affiliation": "Agile Defense Systems LLC",
+             "orcid": ORCID}
+        ]
+        zen_meta = {
+            "metadata": {
+                "title": metadata.get("title", "OSIRIS Research Publication"),
+                "upload_type": metadata.get("upload_type", "publication"),
+                "publication_type": metadata.get("publication_type", "article"),
+                "description": metadata.get("description", "Published via OSIRIS CLI"),
+                "creators": creators,
+                "keywords": metadata.get("keywords", ["quantum", "DNA-Lang", "OSIRIS"]),
+                "license": metadata.get("license", "cc-by-4.0"),
+                "access_right": "open",
+            }
+        }
+        upd = _api(
+            "PUT",
+            f"{base}/deposit/depositions/{dep_id}",
+            body=json.dumps(zen_meta).encode(),
+        )
+        if "_error" in upd:
+            return {"status": "error", "error": upd["_error"], "step": "metadata",
+                    "deposit_url": f"https://zenodo.org/deposit/{dep_id}"}
+
+        # ── 4. Publish ───────────────────────────────────────────────────────
+        pub = _api("POST", f"{base}/deposit/depositions/{dep_id}/actions/publish")
+        if "_error" in pub:
+            return {"status": "error", "error": pub["_error"], "step": "publish",
+                    "deposit_url": f"https://zenodo.org/deposit/{dep_id}"}
+
+        doi = pub.get("doi") or pub.get("metadata", {}).get("doi", "")
+        record_id = pub.get("record_id") or dep_id
+
         self.state.zenodo_publications += 1
-        
         return {
             "status": "published",
-            "doi": f"10.5281/zenodo.{17858632 + self.state.zenodo_publications}",
+            "doi": doi,
+            "record_id": record_id,
+            "deposit_url": f"https://zenodo.org/record/{record_id}",
+            "files_uploaded": uploaded,
             "orcid": ORCID,
             "total_publications": self.state.zenodo_publications,
-            "metadata": metadata
         }
     
     def get_agent_status(self) -> Dict[str, Any]:
@@ -422,11 +521,33 @@ class OmegaMasterIntegration:
         agent_config: AgentConfig,
         task: str
     ) -> str:
-        """Execute task with specified agent"""
-        # Simulate agent execution (would integrate with NCLM/Gemini in production)
-        await asyncio.sleep(0.5)
-        
-        return f"[{agent_config.name}] Task completed with {len(agent_config.capabilities)} capabilities"
+        """Execute task with specified agent via real LLM backend."""
+        try:
+            from .nclm.tools import tool_llm
+            agent_context = (
+                f"You are {agent_config.name}, an OSIRIS agent "
+                f"({agent_config.agent_type.value}). "
+                f"Capabilities: {', '.join(agent_config.capabilities)}. "
+                f"Temperature: {agent_config.temperature}. "
+                f"ΛΦ={2.176435e-8}, θ_lock=51.843°"
+            )
+            # Inject physics research context as workload pre-processor
+            try:
+                from .nclm.research_engine import get_research_engine
+                _re = get_research_engine(auto_load=True)
+                _rc = _re.build_llm_context(task)
+                if _rc:
+                    agent_context = _rc + "\n\n" + agent_context
+            except Exception:
+                pass
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: tool_llm(task, agent_context)
+            )
+            if result and len(result) > 10:
+                return result
+        except Exception:
+            pass
+        return f"[{agent_config.name}] {task[:120]}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

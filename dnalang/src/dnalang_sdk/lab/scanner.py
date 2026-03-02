@@ -160,7 +160,7 @@ class LabScanner:
     ]
 
     def __init__(self, home: Optional[str] = None):
-        self.home = home or "/home/devinpd"
+        self.home = home or os.path.expanduser("~")
 
     def scan_all(self, registry: ExperimentRegistry) -> Dict[str, int]:
         """Full scan: discover scripts, results, organisms. Returns counts."""

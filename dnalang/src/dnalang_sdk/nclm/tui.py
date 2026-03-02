@@ -319,6 +319,135 @@ class StatusBar(Static):
         )
 
 
+class SwarmPanel(Static):
+    """
+    Live swarm intelligence dashboard.
+
+    Displays:
+    ▸ CRSM metrics (Φ, Γ, Λ, Fdna)
+    ▸ GA genome status (best genome, generation, fitness)
+    ▸ Fdna heatmap for top queued tasks
+    ▸ DoD bar chart for recent files
+    ▸ Swarm queue depth
+    """
+
+    # Reactive toggle for visibility
+    visible_panel = reactive(True)
+
+    def render(self) -> Text:  # noqa: D102
+        t = Text()
+
+        if not self.visible_panel:
+            t.append("⚙ Swarm Panel [ctrl+w to show]", style="dim")
+            return t
+
+        t.append("╭─── Swarm Intelligence ────╮\n", style="bold magenta")
+
+        # ── CRSM metrics ──────────────────────────────────────────────
+        try:
+            from .swarm_brain import get_brain, compute_fdna, crsm_from_file
+            brain = get_brain()
+            stats = brain.stats_dict()
+
+            # Pull CRSM from session aggregate
+            crsm = brain._session_crsm()
+            fdna = compute_fdna(crsm)
+
+            phi_bar = "█" * int(crsm.phi_consciousness * 12) + "░" * (12 - int(crsm.phi_consciousness * 12))
+            phi_color = "green" if crsm.phi_consciousness > 0.7 else ("yellow" if crsm.phi_consciousness > 0.4 else "red")
+
+            t.append("│ CRSM                      │\n", style="magenta")
+            t.append(f"│  Φ ", style="magenta")
+            t.append(f"{phi_bar}", style=f"bold {phi_color}")
+            t.append(f" {crsm.phi_consciousness:.2f}", style="dim")
+            t.append(" │\n", style="magenta")
+
+            gamma_color = "green" if crsm.gamma_decoherence < 0.2 else ("yellow" if crsm.gamma_decoherence < 0.5 else "red")
+            t.append(f"│  Γ={crsm.gamma_decoherence:.3f}  ", style="magenta")
+            t.append(f"Λ={crsm.lambda_coherence:.3f}", style="cyan")
+            t.append("             │\n", style="magenta")
+
+            fdna_color = "green" if fdna > 0.5 else ("yellow" if fdna > 0.2 else "red")
+            t.append("│  Fdna=", style="magenta")
+            t.append(f"{fdna:.4f}", style=f"bold {fdna_color}")
+            t.append(f"  CI={crsm.coherence_integrity():.1f}", style="dim")
+            t.append("      │\n", style="magenta")
+            t.append("│                           │\n", style="magenta")
+
+            # ── GA genome status ───────────────────────────────────────
+            t.append("│ StrategyGenome            │\n", style="bold magenta")
+            gen = stats["generation"]
+            max_gen = stats["max_gens"]
+            fitness = stats["best_fitness"]
+            f_color = "green" if fitness > 0.7 else ("yellow" if fitness > 0.4 else "red")
+            frozen_mark = " ❄" if stats["frozen"] else ""
+            killed_mark = " ☠" if stats["killed"] else ""
+            t.append(f"│  Gen {gen}/{max_gen}  F=", style="magenta")
+            t.append(f"{fitness:.3f}", style=f"bold {f_color}")
+            t.append(f"{frozen_mark}{killed_mark}", style="cyan")
+            # pad to width
+            used = 14 + len(frozen_mark) + len(killed_mark)
+            t.append(" " * max(1, 27 - used) + "│\n", style="magenta")
+
+            order_str = "→".join(s[:3] for s in stats["best_order"][:3]) + ".."
+            t.append(f"│  {order_str[:25]}", style="dim")
+            t.append(" " * max(1, 27 - len(order_str[:25])) + "│\n", style="magenta")
+
+            sig = stats.get("best_sig", "")[:12]
+            t.append(f"│  sig:{sig}", style="dim")
+            t.append(" " * max(1, 22 - len(sig)) + "│\n", style="magenta")
+            t.append("│                           │\n", style="magenta")
+
+        except Exception as e:
+            t.append(f"│ Brain N/A ({str(e)[:18]}) │\n", style="dim")
+
+        # ── Swarm queue status ─────────────────────────────────────────
+        try:
+            from .shadow_swarm import get_swarm
+            swarm = get_swarm()
+            with swarm._lock:
+                q_tasks = list(swarm._heap)
+                done_count = len(swarm._completed)
+
+            running_mark = "▶ RUNNING" if swarm._running else "◌ IDLE   "
+            q_color = "green" if swarm._running else "dim"
+            t.append("│ Shadow Swarm              │\n", style="bold magenta")
+            t.append(f"│  ", style="magenta")
+            t.append(running_mark, style=f"bold {q_color}")
+            t.append(f"  Q:{len(q_tasks):2d}  ✓:{done_count}", style="dim")
+            t.append("  │\n", style="magenta")
+
+            # Fdna heatmap: top 5 queued tasks
+            if q_tasks:
+                t.append("│ Fdna heatmap              │\n", style="magenta")
+                sorted_tasks = sorted(q_tasks, key=lambda x: x.priority)[:5]
+                for task in sorted_tasks:
+                    fname = task.file_path.split("/")[-1][:12]
+                    fdna_t = task.fdna
+                    bar_w = int(fdna_t * 8)
+                    bar = "█" * bar_w + "░" * (8 - bar_w)
+                    fc = "green" if fdna_t > 0.5 else ("yellow" if fdna_t > 0.2 else "red")
+                    t.append(f"│  ", style="magenta")
+                    t.append(bar, style=fc)
+                    t.append(f" p{task.priority} {fname}", style="dim")
+                    pad = max(1, 12 - len(fname))
+                    t.append(" " * pad + "│\n", style="magenta")
+            else:
+                t.append("│  Queue empty              │\n", style="dim magenta")
+
+        except Exception:
+            t.append("│ Swarm N/A                 │\n", style="dim")
+
+        t.append("│                           │\n", style="magenta")
+        t.append("│ ", style="magenta")
+        t.append("ctrl+w", style="bold yellow")
+        t.append(" toggle  ", style="dim")
+        t.append("ctrl+e", style="bold yellow")
+        t.append(" evolve│\n", style="dim magenta")
+        t.append("╰───────────────────────────╯", style="bold magenta")
+        return t
+
+
 class ToolsLog(RichLog):
     """Dedicated tool execution visualization pane."""
     pass
@@ -367,6 +496,16 @@ HELP_TEXT = """\
 
 [bold]━━━ Mesh & Swarm ━━━[/]
   /swarm evolve [cycles] [nodes]  NCLM swarm evolution (7-layer CRSM)
+  /swarm status          Shadow swarm queue + DoD completion
+  /swarm dod [path]      Definition-of-Done report for Python files
+  /swarm learn           Apprentice synthesis + flush training corpus
+  /swarm force <file> <role>  Force a swarm role on a file
+  /swarm lineage         GA genome evolution lineage
+  /swarm freeze          Freeze current strategy genome
+  /swarm kill            Emergency kill switch (halt all evolution)
+  ctrl+w                 Toggle swarm intelligence panel
+  ctrl+e                 Trigger GA evolution step
+  ctrl+g                 Show genome lineage in chat
   /mesh                  Show constellation/mesh status
   /constellation         Same as /mesh
 
@@ -518,6 +657,12 @@ class OsirisTUI(App):
         height: 100%;
     }
 
+    #swarm-panel {
+        height: auto;
+        max-height: 24;
+        margin-top: 1;
+    }
+
     #right-col {
         width: 1fr;
         height: 100%;
@@ -588,6 +733,9 @@ class OsirisTUI(App):
         Binding("ctrl+l", "clear_chat", "Clear", show=True),
         Binding("ctrl+d", "toggle_devmode", "Dev", show=True),
         Binding("ctrl+r", "research", "Research", show=True),
+        Binding("ctrl+w", "toggle_swarm", "Swarm", show=True),
+        Binding("ctrl+e", "evolve_strategy", "Evolve", show=True),
+        Binding("ctrl+g", "swarm_lineage", "Lineage", show=True),
         Binding("escape", "focus_input", "Input", show=False),
     ]
 
@@ -649,6 +797,7 @@ class OsirisTUI(App):
 
             with Vertical(id="right-col"):
                 yield AgentPanel(id="agent-panel")
+                yield SwarmPanel(id="swarm-panel")
                 yield RichLog(
                     id="tools-log",
                     highlight=True,
@@ -700,6 +849,15 @@ class OsirisTUI(App):
 
         # Start status bar refresh timer
         self._status_timer = self.set_interval(2.0, self._refresh_status)
+        # Start swarm panel refresh timer
+        self._swarm_timer = self.set_interval(4.0, self._refresh_swarm)
+
+        # Signal Scimitar mouse: boot nominal
+        try:
+            from .scimitar_agent_bridge import get_bridge
+            get_bridge().signal_all_green()
+        except Exception:
+            pass
 
     def _boot(self):
         """Display boot sequence in chat."""
@@ -906,6 +1064,11 @@ class OsirisTUI(App):
             if self.messages:
                 chat.write(Text(f"First: {self.messages[0]['content'][:60]}...", style="dim"))
                 chat.write(Text(f"Last:  {self.messages[-1]['content'][:60]}...", style="dim"))
+            return
+
+        # /swarm — Shadow Swarm + GA Brain control
+        if command == "/swarm":
+            await self._handle_swarm_cmd(arg)
             return
 
         # /chat and /ask — force LLM reasoning (bypass tool dispatch)
@@ -1165,6 +1328,104 @@ class OsirisTUI(App):
             chat.write(Text(f"  {i:2d}. {cmd[:80]}", style="dim"))
         if not self.input_history:
             chat.write(Text("  (no history yet)", style="dim"))
+
+    # ── SWARM COMMAND HANDLER ─────────────────────────────────────────────────
+
+    async def _handle_swarm_cmd(self, arg: str):
+        """Handle /swarm <subcommand> routing."""
+        chat = self.query_one("#chat-log", RichLog)
+        events = self.query_one("#events-log", RichLog)
+        sub = (arg.split(maxsplit=1)[0] if arg else "status").lower()
+        rest = arg.split(maxsplit=1)[1] if " " in arg else ""
+
+        if sub == "status":
+            try:
+                from .shadow_swarm import get_swarm
+                result = get_swarm().status()
+                clean = self._strip_ansi(result)
+                msg = Text()
+                msg.append("\n─── Shadow Swarm Status ───\n", style="bold magenta")
+                msg.append(clean, style="dim")
+                chat.write(msg)
+            except Exception as e:
+                chat.write(Text(f"Swarm status error: {e}", style="red"))
+
+        elif sub == "dod":
+            try:
+                from .shadow_swarm import get_swarm
+                result = get_swarm().dod_report(rest or None)
+                clean = self._strip_ansi(result)
+                msg = Text()
+                msg.append("\n─── DoD Report ───\n", style="bold cyan")
+                msg.append(clean, style="dim")
+                chat.write(msg)
+            except Exception as e:
+                chat.write(Text(f"DoD error: {e}", style="red"))
+
+        elif sub == "learn":
+            try:
+                from .apprentice import get_apprentice
+                from .scimitar_agent_bridge import get_bridge
+                get_bridge().signal_learning()
+                ap = get_apprentice()
+                ap.synthesise_with_llm("swarm orchestration patterns")
+                ap.flush_to_corpus()
+                chat.write(Text(
+                    "◈ Apprentice: lessons synthesised + corpus flushed.",
+                    style="bold cyan"))
+                events.write(Text("Swarm learn: done", style="cyan"))
+            except Exception as e:
+                chat.write(Text(f"Learn error: {e}", style="red"))
+
+        elif sub == "force":
+            # /swarm force <file> <role>
+            parts = rest.split()
+            if len(parts) < 2:
+                chat.write(Text(
+                    "Usage: /swarm force <file_path> <role>", style="yellow"))
+                return
+            file_path, role = parts[0], parts[1]
+            try:
+                from .shadow_swarm import get_swarm
+                get_swarm().force_role(file_path, role)
+                chat.write(Text(
+                    f"◈ Forced {role} on {file_path}", style="bold magenta"))
+            except Exception as e:
+                chat.write(Text(f"Force error: {e}", style="red"))
+
+        elif sub == "lineage":
+            self.action_swarm_lineage()
+
+        elif sub == "freeze":
+            try:
+                from .swarm_brain import get_brain
+                get_brain().strategy_freeze()
+                chat.write(Text("❄ Strategy genome frozen.", style="bold cyan"))
+            except Exception as e:
+                chat.write(Text(f"Freeze error: {e}", style="red"))
+
+        elif sub == "kill":
+            try:
+                from .swarm_brain import get_brain
+                from .scimitar_agent_bridge import get_bridge
+                get_brain().kill_switch()
+                get_bridge().signal_critical_stop()
+                chat.write(Text(
+                    "☠ KILL SWITCH activated — GA evolution halted.",
+                    style="bold red"))
+            except Exception as e:
+                chat.write(Text(f"Kill error: {e}", style="red"))
+
+        elif sub in ("evolve", "ga"):
+            self.action_evolve_strategy()
+
+        else:
+            chat.write(Text(
+                "Swarm subcommands: status | dod | learn | force | "
+                "lineage | freeze | kill | evolve",
+                style="yellow"))
+
+        self._refresh_swarm()
 
     # ── NATURAL LANGUAGE HANDLER ──────────────────────────────────────────────
 
@@ -1455,6 +1716,65 @@ class OsirisTUI(App):
 
     def action_focus_input(self):
         self.query_one("#input-field", Input).focus()
+
+    def action_toggle_swarm(self):
+        """Toggle swarm panel visibility."""
+        panel = self.query_one("#swarm-panel", SwarmPanel)
+        panel.visible_panel = not panel.visible_panel
+        panel.refresh()
+        events = self.query_one("#events-log", RichLog)
+        state = "visible" if panel.visible_panel else "hidden"
+        events.write(Text(f"Swarm panel: {state}", style="bold magenta"))
+
+    def action_evolve_strategy(self):
+        """Trigger a GA evolution step on the active genome."""
+        events = self.query_one("#events-log", RichLog)
+        chat = self.query_one("#chat-log", RichLog)
+        try:
+            from .swarm_brain import get_brain
+            from .scimitar_agent_bridge import get_bridge
+            brain = get_brain()
+            brain.reset_evolution()
+            # Fire off an evolution step by injecting dummy positive outcomes
+            brain.record_task_outcome(
+                role="complete", file_path="session", status="done",
+                dod_before=0.5, dod_after=0.8, syntax_ok=True)
+            get_bridge().signal_evolution(brain.stats_dict()["generation"])
+            gen = brain.stats_dict()["generation"]
+            fitness = brain.stats_dict()["best_fitness"]
+            msg = Text()
+            msg.append("⚡ GA evolution triggered ", style="bold magenta")
+            msg.append(f"gen={gen} best_fitness={fitness:.3f}", style="cyan")
+            chat.write(msg)
+            events.write(Text(f"GA step: gen={gen}", style="magenta"))
+        except Exception as e:
+            events.write(Text(f"Evolution error: {e}", style="red"))
+        self._refresh_swarm()
+
+    def action_swarm_lineage(self):
+        """Show GA genome lineage in the chat."""
+        chat = self.query_one("#chat-log", RichLog)
+        try:
+            from .swarm_brain import get_brain
+            brain = get_brain()
+            lineage = brain.lineage()
+            # Strip ANSI and write to Textual RichLog
+            clean = self._strip_ansi(lineage)
+            msg = Text()
+            msg.append("\n─── Strategy Genome Lineage ───\n", style="bold magenta")
+            msg.append(clean, style="dim")
+            chat.write(msg)
+        except Exception as e:
+            chat.write(Text(f"Lineage error: {e}", style="red"))
+
+    def _refresh_swarm(self):
+        """Refresh the swarm panel on timer tick."""
+        try:
+            panel = self.query_one("#swarm-panel", SwarmPanel)
+            if panel.visible_panel:
+                panel.refresh()
+        except Exception:
+            pass
 
     # ── UTILITY ───────────────────────────────────────────────────────────────
 

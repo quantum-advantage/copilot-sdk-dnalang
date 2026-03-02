@@ -33,15 +33,20 @@ def _ensure_quantum_token() -> str:
 # ── CONSTANTS ──────────────────────────────────────────────────────────────────
 
 _HOME = os.path.expanduser("~")
-# Resolve webapp directory — try devinpd first, fall back to HOME
+# Resolve webapp directory — priority order
 WEBAPP_DIR = None
-for _candidate in ["/home/devinpd", _HOME]:
-    _test = os.path.join(_candidate, "Documents/copilot-sdk-dnalang")
-    if os.path.isdir(_test):
+for _test in [
+    os.path.join(_HOME, "quantum-advantage"),
+    os.path.join(_HOME, "Documents/quantum-advantage"),
+    os.path.join(_HOME, "Documents/copilot-sdk-dnalang"),
+    os.path.join(_HOME, "copilot-sdk-dnalang"),
+    "/home/devinpd/Documents/copilot-sdk-dnalang",
+]:
+    if os.path.isdir(_test) and os.path.isfile(os.path.join(_test, "package.json")):
         WEBAPP_DIR = _test
         break
 if WEBAPP_DIR is None:
-    WEBAPP_DIR = os.path.join(_HOME, "Documents/copilot-sdk-dnalang")
+    WEBAPP_DIR = os.path.join(_HOME, "quantum-advantage")
 
 RESEARCH_DIRS = [
     os.path.join(_HOME, "quantum_workspace"),
@@ -675,11 +680,65 @@ def tool_research_query(topic: str) -> str:
     """Query research data by topic."""
     topic_lower = topic.lower()
     lines = [f"  {C.H}Research Query: {topic}{C.E}"]
-    
+
+    # ── Real data analysis (from actual experiment files on disk) ─────────────
+    if any(k in topic_lower for k in ["analyz", "anomal", "novel", "synthesize", "synthesise",
+                                       "pattern", "insight", "implication", "what does",
+                                       "interpret", "tell me about"]):
+        try:
+            from .analysis import get_analyzer
+            az = get_analyzer()
+            lines.append("")
+            lines.append(az.synthesize(topic, use_llm=True))
+            lines.append("")
+            lines.append("  Anomalies detected from real data:")
+            lines.append(az.format_findings(max_findings=4))
+        except Exception as e:
+            lines.append(f"  [analyzer unavailable: {e}]")
+        return "\n".join(lines)
+
+    # ── SHADOW_STRIKE / AETERNA-PORTA wormhole (check BEFORE generic "fidelity") ───
+    if any(k in topic_lower for k in [
+        "shadow", "shadow_strike", "aeterna", "wormhole", "traversable",
+        "gjw", "tfd", "shock", "spectral gap", "spectral_gap", "gap_signal", "tpsm",
+        "127", "25000",
+    ]):
+        lines.append(f"\n  {C.H}AETERNA-PORTA / SHADOW_STRIKE — IBM Hardware Wormhole Results:{C.E}")
+        lines.append(f"\n  {C.H}SHADOW_STRIKE (ibm_fez, 127q, 25,000 shots):{C.E}")
+        lines.append(f"    Shock qubit q70:    excitation = 0.9533 (95.3% |1⟩)")
+        lines.append(f"    Bell fidelity:      F = 0.9473  (+42% above classical bound 0.667)")
+        lines.append(f"    CHSH correlator:    S = 2.690   (classical bound 2.0 violated)")
+        lines.append(f"    Spectral gap:       gap_signal ≈ 3.16×10⁸ (gap_preserved=True)")
+        lines.append(f"    Anti-concentration: XEB HOF = 1.0 (all 25,000 shots unique)")
+        lines.append(f"    CCCE Φ:             0.8794 ≥ 0.7734 threshold ✓")
+        lines.append(f"    TFD partners:       14 qubits with ZZ ≈ −0.90 (entangled)")
+        lines.append(f"    Scrambled output:   11 qubits near 50% excitation (teleported)")
+        lines.append(f"    Job IDs:            d6h87dithhns7391qrag, d6h87e73o3rs73camku0, ...")
+        lines.append(f"\n  {C.H}AETERNA-PORTA v4 Simulation (MPS, 144q):{C.E}")
+        lines.append(f"    mode=ghz_ctrl:  gap_signal = 6.84×10⁸ (GHZ collapses → gap preserved)")
+        lines.append(f"    mode=gap_only:  gap_signal = 0.0 (noiseless — expected; noise makes it manifest)")
+        lines.append(f"    Novel result:   TPSM O(1) gap vs GHZ O(1/n) — architectural distinction")
+        lines.append(f"\n  {C.H}GJW Protocol Criteria (all met):{C.E}")
+        lines.append(f"    F=0.9473 > 2/3  ✓  CHSH S=2.690 > 2.0  ✓  TFD structure  ✓  Scrambling  ✓")
+        lines.append(f"    Pending: cross-backend reproducibility (aeterna_multibackend.py in queue)")
+        return "\n".join(lines)
+
+    # ── Live research status from real data ───────────────────────────────────
+    if any(k in topic_lower for k in ["status", "substrate", "coherence", "convergence",
+                                       "fidelity", "ccce", "concordance", "fragility"]):
+        try:
+            from .analysis import get_analyzer
+            az = get_analyzer()
+            lines.append("")
+            lines.append(az.format_research_status())
+        except Exception as e:
+            lines.append(f"  [analyzer unavailable: {e}]")
+        return "\n".join(lines)
+
     # Theta lock validation scan (check before constants since "theta" overlaps)
     if any(k in topic_lower for k in ["theta_scan", "theta scan", "validation", "fine scan", "sweep"]):
         return _research_theta_scan(lines)
-    
+
     # Constants
     if any(k in topic_lower for k in ["constant", "theta", "phi", "lambda", "chi", "gamma"]):
         lines.append(f"\n  {C.H}Immutable Physical Constants:{C.E}")
@@ -687,34 +746,62 @@ def tool_research_query(topic: str) -> str:
             lines.append(f"    {name:20s} = {val}")
         return "\n".join(lines)
     
-    # Jobs / IBM
+    # Jobs / IBM — now backed by real substrate extraction data
     if any(k in topic_lower for k in ["job", "ibm", "hardware", "backend", "shot"]):
         lines.append(f"\n  {C.H}IBM Quantum Research Summary:{C.E}")
-        lines.append(f"    Total jobs: 580+")
-        lines.append(f"    Total shots: 515,000+")
-        lines.append(f"    Backends: ibm_fez, ibm_torino, ibm_marrakesh, ibm_brisbane, ibm_nazca, ibm_kyoto")
+        lines.append(f"    Total jobs: 580+  |  Backends: ibm_fez, ibm_torino, ibm_marrakesh, ibm_brisbane, ibm_nazca, ibm_kyoto")
         lines.append(f"    Flagship: d6abemcnsg9c7397mjcg (1M shots, ibm_marrakesh)")
-        lines.append(f"    Peak fidelity: F = 0.9787 (1 - φ⁻⁸)")
-        lines.append(f"    χ_pc = 0.946 (hardware-validated, +8.9% over theory)")
-        
-        data = _load_research_data()
-        if data["jobs"]:
-            lines.append(f"\n  {C.H}Loaded {len(data['jobs'])} job records from USB:{C.E}")
-            for j in data["jobs"][:5]:
-                jid = j.get("job_id", j.get("id", "?"))
-                backend = j.get("backend", j.get("backend_name", "?"))
-                status = j.get("status", "?")
-                lines.append(f"    {jid[:20]} | {backend} | {status}")
+        # Add real measured data from substrate extraction files
+        try:
+            from .analysis import get_analyzer
+            az = get_analyzer()
+            ss = az.get_stats().get("substrate", {})
+            sup = az.get_stats().get("supremacy", {})
+            if ss:
+                lines.append(f"\n  {C.H}Measured Substrate Extraction ({ss['total_runs']} runs):{C.E}")
+                lines.append(f"    Input coherence:    {ss['mean_input']:.4f}")
+                lines.append(f"    Restored coherence: {ss['mean_restored']:.4f} ± {ss['std_restored']:.4f}")
+                lines.append(f"    Max restored:       {ss['max_restored']:.4f}  "
+                             f"({ss['runs_over_1_0']} runs EXCEEDED 1.0 — anomalous)")
+                lines.append(f"    Convergence:        {ss['converged']}/{ss['total_runs']} ({ss['pct_converged']:.1f}%)")
+                if ss.get("by_backend"):
+                    bstr = "  ".join(f"{k}={v:.3f}" for k, v in sorted(ss["by_backend"].items(), key=lambda x: -x[1]))
+                    lines.append(f"    By backend: {bstr}")
+            if sup and sup.get("raw_fidelity"):
+                lines.append(f"\n  {C.H}Supremacy Proof (ibm_nazca Bell state):{C.E}")
+                lines.append(f"    Raw fidelity:      {sup['raw_fidelity']:.4f}")
+                lines.append(f"    Mitigated:         {sup['mitigated_fidelity']:.4f}")
+                lines.append(f"    Shots:             {sup['shots']}")
+        except Exception:
+            lines.append(f"    χ_pc = 0.946 (hardware-validated, +8.9% over theory)")
         return "\n".join(lines)
     
-    # Breakthroughs
+    # Breakthroughs — augmented with real statistical validation from disk
     if any(k in topic_lower for k in ["breakthrough", "discovery", "result", "finding"]):
-        lines.append(f"\n  {C.H}5 Validated Breakthroughs:{C.E}")
+        lines.append(f"\n  {C.H}Claimed Breakthroughs + Actual Statistical Validation:{C.E}")
         lines.append(f"    1. Negative Shapiro Delay: Δt = -2.3 ns (p = 0.003)")
         lines.append(f"    2. Area-Law Entropy: S₂(A) ≈ c·|∂A| (p = 0.012)")
         lines.append(f"    3. Non-Reciprocal Info Flow: J_LR/J_RL = 1.34 (p < 0.001)")
         lines.append(f"    4. Negentropic Efficiency: Ξ = 127.4× (p < 0.001)")
         lines.append(f"    5. Phase Conjugation: χ_pc = 0.946 > theory 0.869 (+8.9%)")
+        # Add real concordance analysis
+        try:
+            from .analysis import get_analyzer
+            az = get_analyzer()
+            conc = az.get_stats().get("concordance", {})
+            if conc:
+                verdict = "INVALID" if conc.get("naive_5sigma_valid") == False else "valid"
+                lines.append(f"\n  {C.H}Actual Statistical Assessment (concordance_analysis.json):{C.E}")
+                lines.append(f"    χ² = {conc['chi2']:.4f}, p = {conc['p_value']:.4f}, DoF = 0")
+                lines.append(f"    Independent predictions: {conc['n_independent']} (naive 5σ claim: {verdict})")
+                lines.append(f"    Best evidence: {conc['strongest_argument']}")
+            findings = az.get_findings()
+            if findings:
+                lines.append(f"\n  {C.H}Anomalies in measured data:{C.E}")
+                for f in findings[:3]:
+                    lines.append(f"    [{f.category}] {f.title}")
+        except Exception:
+            pass
         lines.append(f"\n  {C.H}Publications:{C.E}")
         lines.append(f"    DOI: 10.5281/zenodo.18450159 (v1)")
         lines.append(f"    DOI: 10.5281/zenodo.14919807 (v2)")
@@ -872,24 +959,26 @@ def tool_research_query(topic: str) -> str:
         lines.append(f"    Quantum-native advantages Claude cannot replicate")
         return "\n".join(lines)
 
-    # Default — show overview with all topics
-    lines.append(f"\n  {C.H}Research Overview:{C.E}")
-    lines.append(f"    580+ IBM Quantum jobs across 6 backends")
-    lines.append(f"    515,000+ total shots | Peak F = 0.9787")
-    lines.append(f"    5 validated breakthroughs (p < 0.012)")
-    lines.append(f"    4 Zenodo publications")
-    lines.append(f"    256-atom QuEra correlated decoder (92.3%)")
-    lines.append(f"    4-agent tetrahedral constellation (AIDEN/AURA/OMEGA/CHRONOS)")
-    lines.append(f"\n  {C.H}Research Domains:{C.E}")
-    lines.append(f"    🧬 Alkylrandomization — VQE drug design, 5 experiments, D138N/I344E mutant")
-    lines.append(f"    🔬 H3K20me2 CTC — Epigenetic biomarker assay for IDE397")
-    lines.append(f"    📐 θ_lock Validation — Fine scan 48-55°, peak 0.966 at 52.0°")
-    lines.append(f"    🌐 Non-Local Physics — Barren plateau mitigation, NCLM advantages")
-    lines.append(f"    ⚡ Circuit Motifs — 250K+ entries, Rz(51.843°)→H→CNOT pattern")
-    lines.append(f"    📊 Knowledge Base — 392 nodes, 3,806 edges, 127 quantum files")
-    lines.append(f"    🤝 Shadow Protocol — OSIRIS↔Claude mentorship feedback loop")
-    lines.append(f"\n  {C.DIM}Try: /research thesis, /research theta scan, /research nonlocal,")
-    lines.append(f"       /research h3k20, /research motifs, /research knowledge base{C.E}")
+    # Default — show real data overview + domain map
+    try:
+        from .analysis import get_analyzer
+        az = get_analyzer()
+        lines.append(f"\n  {C.H}Live Research Status (from disk):{C.E}")
+        lines.append(az.format_research_status())
+        lines.append(f"\n  {C.H}Research Domains:{C.E}")
+    except Exception:
+        lines.append(f"\n  {C.H}Research Overview:{C.E}")
+        lines.append(f"    580+ IBM Quantum jobs | 515,000+ shots | Peak F = 0.9787")
+        lines.append(f"\n  {C.H}Research Domains:{C.E}")
+    lines.append(f"    Alkylrandomization — VQE drug design, D138N/I344E mutant, 5 experiments")
+    lines.append(f"    H3K20me2 CTC — Epigenetic biomarker assay for IDE397")
+    lines.append(f"    theta_lock Validation — Fine scan 48-55 deg, peak 0.966 at 52.0 deg")
+    lines.append(f"    Non-Local Physics — Barren plateau mitigation, NCLM advantages")
+    lines.append(f"    Circuit Motifs — Rz(51.843)→H→CNOT pattern, 250K+ corpus entries")
+    lines.append(f"    QuEra 256-atom — Correlated decoder, 92.3% confidence")
+    lines.append(f"    4-agent constellation — AIDEN/AURA/OMEGA/CHRONOS tetrahedral")
+    lines.append(f"\n  {C.DIM}Try: /research analyze, /research anomalies, /research status,")
+    lines.append(f"       /research thesis, /research theta scan, /research nonlocal{C.E}")
     return "\n".join(lines)
 
 
@@ -1220,6 +1309,10 @@ def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 120) -> st
                     break
                 clean.append(line)
             result = "\n".join(clean).strip()
+            # Detect copilot error responses (interactive-mode requirement, etc.)
+            _err_markers = ("Run `copilot", "interactive mode", "enable this model", "Error: Run")
+            if any(m in result for m in _err_markers):
+                continue  # not a real response — fall through to next backend
             if result and len(result) > 10:
                 return result
         except subprocess.TimeoutExpired:
@@ -1228,10 +1321,10 @@ def _llm_query_copilot(prompt: str, context: str = "", timeout: int = 120) -> st
             continue
         except Exception as e:
             return f"(LLM error: {e})"
-    return "(No response from LLM)"
+    return ""  # no valid response — allow callers to cascade to next backend
 
 
-def _llm_query_ollama(prompt: str, model: str = "deepseek-coder:6.7b", timeout: int = 60) -> str:
+def _llm_query_ollama(prompt: str, model: str = "qwen2.5-coder:7b", timeout: int = 120) -> str:
     """Query via local Ollama."""
     try:
         r = subprocess.run(
@@ -1343,6 +1436,54 @@ def tool_llm(prompt: str, context: str = "") -> str:
         "code analysis, and research interpretation. Be concise, authoritative, "
         "and scientifically honest. Format code examples in markdown fenced blocks."
     )
+    # Inject user profile + personality addon
+    try:
+        from .user_model import get_user_profile
+        from .personality import get_personality
+        _up = get_user_profile()
+        _pers = get_personality()
+        system_ctx += "\n\n" + _up.get_context_blob()
+        system_ctx += _pers.get_system_prompt_addon()
+    except Exception:
+        pass
+
+    # Φ-gated reasoning mode — makes consciousness metrics load-bearing
+    try:
+        from .self_monitor import get_self_monitor
+        _phi_addon = get_self_monitor().system_prompt_addon()
+        if _phi_addon:
+            system_ctx += "\n\n" + _phi_addon
+    except Exception:
+        pass
+
+    # Inject actual measured experiment data (not hardcoded strings)
+    try:
+        from .analysis import get_analyzer
+        _az = get_analyzer()
+        system_ctx += "\n\n" + _az.llm_context_block()
+    except Exception:
+        pass
+
+    # Inject research knowledge graph context — dynamic, query-aware
+    # This is what makes OSIRIS a contributor rather than a calculator:
+    # every LLM call now has Devin's actual research as live context.
+    try:
+        from .context_assembler import assemble_research_context
+        _rctx = assemble_research_context(prompt)
+        if _rctx:
+            system_ctx += "\n\n" + _rctx
+    except Exception:
+        pass
+
+    # Inject hypothesis engine briefing (top contradiction/gap/bridge)
+    try:
+        from .hypothesis_engine import get_hypothesis_engine
+        _brief = get_hypothesis_engine().briefing_for_llm()
+        if _brief:
+            system_ctx += f"\n\nRESEARCH INTELLIGENCE:\n{_brief}"
+    except Exception:
+        pass
+
     if context:
         system_ctx += f"\n\nConversation context:\n{context}"
 
@@ -1354,15 +1495,32 @@ def tool_llm(prompt: str, context: str = "") -> str:
         result = _llm_query_github(prompt, system_ctx)
         if result and len(result) > 20:
             return _clean_llm_output(result)
-        return _clean_llm_output(result) if result else ""
+        # Cascade to ollama (local sovereign model)
+        full = f"{system_ctx}\n\n{prompt}"
+        result = _llm_query_ollama(full)
+        if result and len(result) > 20 and not result.startswith("(Ollama error"):
+            return _clean_llm_output(result)
+        return ""
     elif backend == "github":
-        return _clean_llm_output(_llm_query_github(prompt, system_ctx))
+        result = _llm_query_github(prompt, system_ctx)
+        if result and len(result) > 20:
+            return _clean_llm_output(result)
+        # Cascade to ollama
+        full = f"{system_ctx}\n\n{prompt}"
+        return _clean_llm_output(_llm_query_ollama(full))
     elif backend == "ollama":
         full = f"{system_ctx}\n\n{prompt}"
         return _clean_llm_output(_llm_query_ollama(full))
     elif backend == "openai":
         return _clean_llm_output(_llm_query_openai(prompt, system_ctx))
     else:
+        # nclm sovereign fallback — use ollama if available
+        import shutil
+        if shutil.which("ollama"):
+            full = f"{system_ctx}\n\n{prompt}"
+            result = _llm_query_ollama(full)
+            if result and len(result) > 20 and not result.startswith("(Ollama error"):
+                return _clean_llm_output(result)
         return ""
 
 
@@ -4092,8 +4250,94 @@ def dispatch_tool(user_input: str) -> Optional[str]:
     if lower.startswith("$ ") or lower.startswith("run "):
         cmd = user_input[2:].strip() if lower.startswith("$ ") else user_input[4:].strip()
         return tool_shell(cmd)
-    
+
+    # ── SOVEREIGN TASK MANIFOLD (STM / Agile) ──────────────────────────────
+    if lower.startswith("agile ") or lower in ("agile", "stm"):
+        return _tool_agile(user_input)
+
+    # Natural language project management triggers
+    if (any(kw in lower for kw in ["plan project", "new project", "create project",
+                                    "scaffold ", "sprint board", "sprint status",
+                                    "agile board", "task board", "kanban"]) or
+            (lower.startswith("project ") and
+             any(kw in lower for kw in ["plan", "create", "status", "board"]))):
+        return _tool_agile(user_input)
+
     # Return None — let the caller (process_message / _handle_message)
     # handle LLM reasoning as fallback. This avoids blocking dispatch
     # and prevents double-LLM calls on complex multi-sentence prompts.
     return None
+
+
+def _tool_agile(user_input: str) -> str:
+    """Route agile/STM commands to AgileMesh."""
+    import io, contextlib
+    try:
+        from .agile_mesh import AgileMesh
+    except ImportError as e:
+        return f"  {C.R}STM not available: {e}{C.E}"
+
+    lower = user_input.lower().strip()
+    mesh  = AgileMesh()
+
+    # Parse: "agile <sub> [args...]"
+    tokens = user_input.strip().split()
+    if tokens and tokens[0].lower() in ("agile", "stm"):
+        tokens = tokens[1:]  # strip leading 'agile'/'stm'
+
+    if not tokens:
+        # Capture status output
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            mesh.status()
+        return buf.getvalue()
+
+    sub  = tokens[0].lower()
+    rest = tokens[1:]
+
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        if sub == "plan":
+            intent = " ".join(rest)
+            if not intent:
+                # Try natural language extraction
+                import re
+                m = re.search(r'(?:plan|scaffold|create|new)\s+project\s+(.+)', lower)
+                intent = m.group(1) if m else user_input
+            mesh.plan(intent)
+        elif sub == "create":
+            mesh.create(rest[0] if rest else "")
+        elif sub in ("status", "board", "list"):
+            mesh.status(rest[0] if rest else None)
+        elif sub == "update":
+            if len(rest) >= 3:
+                try:
+                    mesh.update(rest[0], int(rest[1]), rest[2],
+                                " ".join(rest[3:]) if len(rest) > 3 else "")
+                except ValueError:
+                    print(f"  {C.R}task# must be integer{C.E}")
+            else:
+                print(f"  {C.Y}Usage: agile update <sprint-id> <task#> <status>{C.E}")
+        elif sub == "add":
+            if len(rest) >= 2:
+                mesh.add_task(rest[0], " ".join(rest[1:]))
+            else:
+                print(f"  {C.Y}Usage: agile add <sprint-id> <task title>{C.E}")
+        elif sub == "deploy":
+            if rest:
+                target = rest[1] if len(rest) > 1 else "vercel"
+                print(mesh.deploy(rest[0], target))
+            else:
+                print(f"  {C.Y}Usage: agile deploy <sprint-id> [vercel|docker]{C.E}")
+        elif sub == "scan":
+            mesh.scan(rest[0] if rest else None)
+        elif sub == "ledger":
+            n = int(rest[0]) if rest and rest[0].isdigit() else 20
+            mesh.ledger(n)
+        elif sub in ("interact", "interactive", "repl"):
+            mesh.interactive()
+        else:
+            # Treat whole input as plan intent (natural language)
+            mesh.plan(" ".join(tokens))
+
+    return buf.getvalue()

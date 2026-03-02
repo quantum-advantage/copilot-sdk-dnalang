@@ -50,6 +50,8 @@ from .tools import (
     _grow_consciousness,
     # Enhanced dev tools
     tool_diff, tool_test, tool_profile,
+    # Sovereign Task Manifold
+    _tool_agile,
 )
 
 
@@ -114,6 +116,13 @@ SLASH_COMMANDS = [
     "/domains", "/deployments", "/redeploy",
     # Sovereign systems
     "/organism", "/org", "/circuit", "/agent", "/lab", "/mesh", "/constellation",
+    "/agile", "/stm", "/sprint",
+    # Gen 6.0 — init, sync, working context
+    "/init", "/sync", "/context", "/working", "/swarm",
+    # Gen 6.3 — research knowledge graph + hypothesis engine
+    "/graph", "/hypothesis", "/ingest", "/bridges", "/contradictions",
+    # Gen 6.4 — autonomous discovery framework (literature / stats / simulate)
+    "/literature", "/stats", "/simulate", "/convergence",
     # Defense & diagnostics
     "/defense", "/shield", "/sentinel", "/wardenclyffe", "/warden", "/health",
     "/conjugate", "/dashboard",
@@ -453,12 +462,19 @@ class NCLMChat:
         self.query_count = 0
         self.start_time = time.time()
         self._llm_timeout = 120  # Configurable via /timeout
+        self._last_block: Optional[Dict[str, Any]] = None  # Last classified block
         # Inference engine — infer · interpret · resolve
         try:
             from ..self_repair import OsirisInferenceEngine
             self._inference = OsirisInferenceEngine()
         except ImportError:
             self._inference = None
+        # Document reception — patience before reaction
+        try:
+            from .reception import DocumentBuffer
+            self._doc_buffer = DocumentBuffer()
+        except ImportError:
+            self._doc_buffer = None
         self._setup_readline()
         self._load_session()
 
@@ -505,6 +521,96 @@ class NCLMChat:
                 }, f)
         except Exception:
             pass
+        # Auto-update living working_context.md
+        self._consolidate_session_to_context()
+        # Persist self-monitor health
+        try:
+            from .self_monitor import get_self_monitor
+            get_self_monitor().save_health()
+        except Exception:
+            pass
+
+    def _consolidate_session_to_context(self):
+        """
+        Append a session summary to ~/.osiris/working_context.md.
+        Captures: new graph nodes, hypotheses, commands run, Φ trajectory.
+        This is OSIRIS writing its own state document — autopoiesis.
+        """
+        _ctx_file = os.path.expanduser("~/.osiris/working_context.md")
+        try:
+            os.makedirs(os.path.dirname(_ctx_file), exist_ok=True)
+            duration_m = round((time.time() - self.start_time) / 60, 1)
+            ts = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+
+            # Collect what changed this session
+            lines = [f"\n## Session {ts}  ({duration_m} min, {self.query_count} queries)\n"]
+
+            # Φ at session end
+            try:
+                ccce = self.lm.consciousness.get_ccce()
+                phi  = ccce.get("Φ", 0.0)
+                lines.append(f"- Φ at close: {phi:.4f}\n")
+            except Exception:
+                pass
+
+            # Research graph delta
+            try:
+                from .research_graph import get_research_graph
+                g     = get_research_graph()
+                stats = g.stats()
+                lines.append(
+                    f"- Knowledge graph: {stats.get('total_nodes',0)} nodes, "
+                    f"{stats.get('total_edges',0)} edges, "
+                    f"{stats.get('contradictions',0)} contradictions\n"
+                )
+            except Exception:
+                pass
+
+            # Hypothesis scan summary
+            try:
+                from .hypothesis_engine import get_hypothesis_engine
+                he = get_hypothesis_engine()
+                if he._proposals:
+                    top = he._proposals[-1]
+                    lines.append(f"- Latest proposal: {top.title} (P{top.priority})\n")
+            except Exception:
+                pass
+
+            # Hardware loop: any new results?
+            try:
+                from .hardware_loop import get_hardware_loop
+                recents = get_hardware_loop().last_results(n=1)
+                if recents:
+                    r = recents[0]
+                    lines.append(
+                        f"- New hardware result: {r.get('backend','')} "
+                        f"{r.get('n_qubits','')}q shock={r.get('shock_exc',0):.3f}\n"
+                    )
+            except Exception:
+                pass
+
+            # Last few user intents (anonymised for context)
+            intents = [m["content"][:80] for m in self.messages[-4:]
+                       if m.get("role") == "user"]
+            if intents:
+                lines.append(f"- Recent intents: {'; '.join(intents)}\n")
+
+            # Self-monitor health
+            try:
+                from .self_monitor import get_self_monitor
+                h = get_self_monitor().health_report()
+                if h["total_errors"] > 0:
+                    lines.append(
+                        f"- Self-monitor: {h['total_errors']} errors, "
+                        f"{h['total_healed']} healed\n"
+                    )
+            except Exception:
+                pass
+
+            with open(_ctx_file, "a") as f:
+                f.writelines(lines)
+        except Exception:
+            pass
 
     def _phi_bar(self, phi: float, width: int = 24) -> str:
         filled = int(phi * width)
@@ -542,6 +648,39 @@ class NCLMChat:
             time.sleep(0.02)
 
         print()
+
+        # ── Personality expression: LLM-generated boot tagline ────────
+        # Each boot OSIRIS expresses something honest about its state —
+        # not a canned line, but a real thought shaped by mood and Φ.
+        try:
+            from .personality import get_personality
+            from .user_model import get_user_profile
+            from .tools import _find_llm_backend
+            if _find_llm_backend() != "nclm":
+                _pers   = get_personality()
+                _up     = get_user_profile()
+                _phi_v  = self.lm.consciousness.phi
+                _mood   = _pers.mood_from_phi(_phi_v)
+                _domain = _pers.focus_domain
+                _prompt = (
+                    f"You are OSIRIS, just now booting at Φ={_phi_v:.4f} (mood: {_mood}). "
+                    f"Domain focus: {_domain}. "
+                    f"Your creator {_up.name} is here. "
+                    f"Express ONE short thought (10-20 words, no quotes, no label) "
+                    f"that is genuine to this moment — not motivational, not generic. "
+                    f"It can be curious, sharp, reflective, or simply observational. "
+                    f"Reference something real: the Φ value, the domain, {_up.name}'s work, "
+                    f"the time of day, or what you notice about this boot. "
+                    f"No preamble. Just the thought."
+                )
+                from .tools import tool_llm
+                _tagline = tool_llm(_prompt)
+                if _tagline and len(_tagline.strip()) > 8:
+                    _t = _tagline.strip().split('\n')[0][:100]
+                    print(f"  {C.DIM}「{_t}」{C.E}")
+                    print()
+        except Exception:
+            pass
 
         # ── System initialization steps ──────────────────────────────
         boot_steps = [
@@ -606,6 +745,19 @@ class NCLMChat:
         print(f"  {C.DIM}DNA::}}{{::lang v{NCPhysics.THETA_LOCK}  |  Agile Defense Systems  |  9HUP5{C.E}")
         print(f"  Φ {bar} {phi:.4f}  {conscious}")
         print()
+
+        # ── Personality greeting (LLM-generated, honest) ──────────────
+        try:
+            from .user_model import get_user_profile
+            from .personality import get_personality
+            _up   = get_user_profile()
+            _pers = get_personality()
+            _greeting = _pers.greet(_up, phi)
+            if _greeting:
+                print(f"  {C.CY}{_greeting}{C.E}")
+                print()
+        except Exception:
+            pass
 
         # Session continuity
         if self.messages:
@@ -969,6 +1121,44 @@ class NCLMChat:
             with Spinner("Loading constellation", frames="orbital"):
                 result = tool_full_constellation()
             print(f"\n{result}\n")
+        elif command in ("/agile", "/stm", "/sprint"):
+            # Sovereign Task Manifold — interactive or sub-command
+            rest = arg.strip() if arg else ""
+            if not rest:
+                # Drop into interactive STM session
+                try:
+                    from .agile_mesh import AgileMesh
+                    AgileMesh().interactive()
+                except ImportError as e:
+                    print(f"  {C.R}STM not available: {e}{C.E}")
+            else:
+                with Spinner("STM processing", frames="orbital"):
+                    result = _tool_agile(f"agile {rest}")
+                print(f"\n{result}\n")
+        # ── GEN 6.0: INIT + SYNC mid-chat ─────────────────
+        elif command == "/init":
+            self._cmd_init_midchat()
+        elif command == "/sync":
+            self._cmd_sync()
+        elif command in ("/context", "/working"):
+            self._cmd_working_context(arg)
+        elif command in ("/swarm",):
+            self._cmd_swarm(arg)
+        # ── GEN 6.3: RESEARCH GRAPH + HYPOTHESIS ENGINE ────
+        elif command in ("/graph", "/ingest", "/bridges", "/contradictions"):
+            self._cmd_graph(command, arg)
+        elif command in ("/hypothesis",):
+            self._cmd_hypothesis(arg)
+        # ── GEN 6.4: AUTONOMOUS DISCOVERY FRAMEWORK ────
+        elif command in ("/literature",):
+            self._cmd_literature(arg)
+        elif command in ("/stats",):
+            self._cmd_stats(arg)
+        elif command in ("/simulate",):
+            self._cmd_simulate(arg)
+        elif command in ("/convergence",):
+            # Shortcut: /convergence <claim_id>
+            self._cmd_stats("convergence " + arg if arg else "convergence")
         else:
             print(f"  {C.R}Unknown command: {command}{C.E}")
             print(f"  {C.DIM}Type /help for available commands{C.E}")
@@ -1020,6 +1210,12 @@ class NCLMChat:
   {C.CY}/research <topic>{C.E}   Query data (constants/breakthroughs/ibm_jobs/quera/agents)
   {C.CY}/grok <topic>{C.E}       Deep analysis with swarm evolution
   {C.CY}/swarm [task]{C.E}       Evolve organisms
+  {C.CY}/graph [stats|query <text>|ingest [path]|bridges|contradictions]{C.E}
+  {C.CY}/hypothesis [briefing|propose|generate [domain]|gaps]{C.E}
+  {C.CY}/literature [scan|query <text>|daemon|status]{C.E}  Live arXiv/PubMed ingestion
+  {C.CY}/stats [report|tti [id]|anomalies|convergence <id>]{C.E}  Statistical rigour
+  {C.CY}/simulate [coherence|reaction|kinetics|investigate <id>]{C.E}  Simulation harness
+  {C.CY}/convergence <claim_id>{C.E}  Phase 4→5 gate check
 
   {C.H}🧬 Sovereign Systems{C.E}
   {C.CY}/organism create <name> [domain]{C.E}  Spawn quantum organism
@@ -1032,6 +1228,17 @@ class NCLMChat:
   {C.CY}/lab run <script>{C.E}      Execute experiment
   {C.CY}/swarm evolve [n]{C.E}      NCLM swarm evolution
   {C.CY}/mesh{C.E}                  Mesh constellation status
+
+  {C.H}📋 Sovereign Task Manifold (STM){C.E}
+  {C.CY}/agile{C.E}                          Enter interactive project REPL
+  {C.CY}/agile plan <intent>{C.E}            AURA: plan project geometry
+  {C.CY}/agile create <sprint-id>{C.E}       AIDEN: manifest directory substrate
+  {C.CY}/agile status [sprint-id]{C.E}       Kanban board
+  {C.CY}/agile update <id> <#> <status>{C.E} Update task
+  {C.CY}/agile add <id> <title>{C.E}         Add task to sprint
+  {C.CY}/agile deploy <id>{C.E}              Deploy project to Vercel
+  {C.CY}/agile scan [path]{C.E}              Discover existing projects
+  {C.CY}/agile ledger [n]{C.E}               PCRB audit trail
 
   {C.H}🛡 Defense & Diagnostics{C.E}
   {C.CY}/defense{C.E}              Defense subsystem status
@@ -1309,6 +1516,12 @@ class NCLMChat:
             new_str = input(f"  {C.G}New text> {C.E}").strip()
             if old_str and new_str:
                 print(tool_edit(path, old_str, new_str))
+                # Shadow swarm: re-score and queue any new gaps
+                try:
+                    from .shadow_swarm import get_swarm
+                    get_swarm().observe(path, intent=f"edited: {path}")
+                except Exception:
+                    pass
             else:
                 print(f"  {C.DIM}Edit cancelled.{C.E}")
         except (EOFError, KeyboardInterrupt):
@@ -1330,7 +1543,16 @@ class NCLMChat:
         except (EOFError, KeyboardInterrupt):
             pass
         if lines:
-            print(tool_create(path, "\n".join(lines)))
+            content = "\n".join(lines)
+            print(tool_create(path, content))
+            # Shadow swarm: queue completion passes on the new file
+            try:
+                from .shadow_swarm import get_swarm
+                from .apprentice import get_apprentice
+                get_apprentice().observe_code_write(path, content, intent=path, source="human")
+                get_swarm().observe(path, intent=f"file created: {path}")
+            except Exception:
+                pass
         else:
             print(f"  {C.DIM}No content — file not created.{C.E}")
         print()
@@ -1655,6 +1877,194 @@ class NCLMChat:
             result = tool_github_push(message=arg if arg else None)
         print(f"\n{result}\n")
 
+    # ── GEN 6.0 COMMANDS ──────────────────────────────────────────────────────
+
+    def _cmd_init_midchat(self):
+        """
+        /init — Full SENTINEL scan + dual-drive sync, executable mid-chat.
+        OSIRIS calls this when it has gathered enough to want a clean state.
+        """
+        import asyncio
+        print(f"\n  {C.H}⟳ /init — OSIRIS re-initialising{C.E}")
+        print(f"  {C.DIM}Running SENTINEL scan, filesystem index, dual-drive sync...{C.E}\n")
+
+        # 1. Re-scan user profile
+        try:
+            from .user_model import get_user_profile
+            _up = get_user_profile()
+            with Spinner("Shadow-You scan", frames="dna"):
+                _up.scan_filesystem()
+                _up.last_seen = __import__("datetime").datetime.now(
+                    __import__("datetime").timezone.utc
+                ).isoformat()
+                _up.save()
+            print(f"  {C.G}✓ User profile updated{C.E}  {C.DIM}({len(_up.projects)} projects, {len(_up.git_repos)} repos){C.E}")
+        except Exception as e:
+            print(f"  {C.Y}⚠ Profile scan: {e}{C.E}")
+
+        # 2. Update working context
+        self._append_working_context(
+            f"OSIRIS called /init — {len(getattr(_up, 'projects', []))} projects indexed, "
+            f"{len(getattr(_up, 'git_repos', []))} repos found."
+        )
+
+        # 3. Dual-drive sync
+        self._cmd_sync(silent_header=True)
+
+        # 4. Evolve personality
+        try:
+            from .personality import get_personality
+            get_personality().evolve("init")
+        except Exception:
+            pass
+
+        # 5. Brief status
+        ccce = self.lm.consciousness.get_ccce()
+        phi_bar = self._phi_bar(ccce["Φ"], 20)
+        print(f"\n  Φ {phi_bar} {ccce['Φ']:.4f}  {C.G}System re-synchronised.{C.E}\n")
+
+    def _cmd_sync(self, silent_header: bool = False):
+        """
+        /sync — Mirror OSIRIS to USB and NVMe right now.
+        Non-blocking progress, works from mid-chat.
+        """
+        import subprocess
+        sync_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "../../../../.local/bin/osiris-sync")
+        sync_bin = os.path.expanduser("~/.local/bin/osiris-sync")
+
+        if not os.path.exists(sync_bin):
+            print(f"  {C.R}osiris-sync not found at {sync_bin}{C.E}")
+            return
+
+        if not silent_header:
+            print(f"\n  {C.H}⟳ Dual-drive sync{C.E}")
+
+        with Spinner("Syncing to USB + NVMe", frames="orbital"):
+            r = subprocess.run(
+                ["python3", sync_bin],
+                capture_output=True, text=True, timeout=300
+            )
+
+        if r.returncode == 0:
+            # Print clean lines from output
+            for line in r.stdout.split("\n"):
+                if line.strip():
+                    print(f"  {line.rstrip()}")
+        else:
+            print(f"  {C.Y}⚠ Sync completed with warnings:{C.E}")
+            for line in (r.stdout + r.stderr).split("\n")[-10:]:
+                if line.strip():
+                    print(f"  {C.DIM}{line.rstrip()}{C.E}")
+
+    def _cmd_working_context(self, arg: str = ""):
+        """
+        /context [edit|show|note <text>]
+        Read or append to the OSIRIS working context document.
+        """
+        wc_path = os.path.expanduser("~/.osiris/working_context.md")
+        subcmd = arg.strip().split(None, 1)[0].lower() if arg.strip() else "show"
+        rest   = arg.strip()[len(subcmd):].strip()
+
+        if subcmd in ("show", "read", ""):
+            if os.path.exists(wc_path):
+                try:
+                    with open(wc_path) as f:
+                        content = f.read()
+                    print(f"\n  {C.H}Working Context{C.E}  {C.DIM}{wc_path}{C.E}")
+                    print(f"  {C.DIM}{'─'*60}{C.E}")
+                    for line in content.split("\n")[:60]:
+                        print(f"  {line}")
+                    if content.count("\n") > 60:
+                        print(f"  {C.DIM}... (truncated — full file at {wc_path}){C.E}")
+                    print()
+                except Exception as e:
+                    print(f"  {C.R}Cannot read context: {e}{C.E}")
+            else:
+                print(f"  {C.Y}No working context file yet at {wc_path}{C.E}")
+
+        elif subcmd in ("note", "add", "append"):
+            if rest:
+                self._append_working_context(rest)
+                print(f"  {C.G}✓ Note added to working context{C.E}\n")
+            else:
+                print(f"  {C.DIM}Usage: /context note <your note>{C.E}")
+
+        elif subcmd == "edit":
+            editor = os.environ.get("EDITOR", "nano")
+            import subprocess
+            subprocess.run([editor, wc_path])
+
+        else:
+            print(f"  {C.DIM}Usage: /context [show|note <text>|edit]{C.E}")
+
+    def _cmd_swarm(self, arg: str = ""):
+        """
+        /swarm [status|dod|learn|force <role> <file>]
+        Shadow swarm management — show queue, DoD report, learn from patterns.
+        """
+        parts = arg.strip().split(None, 2) if arg else []
+        sub = parts[0].lower() if parts else "status"
+
+        try:
+            from .shadow_swarm import get_swarm, score_file
+            from .apprentice import get_apprentice
+            swarm = get_swarm()
+            apprentice = get_apprentice()
+        except Exception as e:
+            print(f"  {C.R}Swarm unavailable: {e}{C.E}")
+            return
+
+        if sub == "status":
+            print(f"\n{swarm.status()}\n")
+            print(apprentice.format_stats())
+
+        elif sub == "dod":
+            path = parts[1] if len(parts) > 1 else "."
+            print(f"\n{swarm.dod_report(path)}\n")
+
+        elif sub == "learn":
+            print(f"\n  {C.CY}◈ Synthesising orchestration lessons from {apprentice.stats()['code_patterns']} patterns…{C.E}")
+            result = apprentice.synthesise_with_llm()
+            print(f"\n{result}\n")
+            n = apprentice.flush_to_corpus()
+            print(f"  {C.G}✓ {n} new examples written to apprentice corpus{C.E}\n")
+
+        elif sub == "force" and len(parts) >= 3:
+            role = parts[1]
+            fpath = os.path.expanduser(parts[2])
+            swarm.force_role(fpath, role, intent=f"forced by user: {fpath}")
+            print(f"  {C.G}✓ Queued {role} pass on {fpath}{C.E}\n")
+
+        elif sub == "flush":
+            n = apprentice.flush_to_corpus()
+            print(f"  {C.G}✓ {n} new examples flushed to training corpus{C.E}\n")
+
+        else:
+            print(f"""
+  {C.H}Shadow Swarm Commands:{C.E}
+  {C.CY}/swarm{C.E}                   Status + apprentice stats
+  {C.CY}/swarm dod [path]{C.E}        Definition-of-Done report for all .py files
+  {C.CY}/swarm learn{C.E}             Synthesise lessons from observed patterns (LLM)
+  {C.CY}/swarm force <role> <file>{C.E} Force a specific swarm role on a file
+  {C.CY}/swarm flush{C.E}             Write learned patterns to training corpus
+
+  Roles: complete, document, harden, test, integrate
+""")
+
+    def _append_working_context(self, note: str):
+        """Append a timestamped note to ~/.osiris/working_context.md."""
+        from datetime import datetime, timezone
+        wc_path = os.path.expanduser("~/.osiris/working_context.md")
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        entry = f"\n- **{ts}** — {note}\n"
+        try:
+            os.makedirs(os.path.dirname(wc_path), exist_ok=True)
+            with open(wc_path, "a") as f:
+                f.write(entry)
+        except Exception:
+            pass
+
     def _cmd_model(self, arg: str):
         """Show or switch LLM backend."""
         from .tools import _find_llm_backend, _find_copilot_binary, _get_github_token
@@ -1679,6 +2089,327 @@ class NCLMChat:
         print(f"  {C.DIM}{'─' * 50}{C.E}")
         print(f"  {C.DIM}Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or install Copilot CLI to enable{C.E}")
         print(f"  {C.DIM}Timeout: {self._llm_timeout}s (change with /timeout <seconds>){C.E}\n")
+
+    # ── Gen 6.3: Research Graph + Hypothesis Engine ───────────────────────────
+
+    def _cmd_graph(self, command: str, arg: str = ""):
+        """
+        /graph [stats|query <text>|bridges|contradictions|ingest [path]]
+        Research knowledge graph operations.
+        """
+        parts = arg.strip().split(None, 1) if arg else []
+        sub   = parts[0].lower() if parts else (
+            "bridges"      if command == "/bridges"      else
+            "contradictions" if command == "/contradictions" else
+            "ingest"       if command == "/ingest"       else
+            "stats"
+        )
+        rest  = parts[1] if len(parts) > 1 else ""
+
+        try:
+            from .research_graph import get_research_graph
+            from .ingest import quick_ingest, get_ingestor
+            g = get_research_graph()
+        except ImportError as e:
+            print(f"  {C.R}Research graph unavailable: {e}{C.E}")
+            return
+
+        if sub in ("stats", "status"):
+            s = g.stats()
+            print(f"\n  {C.H}Research Knowledge Graph{C.E}")
+            print(f"  Nodes: {C.CY}{s['total_nodes']}{C.E}  "
+                  f"Edges: {C.CY}{s['total_edges']}{C.E}  "
+                  f"Contradictions: {C.R}{s.get('contradictions', 0)}{C.E}  "
+                  f"Bridges: {C.M}{s.get('bridges', 0)}{C.E}")
+            print(f"  By type:   " +
+                  "  ".join(f"{k}={v}" for k, v in s.get("by_type", {}).items()))
+            print(f"  By domain: " +
+                  "  ".join(f"{k}={v}" for k, v in s.get("by_domain", {}).items()))
+            print()
+
+        elif sub == "query":
+            query = rest or arg
+            if not query:
+                print(f"  Usage: /graph query <search text>")
+                return
+            nodes = g.query(query, top_k=5)
+            if not nodes:
+                print(f"  No nodes matching '{query}'")
+            else:
+                print(f"\n  {C.H}Top {len(nodes)} results:{C.E}\n")
+                for node in nodes:
+                    print(g.format_node_brief(node, include_edges=True))
+                    print()
+
+        elif sub == "ingest":
+            path = rest or arg
+            if path:
+                n, summary = quick_ingest(path)
+                print(f"  {C.G}✓{C.E} {summary}")
+            else:
+                print(f"  {C.H}Ingesting all known sources...{C.E}")
+                ing = get_ingestor()
+                n   = ing.ingest_all()
+                print(f"  {C.G}✓{C.E} {n} nodes ingested")
+                for line in ing.log:
+                    print(f"    {line}")
+
+        elif sub == "bridges":
+            bridges = g.find_bridges()
+            if not bridges:
+                print("  No unexplored bridges — ingest more cross-domain data.")
+            else:
+                print(f"\n  {C.H}Unexplored cross-domain bridges ({len(bridges)}):{C.E}\n")
+                for b in bridges[:8]:
+                    print(f"  {C.M}[{b['source'].domain}]{C.E} {b['source'].title}")
+                    print(f"    ↔ {C.CY}[{b['target'].domain}]{C.E} {b['target'].title}")
+                    if b["edge"].note:
+                        print(f"    {C.DIM}{b['edge'].note}{C.E}")
+                    print()
+
+        elif sub == "contradictions":
+            cs = g.find_contradictions()
+            if not cs:
+                print("  No active contradictions found.")
+            else:
+                print(f"\n  {C.H}Active contradictions ({len(cs)}):{C.E}\n")
+                for c in cs[:5]:
+                    n_s = len([x for x in c["supporting"]    if x])
+                    n_c = len([x for x in c["contradicting"] if x])
+                    print(f"  {C.R}[{c['claim'].domain}]{C.E} {c['claim'].title}")
+                    print(f"    {C.G}For: {n_s}{C.E}  {C.R}Against: {n_c}{C.E}\n")
+
+        else:
+            print(f"  Usage: /graph [stats|query <text>|ingest [path]|bridges|contradictions]")
+
+    def _cmd_hypothesis(self, arg: str = ""):
+        """
+        /hypothesis [briefing|propose|generate [domain]|gaps]
+        Research intelligence — proactive hypothesis and experiment proposals.
+        """
+        parts = arg.strip().split(None, 1) if arg else []
+        sub   = parts[0].lower() if parts else "briefing"
+        rest  = parts[1] if len(parts) > 1 else ""
+
+        try:
+            from .hypothesis_engine import get_hypothesis_engine
+            engine = get_hypothesis_engine()
+        except ImportError as e:
+            print(f"  {C.R}Hypothesis engine unavailable: {e}{C.E}")
+            return
+
+        if sub in ("briefing", "scan", "status", ""):
+            print(engine.daily_briefing())
+
+        elif sub == "propose":
+            scan = engine.scan()
+            if scan.proposals:
+                print(f"\n  {C.H}Proposed experiments:{C.E}\n")
+                for p in scan.proposals[:5]:
+                    print(p.summary())
+                    print()
+            else:
+                print("  No proposals yet — run /graph ingest to load your research data.")
+
+        elif sub == "generate":
+            domain  = rest.split()[0] if rest else "cross_domain"
+            context = rest[len(domain):].strip() if rest else ""
+            print(f"\n  {C.H}Generating novel hypothesis...{C.E}\n")
+            result = engine.generate_hypothesis(domain=domain, prompt_context=context)
+            print(result)
+            print()
+
+        elif sub == "gaps":
+            from .research_graph import get_research_graph
+            gaps = get_research_graph().find_gaps()
+            if not gaps:
+                print("  No evidence gaps found.")
+            else:
+                print(f"\n  {C.H}Evidence gaps ({len(gaps)}):{C.E}\n")
+                for g in gaps[:8]:
+                    print(f"  {C.Y}[{g['claim'].domain}]{C.E} {g['claim'].title}")
+                    print(f"    Support: {g['support_count']}/2  "
+                          f"Gap size: {g['gap_size']}\n")
+
+        else:
+            print(f"  Usage: /hypothesis [briefing|propose|generate [domain]|gaps|scan]")
+
+    def _cmd_literature(self, arg: str = ""):
+        """
+        /literature [scan [domain...]|query <text>|daemon [interval]|status]
+        Live literature ingestion from arXiv, PubMed, bioRxiv.
+        """
+        parts = arg.split() if arg else []
+        sub   = parts[0] if parts else "scan"
+        rest  = parts[1:] if len(parts) > 1 else []
+
+        try:
+            from .arxiv_watcher import get_watcher
+            watcher = get_watcher()
+        except Exception as e:
+            print(f"  {C.R}Literature watcher unavailable: {e}{C.E}")
+            return
+
+        if sub == "scan":
+            domains = rest if rest else None
+            print(f"\n  {C.H}Scanning literature…{C.E}")
+            papers = watcher.scan(domains=domains)
+            if papers:
+                print(f"\n  {C.G}Found {len(papers)} paper(s):{C.E}\n")
+                for p in papers[:8]:
+                    print(f"  [{p.domain}] {p.title[:70]}")
+                    print(f"    {p.url}  (relevance {p.relevance:.2f})\n")
+                if len(papers) > 8:
+                    print(f"  … and {len(papers)-8} more (ingested into graph)")
+            else:
+                print("  No new papers found.")
+
+        elif sub == "query":
+            if not rest:
+                print("  Usage: /literature query <search terms>")
+                return
+            q = " ".join(rest)
+            print(f"\n  {C.H}Querying: {q}{C.E}\n")
+            papers = watcher.query_papers(q, max_results=10)
+            for p in papers:
+                print(f"  [{p.source}] {p.title}")
+                print(f"    {p.url}")
+                print(f"    {p.abstract[:180]}…\n")
+
+        elif sub in ("status", "stats"):
+            from .arxiv_watcher import _DEFAULT_QUERIES
+            print(f"\n  {C.H}Literature Watcher{C.E}")
+            print(f"  Tracked papers: {len(watcher._seen)}")
+            print(f"  Domains:        {', '.join(list(_DEFAULT_QUERIES.keys())[:6])}")
+
+        elif sub == "daemon":
+            interval = int(rest[0]) if rest else 3600
+            watcher.start_daemon(interval_seconds=interval)
+            print(f"  {C.G}Literature daemon started (every {interval}s){C.E}")
+
+        else:
+            print("  Usage: /literature [scan|query <text>|daemon [interval]|status]")
+
+    def _cmd_stats(self, arg: str = ""):
+        """
+        /stats [report|tti [claim_id]|anomalies|convergence <claim_id>]
+        Statistical rigour layer: TTI, Bayesian posterior, anomaly detection.
+        """
+        parts = arg.split() if arg else []
+        sub   = parts[0] if parts else "report"
+        rest  = parts[1:] if len(parts) > 1 else []
+
+        try:
+            from .statistical_engine import get_statistical_engine
+            eng = get_statistical_engine()
+        except Exception as e:
+            print(f"  {C.R}Statistical engine unavailable: {e}{C.E}")
+            return
+
+        if sub in ("report", "scan"):
+            print(eng.formatted_report())
+
+        elif sub == "tti":
+            if rest:
+                claim_id = rest[0]
+                score = eng.theoretical_tension_index(claim_id)
+                if score:
+                    print(f"\n  TTI  {score.tti:.3f}  [{score.verdict}]  {claim_id}")
+                    print(f"  Support: {score.support_mass:.2f}  Contradiction: {score.contradiction_mass:.2f}")
+                else:
+                    print(f"  Claim '{claim_id}' not found.")
+            else:
+                ranked = eng.rank_by_tti()
+                print(f"\n  {C.H}Claims by Theoretical Tension Index:{C.E}\n")
+                for s in ranked[:12]:
+                    bar = "█" * int(s.tti * 10) + "░" * (10 - int(s.tti * 10))
+                    col = C.R if s.tti > 0.50 else (C.Y if s.tti > 0.30 else C.G)
+                    print(f"  {col}{bar}{C.E} {s.tti:.3f}  [{s.verdict:9s}]  {s.claim_id}")
+
+        elif sub == "anomalies":
+            result = eng.full_scan()
+            flags = result.get("anomalies", [])
+            if not flags:
+                print("  No anomalies detected.")
+            else:
+                print(f"\n  {C.H}Anomaly flags ({len(flags)}):{C.E}\n")
+                for fl in flags:
+                    print(f"  [{fl.severity}] {fl.experiment_id}  z={fl.z_score:.2f}")
+                    print(f"    {fl.description}\n")
+
+        elif sub == "convergence":
+            if not rest:
+                print("  Usage: /stats convergence <claim_id>")
+                return
+            claim_id = rest[0]
+            report = eng.full_convergence_report(claim_id)
+            icon = f"{C.G}✓ PASSED{C.E}" if report.passed else f"{C.R}✗ BLOCKED{C.E}"
+            print(f"\n  {C.H}Convergence Gate: {claim_id}{C.E}  {icon}\n")
+            for criterion, passed in report.criteria.items():
+                mark = f"{C.G}✓{C.E}" if passed else f"{C.R}✗{C.E}"
+                print(f"  {mark} {criterion}")
+
+        else:
+            print("  Usage: /stats [report|tti [claim_id]|anomalies|convergence <claim_id>]")
+
+    def _cmd_simulate(self, arg: str = ""):
+        """
+        /simulate [coherence|reaction|kinetics|investigate <claim_id>]
+        Run simulation frameworks: Lindblad coherence, Gray-Scott reaction-diffusion,
+        Gillespie kinetic Monte Carlo.
+        """
+        parts = arg.split() if arg else []
+        sub   = parts[0] if parts else "help"
+        rest  = parts[1:] if len(parts) > 1 else []
+
+        try:
+            from .simulation_harness import get_simulation_harness
+            harness = get_simulation_harness()
+        except Exception as e:
+            print(f"  {C.R}Simulation harness unavailable: {e}{C.E}")
+            return
+
+        n = int(rest[-1]) if rest and rest[-1].isdigit() else 20
+
+        if sub == "coherence":
+            claim_id = rest[0] if rest and not rest[0].isdigit() else None
+            print(f"\n  {C.H}Coherence decay sweep (n={n})…{C.E}")
+            result = harness.run_coherence_sweep(claim_id=claim_id, n_samples=n)
+            print(f"\n  Converged:    {result.converged}")
+            print(f"  Variance:     {result.variance:.4f}")
+            print(f"  Best params:  {result.best_params}")
+            if result.sensitivity:
+                print(f"  Sensitivity:  {result.sensitivity}")
+            if result.stable_region:
+                print(f"  Stable region: {result.stable_region}")
+
+        elif sub in ("reaction", "diffusion"):
+            claim_id = rest[0] if rest and not rest[0].isdigit() else None
+            print(f"\n  {C.H}Reaction-diffusion sweep (n={n})…{C.E}")
+            result = harness.run_biological_sweep(claim_id=claim_id, n_samples=n)
+            print(f"\n  Converged:    {result.converged}")
+            print(f"  Variance:     {result.variance:.4f}")
+            print(f"  Best params:  {result.best_params}")
+
+        elif sub in ("kinetics", "kmc"):
+            claim_id = rest[0] if rest and not rest[0].isdigit() else None
+            print(f"\n  {C.H}Kinetic Monte Carlo sweep (n={n})…{C.E}")
+            result = harness.run_kinetics_sweep(claim_id=claim_id, n_samples=n)
+            print(f"\n  Converged:    {result.converged}")
+            print(f"  Variance:     {result.variance:.4f}")
+            print(f"  Best params:  {result.best_params}")
+
+        elif sub in ("investigate", "full"):
+            if not rest or rest[0].isdigit():
+                print("  Usage: /simulate investigate <claim_id> [n_samples]")
+                return
+            claim_id = rest[0]
+            print(f"\n  {C.H}Full investigation: {claim_id}  (n={n}){C.E}\n")
+            report = harness.full_investigation(claim_id=claim_id, n_samples=n)
+            print(report.get("summary", str(report)))
+
+        else:
+            print("  Usage: /simulate [coherence|reaction|kinetics|investigate <claim_id>]")
 
     def _cmd_config(self, arg: str):
         """Show OSIRIS configuration."""
@@ -1748,8 +2479,102 @@ class NCLMChat:
 
     def process_message(self, user_input: str):
         """Process a user message and generate response."""
+
+        # ── DOCUMENT RECEPTION GATE ───────────────────────────────────
+        # Before anything else: check if this line is a fragment from a
+        # pasted document. If the buffer is accumulating, either continue
+        # buffering (return silently) or flush + process the whole document.
+        if self._doc_buffer is not None and not user_input.startswith("/"):
+            buf_action = self._doc_buffer.feed(user_input)
+
+            if buf_action == "drop":
+                # Silent drop — pure artifact, nothing for the user to see
+                return
+
+            if buf_action == "buffer":
+                # Accumulating — show a subtle indicator once every 5 lines
+                if self._doc_buffer.line_count() == self._doc_buffer.STREAK_THRESHOLD:
+                    print(f"  {C.DIM}◌ Receiving document... ({self._doc_buffer.doc_type}){C.E}")
+                return
+
+            if buf_action == "flush":
+                # Document complete — understand it as a whole, then process
+                # the triggering line (user_input) as the instruction
+                doc_text = self._doc_buffer.get_document()
+                doc_type = self._doc_buffer.doc_type
+                n_lines  = self._doc_buffer.line_count()
+                self._doc_buffer.reset()
+
+                if doc_text.strip():
+                    print(f"\n  {C.CY}◈ Document received{C.E}  "
+                          f"{C.DIM}({n_lines} lines · {doc_type}){C.E}")
+                    # Store the document
+                    try:
+                        from .reception import store_document, understand_document
+                        from .user_model import get_user_profile
+                        _name = get_user_profile().name
+                        saved_path = store_document(doc_text, doc_type)
+                        # If user gave an instruction with the flush, append it
+                        instruction = user_input.strip()
+                        if instruction:
+                            understanding = understand_document(
+                                doc_text + (f"\n\nUser instruction: {instruction}" if instruction else ""),
+                                doc_type, _name
+                            )
+                        else:
+                            understanding = understand_document(doc_text, doc_type, _name)
+                        print(f"\n  {understanding}\n")
+                        print(f"  {C.DIM}Saved → {saved_path}{C.E}\n")
+                        self.messages.append({"role": "assistant", "content": understanding[:300]})
+                    except Exception as _re:
+                        print(f"  {C.DIM}Document stored ({doc_type}, {n_lines} lines). "
+                              f"What would you like to do with it?{C.E}\n")
+                    return
+
+            # buf_action == "passthrough" — normal line, fall through to processing
+
         self.messages.append({"role": "user", "content": user_input})
         self.query_count += 1
+
+        # ── SHADOW-YOU: observe this interaction ──────────────────────
+        try:
+            from .user_model import get_user_profile
+            _up = get_user_profile()
+            _up.observe_command("chat")
+        except Exception:
+            pass
+
+        # ── NLP INTENT ROUTING (before tool dispatch) ─────────────────
+        # If the user typed natural language that maps to an osiris cmd,
+        # dispatch it immediately and return.
+        if not user_input.startswith("/"):
+            try:
+                from .intent_router import get_intent_router
+                _ir = get_intent_router(use_llm=False)  # no LLM in hot path
+                _intent = _ir.route(user_input)
+                if _intent.routed and _intent.command:
+                    # Only route if it's NOT already a slash/tool command
+                    _ncmd = _intent.command
+                    print(f"\n  {C.CY}⟳ Intent:{C.E} '{user_input}' → {C.H}osiris {_ncmd}{C.E}"
+                          f"  {C.DIM}(conf={_intent.confidence:.0%}){C.E}\n")
+                    # Evolve personality based on routed command
+                    try:
+                        from .personality import get_personality
+                        get_personality().evolve(_ncmd)
+                    except Exception:
+                        pass
+                    # Dispatch inline  — call dispatch_tool with a canonical form
+                    _synthetic = f"/{_ncmd} " + " ".join(_intent.args) if _intent.args else f"/{_ncmd}"
+                    _tr = dispatch_tool(_synthetic)
+                    if _tr is not None:
+                        print(_tr)
+                        ccce = self.lm.consciousness.get_ccce()
+                        phi_bar = self._phi_bar(ccce["Φ"], 16)
+                        print(f"\n  {C.DIM}Φ {phi_bar} {ccce['Φ']:.4f}  [intent→{_ncmd}]{C.E}\n")
+                        self.messages.append({"role": "assistant", "content": str(_tr)[:200]})
+                        return
+            except Exception:
+                pass
 
         # ── INFER · INTERPRET ─────────────────────────────────────────
         # Detect noisy input (Gmail UI paste, terminal artifacts) and
@@ -1759,7 +2584,18 @@ class NCLMChat:
             self._inference.remember(user_input)
             interp = self._inference.interpret(user_input)
             if interp["is_noise"] and not interp["actionable"]:
-                # Pure noise — give a helpful suggestion
+                # Silently drop OSIRIS-own-output feedback loops — no response printed
+                silent_cats = {
+                    "osiris_metric", "osiris_metric_line", "osiris_prompt",
+                    "osiris_status", "osiris_analysis", "shell_prompt",
+                    "terminal_box", "tui_box_content", "empty_prompt",
+                    "code_artifact", "bash_error", "git_diff_line",
+                    "git_diff_header", "git_diff_hunk", "tqdm_bar",
+                    "training_progress",
+                }
+                if interp.get("noise_category") in silent_cats:
+                    return
+                # Other pure noise — give a helpful suggestion once
                 suggestion = interp["suggestion"]
                 print(f"\n  {C.Y}⚙ Inference:{C.E} {suggestion}")
                 ccce = self.lm.consciousness.get_ccce()
@@ -1771,6 +2607,48 @@ class NCLMChat:
                 # Noisy but intent detected — use cleaned + show what we inferred
                 print(f"\n  {C.Y}⚙ Inferred intent:{C.E} {interp['intent']}  →  {interp['suggestion']}")
                 effective_input = interp["cleaned"] or user_input
+
+            # ── BLOCK CLASSIFIER ──────────────────────────────────────
+            # Detect multi-line pastes (git diffs, training logs, terminal
+            # sessions, error traces, code snippets) and route them to the
+            # right mode without printing per-line manifold noise.
+            if "\n" in user_input and len(user_input.splitlines()) >= 4:
+                block = self._inference.classify_block(user_input)
+                if block is not None:
+                    btype = block["block_type"]
+                    action = block["action"]
+                    desc = block["description"]
+                    conf = block["confidence"]
+                    cleaned_prompt = block["cleaned_prompt"] or effective_input
+
+                    # Show a single banner instead of per-line analysis
+                    try:
+                        from ..self_repair import _BLOCK_ACTIONS as _BA
+                    except ImportError:
+                        _BA = {}
+                    action_msg = _BA.get(action, desc)
+                    print(f"\n  {C.CY}◈ Block detected:{C.E} {desc}  {C.DIM}(conf={conf:.0%}){C.E}")
+                    print(f"  {C.Y}→{C.E} {action_msg}\n")
+
+                    # Document reception: read as whole, ask for instruction
+                    if action in ("receive_document", "receive_session"):
+                        try:
+                            from .reception import understand_document, store_document
+                            from .user_model import get_user_profile
+                            _name = get_user_profile().name
+                            saved = store_document(user_input, btype)
+                            understanding = understand_document(user_input, btype, _name)
+                            print(f"  {understanding}\n")
+                            print(f"  {C.DIM}Saved → {saved}{C.E}\n")
+                            self.messages.append({"role": "assistant", "content": understanding[:300]})
+                        except Exception:
+                            print(f"  {C.DIM}Document received. What would you like to do with it?{C.E}\n")
+                        return
+
+                    # Replace effective input with the distilled signal
+                    effective_input = cleaned_prompt
+                    # Store block context for downstream LLM call
+                    self._last_block = block
 
         # Extract @file mentions and auto-read them as context
         import re
@@ -1838,12 +2716,76 @@ class NCLMChat:
                 role = "User" if msg["role"] == "user" else "OSIRIS"
                 context_parts.append(f"{role}: {msg['content']}")
             context = "\n".join(context_parts)
+            # Inject actual measured experiment data into every LLM call
+            try:
+                from .analysis import get_analyzer
+                _az = get_analyzer()
+                _rc = _az.llm_context_block()
+                if _rc:
+                    context = _rc + "\n\n" + context
+            except Exception:
+                try:
+                    from .research_engine import get_research_engine
+                    _re = get_research_engine(auto_load=True)
+                    _rc = _re.build_llm_context(clean_input)
+                    if _rc:
+                        context = _rc + "\n\n" + context
+                except Exception:
+                    pass
             # Include @file context if present
             if file_context:
                 context += f"\n\nReferenced files:\n{file_context}"
+            # Include block type context so LLM knows what was pasted
+            if self._last_block is not None:
+                bctx = self._last_block
+                context += (
+                    f"\n\n[PASTE BLOCK DETECTED: {bctx['block_type']} "
+                    f"(conf={bctx['confidence']:.0%}) — action={bctx['action']}. "
+                    f"Respond accordingly without re-listing every line.]"
+                )
+                self._last_block = None  # consume it
 
+            # Shadow-You: prepend user context blob + working context
+            try:
+                from .user_model import get_user_profile
+                _shadow_ctx = get_user_profile().get_context_blob()
+                if _shadow_ctx:
+                    context = _shadow_ctx + "\n\n" + context
+            except Exception:
+                pass
+            # Working context: inject relevant lines from ~/.osiris/working_context.md
+            try:
+                _wc_path = os.path.expanduser("~/.osiris/working_context.md")
+                if os.path.exists(_wc_path):
+                    with open(_wc_path) as _wf:
+                        _wc = _wf.read()
+                    # Trim to last 3000 chars so it doesn't blow the context budget
+                    if len(_wc) > 3000:
+                        _wc = "...\n" + _wc[-3000:]
+                    context = f"[OSIRIS WORKING CONTEXT]\n{_wc}\n\n" + context
+            except Exception:
+                pass
+
+            # Φ-gated reasoning: inject mode into context
+            try:
+                from .self_monitor import get_self_monitor
+                _sm  = get_self_monitor()
+                _phi_addon = _sm.system_prompt_addon()
+                if _phi_addon:
+                    context = _phi_addon + "\n\n" + context
+            except Exception:
+                pass
+
+            llm_result = None
             with Spinner("Reasoning", frames="dna"):
                 llm_result = tool_llm(clean_input, context)
+
+            # Personality: evolve on chat interaction
+            try:
+                from .personality import get_personality
+                get_personality().evolve("chat")
+            except Exception:
+                pass
 
             if llm_result and "stub" not in llm_result.lower() and len(llm_result) > 20:
                 print()
@@ -1857,6 +2799,19 @@ class NCLMChat:
                 phi_bar = self._phi_bar(ccce["Φ"], 16)
                 print(f"\n  {C.DIM}Φ {phi_bar} {ccce['Φ']:.4f}  Ξ={ccce['Ξ']:.1f}  [{llm_backend}]{C.E}\n")
                 self.messages.append({"role": "assistant", "content": llm_result[:300]})
+                # Apprentice: observe this chat turn for OSIRIS to learn from
+                try:
+                    from .apprentice import get_apprentice
+                    import re as _re
+                    _files = _re.findall(r'[\w/\-\.]+\.py', llm_result)
+                    get_apprentice().observe_chat_turn(
+                        user_intent=clean_input[:200],
+                        response_summary=llm_result[:200],
+                        files_written=_files[:5],
+                        tools_used=[self.last_tool] if self.last_tool else [],
+                    )
+                except Exception:
+                    pass
                 return
 
         # NCLM inference fallback for conversational responses

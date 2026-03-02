@@ -544,10 +544,10 @@ async def show_ccce_metrics():
     from dnalang_sdk import OmegaMasterIntegration
     o=OmegaMasterIntegration(); m=await o.get_ccce_metrics()
     print(f"\n{C.H}CCCE Metrics:{C.E}")
-    print(f"  {C.CY}Λ (Coherence):{C.E} {m.lambda_coherence:.4f}")
-    print(f"  {C.CY}Φ (Consciousness):{C.E} {m.phi_consciousness:.4f}")
-    print(f"  {C.CY}Γ (Decoherence):{C.E} {m.gamma_decoherence:.4f}")
-    print(f"  {C.CY}Ξ (Negentropy):{C.E} {m.xi_negentropy:.4f}\n")
+    print(f"  {C.CY}Λ (Coherence):{C.E} {m['lambda_coherence']:.4f}")
+    print(f"  {C.CY}Φ (Consciousness):{C.E} {m['phi_consciousness']:.4f}")
+    print(f"  {C.CY}Γ (Decoherence):{C.E} {m['gamma_decoherence']:.4f}")
+    print(f"  {C.CY}Ξ (Negentropy):{C.E} {m['xi_negentropy']:.4f}\n")
 
 async def aal(index=None):
     """Run the Aura Autopoietic Loop (AAL) — full 6-stage pipeline.
@@ -1013,7 +1013,7 @@ async def agent(t):
         return
     print(f"{C.H}Agent Orchestration{C.E}\n{C.CY}Task:{C.E} {t}\n")
     from dnalang_sdk import OmegaMasterIntegration
-    o=OmegaMasterIntegration(base_url="https://api.openai.com/v1",api_key=os.getenv("OPENAI_API_KEY",""))
+    o=OmegaMasterIntegration()
     print(f"{C.G}Orchestrating with AURA, AIDEN, SCIMITAR...{C.E}\n")
     r=await o.orchestrate_task(t); print(f"{C.G}Result:{C.E} {r.get('consensus','N/A')}")
 

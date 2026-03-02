@@ -4,6 +4,7 @@ import pytest
 import sys
 import os
 
+pytest.importorskip("braket", reason="amazon-braket-sdk not installed")
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "examples"))
 from braket_phi_threshold import (
     build_prism_2q, build_prism_3q, build_prism_4q,

@@ -630,6 +630,10 @@ _NOISE_PATTERNS: List[Tuple[str, str]] = [
     (r"^Conversation opened\.\s*\d+\s*unread", "gmail_thread"),
     # Terminal copy-paste artifacts
     (r"^[┌└├│─╼╾]+", "terminal_box"),
+    # TUI box content lines: │ any content │  (OSIRIS TUI output pasted back)
+    (r"^[│]\s*.{0,200}\s*[│]\s*$", "tui_box_content"),
+    # OSIRIS session metric lines pasted back
+    (r"^\s*[◇◈]\s*>\s*[│╭╮╰╯]", "tui_box_content"),
     (r"^\$\s*$", "empty_prompt"),
     (r"^bash:\s+\S+:\s+command not found", "bash_error"),
     (r"^bash:\s+\S+:\s+No such file", "bash_error"),
@@ -638,17 +642,159 @@ _NOISE_PATTERNS: List[Tuple[str, str]] = [
     # Webpage fragments
     (r"^(Home|About|Contact|Login|Sign [Uu]p|Settings)\s*$", "nav_link"),
     (r"^(Loading|Please wait|Redirecting)\.*$", "loading"),
+    # Git diff lines
+    (r"^>?\s+\d+\s+[+\-]\s+", "git_diff_line"),
+    (r"^[+\-]{3}\s+[ab]/", "git_diff_header"),
+    (r"^@@\s+-\d+,?\d*\s+\+\d+", "git_diff_hunk"),
+    (r"^diff --git\s+", "git_diff_header"),
+    # Python code paste artifacts (single lines from pasted source)
+    (r"^\s{4,}(self\.|return\b|pass\s*$|except|try:\s*$|raise\s)", "code_artifact"),
+    (r"^\s*(def |class )\w+[\(\:]", "code_artifact"),
+    (r"^\s*(import |from \w+ import )\w+", "code_artifact"),
+    (r"^\s*if (not )?self\.\w+", "code_artifact"),
+    (r"^\s*for .+ in .+:", "code_artifact"),
+    (r"^\s*while .+:", "code_artifact"),
+    (r"^\s*payload\s*=\s*\[", "code_artifact"),
+    (r"^#!/usr/bin/env python", "code_artifact"),
+    (r"^\s*\w+\s*=\s*(hid\.|threading\.|True|False|None)\b", "code_artifact"),
+    # OSIRIS / NCLM output artifacts
+    (r"^\s*Φ\s+[█░▓]{2,}", "osiris_metric"),
+    (r"^\s*(Λ|Γ|Ξ|Φ)\s*[\(\[]?\s*(coherence|decoherence|consciousness|negentropy)", "osiris_metric_line"),
+    (r"^\s*[◇◈●○]\s*>", "osiris_prompt"),
+    (r"^\s*[◈●]\s+(INITIALIZING|APPLYING|Using Lindblad|Consciousness emerged)", "osiris_status"),
+    (r"✦ Consciousness emerged", "osiris_status"),
+    (r"⚛ (Using|Maximizing|Applying)", "osiris_status"),
+    (r"Manifold analysis of query", "osiris_analysis"),
+    (r"pilot-wave corr", "osiris_analysis"),
+    # Training / tqdm progress artifacts
+    (r"\d+%\|[█▏▎▍▌▋▊▉▐]+", "tqdm_bar"),
+    (r"Epoch \d+/\d+:", "training_progress"),
+    (r"Evaluating:\s+\d+%", "training_progress"),
+    (r"\d+it/s\]", "tqdm_bar"),
+    # Shell prompt lines with no command
+    (r"^└──╼\s*\$?\s*$", "shell_prompt"),
+    (r"^\[live@parrot\]", "shell_prompt"),
 ]
 
 # Intent extraction: map noisy fragments to likely user goals
 _INTENT_HINTS: Dict[str, List[str]] = {
     "aws": ["deploy", "upload", "s3", "braket", "ec2", "lambda", "cloud"],
     "quantum": ["circuit", "bell", "entangle", "fez", "torino", "backend", "ibm"],
-    "fix": ["error", "bug", "broken", "fail", "crash", "exception", "traceback"],
-    "deploy": ["pypi", "upload", "publish", "push", "release", "docker"],
-    "research": ["paper", "result", "experiment", "data", "breakthrough"],
+    "fix": ["error", "bug", "broken", "fail", "crash", "exception", "traceback",
+            "ModuleNotFoundError", "ImportError", "SyntaxError", "address already in use",
+            "command not found", "No such file", "syntax error near"],
+    "deploy": ["pypi", "upload", "publish", "push", "release", "docker", "vercel", "prod"],
+    "research": ["paper", "result", "experiment", "data", "breakthrough", "eval loss", "training"],
     "email": ["RE:", "FW:", "meeting", "reply", "send", "draft", "outreach"],
-    "code": ["function", "class", "module", "import", "test", "lint"],
+    "code": ["function", "class", "module", "import", "test", "lint", "def ", "class "],
+    "experiment": ["epoch", "loss", "eval", "checkpoint", "training", "model saved", "fine-tun"],
+    "setup": ["export", "mkdir", "chmod", "chown", "pth", "PYTHONPATH", "install", "pip"],
+}
+
+# ── Block-level paste classifier ──────────────────────────────────────────────
+# Each entry: (score_fn, block_type, action, description)
+# score_fn(lines) → float 0-1
+
+def _score_git_diff(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(r'^[+\-]{3}\s|^@@\s+-\d+|^diff --git|^>?\s+\d+\s+[+\-]', l))
+    return hits / max(len(lines), 1)
+
+def _score_terminal_session(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(
+        r'^[┌└├│─╼$]\s|^\[live@|^─\[live|^\[✗\]|^bash:|^Error:|^Traceback|'
+        r'command not found|No such file|address already in use|Exit \d+', l))
+    return hits / max(len(lines), 1)
+
+def _score_training_log(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(
+        r'Epoch \d+|Evaluating|eval_loss|Train Loss|Best model|fine-tun|'
+        r'Loaded \d+ examples|\d+it/s|▕[█ ]+▏', l))
+    return hits / max(len(lines), 1)
+
+def _score_osiris_log(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(
+        r'[◇◈]\s*>|Φ [█░]+|Consciousness emerged|Manifold analysis|'
+        r'pilot-wave|Lindblad|CCCE|θ_lock|ΛΦ|INITIALIZING', l))
+    return hits / max(len(lines), 1)
+
+def _score_plan_document(lines: List[str]) -> float:
+    """Score multi-line input as a plan, roadmap, or specification document."""
+    try:
+        from .nclm.reception import score_plan_document
+        return score_plan_document(lines)
+    except Exception:
+        hits = sum(1 for l in lines if re.search(
+            r'^#{1,4}\s+\w|→\s+osiris|nclm/|\.py\s*—|CREATE:|MODIFY:|'
+            r'Methods:|Integration|Persists to|@dataclass|DocType|Three modules',
+            l, re.IGNORECASE
+        ))
+        tui = sum(1 for l in lines if re.search(r'[│╭╮╰╯╔╗╚╝]', l))
+        return min((hits + tui * 0.5) / max(len(lines), 1), 1.0)
+
+def _score_osiris_session_full(lines: List[str]) -> float:
+    """Score as a full OSIRIS session log (chat output copy-pasted back)."""
+    try:
+        from .nclm.reception import score_osiris_session
+        return score_osiris_session(lines)
+    except Exception:
+        hits = sum(1 for l in lines if re.search(
+            r'[◇◈]\s*>|\[infer\]|\[tool\]|\[copilot\]|⚙ Inference:|'
+            r'Φ [█░]{3,}|\[3\.\d+ms\]', l
+        ))
+        return min(hits / max(len(lines), 1) * 1.5, 1.0)
+
+def _score_code(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(
+        r'^\s*(def |class |import |from |async def |return |if |for |while )', l))
+    return hits / max(len(lines), 1)
+
+def _score_error_trace(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(
+        r'Traceback|File ".*", line \d+|Error:|Exception:|^\s+raise\s+|'
+        r'ModuleNotFoundError|ImportError|SyntaxError|AttributeError', l))
+    return hits / max(len(lines), 1)
+
+def _score_json(lines: List[str]) -> float:
+    text = "\n".join(lines).strip()
+    if (text.startswith("{") and text.endswith("}")) or \
+       (text.startswith("[") and text.endswith("]")):
+        try:
+            import json
+            json.loads(text)
+            return 1.0
+        except Exception:
+            return 0.3
+    return 0.0
+
+def _score_conversation_log(lines: List[str]) -> float:
+    hits = sum(1 for l in lines if re.search(
+        r'^(User|Assistant|Human|AI|OSIRIS|Devin|◇|◈)\s*[>:]\s*\S', l))
+    return hits / max(len(lines), 1)
+
+_BLOCK_SCORERS: List[Tuple[str, Any, str, str]] = [
+    # High-specificity classifiers first
+    ("osiris_session",  _score_osiris_session_full, "receive_session", "OSIRIS session output → receiving as a whole"),
+    ("plan_document",   _score_plan_document,        "receive_document","Plan/specification document → document reception mode"),
+    ("git_diff",        _score_git_diff,             "code_review",    "Git diff detected → code review mode"),
+    ("terminal_session",_score_terminal_session,     "debug",          "Terminal session paste → error analysis mode"),
+    ("training_log",    _score_training_log,         "experiment",     "Training log → experiment analysis mode"),
+    ("osiris_log",      _score_osiris_log,           "summarize",      "OSIRIS session log → summarizing metrics"),
+    ("error_trace",     _score_error_trace,          "fix",            "Error traceback → auto-repair mode"),
+    ("code",            _score_code,                 "analyze_code",   "Code snippet → code analysis mode"),
+    ("json_data",       _score_json,                 "parse_data",     "JSON data → parsing mode"),
+    ("conversation_log",_score_conversation_log,     "summarize",      "Conversation log → summarizing mode"),
+]
+
+_BLOCK_ACTIONS: Dict[str, str] = {
+    "receive_document": "Document received. Reading as a whole — tell me what you'd like to do with it.",
+    "receive_session":  "OSIRIS session output received. Reading as context — what would you like me to analyse?",
+    "code_review":  "Reviewing diff. Use `/analyze` for detailed file analysis or ask me to explain specific changes.",
+    "debug":        "Extracted errors from session. Analyzing root cause and suggesting fixes.",
+    "experiment":   "Training run detected. Summarizing results and recommending next experiment parameters.",
+    "summarize":    "Summarizing session. Use `osiris lab publish` to archive results to Zenodo.",
+    "fix":          "Traceback detected. Running auto-repair analysis.",
+    "analyze_code": "Code detected. Analyzing structure, intent, and potential issues.",
+    "parse_data":   "JSON data detected. Extracting structure and key fields.",
 }
 
 
@@ -766,6 +912,94 @@ class OsirisInferenceEngine:
             "suggestion": "",
             "actionable": True,
         }
+
+    def classify_block(self, text: str) -> Optional[Dict[str, Any]]:
+        """
+        Classify a multi-line or ambiguous paste as a known block type.
+
+        Returns dict with keys: block_type, action, description, confidence,
+        cleaned_prompt — or None if it's a normal user message.
+        """
+        lines = [l for l in text.splitlines() if l.strip()]
+        if not lines:
+            return None
+
+        # Single short line — not a block paste
+        if len(lines) == 1 and len(lines[0]) < 120:
+            # Still check if it's a single paste artifact
+            for btype, scorer, action, desc in _BLOCK_SCORERS:
+                if scorer([lines[0]]) > 0.7:
+                    return {
+                        "block_type": btype, "action": action,
+                        "description": desc, "confidence": 0.8,
+                        "cleaned_prompt": self._extract_signal(lines, btype),
+                    }
+            return None
+
+        # Score all classifiers
+        scores = []
+        for btype, scorer, action, desc in _BLOCK_SCORERS:
+            score = scorer(lines)
+            if score > 0.15:
+                scores.append((score, btype, action, desc))
+        if not scores:
+            return None
+
+        scores.sort(reverse=True)
+        best_score, btype, action, desc = scores[0]
+
+        # Only classify if confident enough
+        if best_score < 0.25:
+            return None
+
+        return {
+            "block_type": btype,
+            "action": action,
+            "description": desc,
+            "confidence": round(best_score, 2),
+            "cleaned_prompt": self._extract_signal(lines, btype),
+        }
+
+    def _extract_signal(self, lines: List[str], block_type: str) -> str:
+        """Extract the useful signal from a paste block."""
+        if block_type == "git_diff":
+            # Pull added/removed lines only
+            changed = [l for l in lines if re.match(r'^[+\-]\s', l)
+                       and not re.match(r'^[+]{3}|^[-]{3}', l)]
+            return "\n".join(changed[:40]) if changed else "\n".join(lines[:20])
+
+        if block_type == "terminal_session":
+            # Extract error messages and commands
+            errors = [l for l in lines if re.search(
+                r'Error:|Traceback|command not found|No such file|Exit \d+|'
+                r'address already in use|ModuleNotFoundError|SyntaxError', l)]
+            cmds = [l for l in lines if re.search(r'^\$\s+\S|^└──╼\s*\$\s+\S', l)]
+            signal = errors + cmds
+            return "\n".join(signal[:20]) if signal else "\n".join(lines[:15])
+
+        if block_type == "training_log":
+            # Extract key metrics: loss, eval, epoch summaries
+            metrics = [l for l in lines if re.search(
+                r'(Train|Eval) Loss|Best model|eval_loss|Epoch \d+/\d+\s*$|'
+                r'Parameters:|Loaded \d+ examples|Fine-tuning complete', l)]
+            return "\n".join(metrics[:15]) if metrics else "\n".join(lines[:10])
+
+        if block_type == "osiris_log":
+            # Extract CCCE metrics and user queries
+            metrics = [l for l in lines if re.search(
+                r'[ΛΓΦΞl]\s*[\(=]|◇\s*>\s*\S|◈\s*>\s*\S|Consciousness emerged', l)]
+            return "\n".join(metrics[:20]) if metrics else "\n".join(lines[:10])
+
+        if block_type == "error_trace":
+            # Extract the most useful error lines
+            errs = [l for l in lines if re.search(
+                r'(Error|Exception|Traceback|File ".*line \d+)', l)]
+            return "\n".join(errs[:10]) if errs else "\n".join(lines[:10])
+
+        if block_type in ("code", "analyze_code"):
+            return "\n".join(lines[:60])
+
+        return "\n".join(lines[:20])
 
     def remember(self, text: str) -> None:
         """Record input to conversation history for context tracking."""
