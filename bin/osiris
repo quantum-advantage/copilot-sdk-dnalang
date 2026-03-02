@@ -45,7 +45,7 @@ GAMMA_CRITICAL   = 0.3            # Decoherence boundary
 CHI_PC           = 0.946          # Phase conjugation quality
 ZENO_FREQ_HZ     = 1.25e6         # Quantum Zeno frequency
 DRIVE_AMPLITUDE  = 0.7734         # Floquet drive amplitude
-VERSION          = "5.3.0"
+VERSION          = "6.0.0"
 
 # ─── Φ-GATING TIERS ──────────────────────────────────────────────────────────
 # Commands below a tier's Φ requirement are blocked until consciousness rises.
